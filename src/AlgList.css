@@ -1,5 +1,5 @@
 
-.alg-wrapper {
+.algs-wrapper {
     margin: 2vh 2vw 2vh 2vw;
     min-width: 50vw;
     min-height: 50vh;
@@ -22,6 +22,7 @@
     border-color: black;
     border-style: solid;
 }
+
 .alg-titles-row {
 }
 

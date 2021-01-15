@@ -76,16 +76,18 @@ class AlgList extends Component {
 
   render() {
     return (
-      <div id="algs_wrapper" className="alg-wrapper">
+      <div id="algs_wrapper" className="algs-wrapper">
         <span id="algs_title" className="algs-title">{this.algTitle}</span>
         <table id="algs_table" className="alg-table">
           <thead className="alg-titles-row">
-           {algTitles.map(this.getTitle)}
+            <tr>
+              {algTitles.map(this.getTitle)}
+            </tr>
           </thead>
           <tbody>
             {this.algs.map((item) => {
               return (
-                <tr id={"alg_detail_row_" + item.id} className="alg-detail-row">
+                <tr id={"alg_detail_row_" + item.id} key={item.id} className="alg-detail-row">
                   <td id={"alg_detail_name_" + item.id} className="alg-detail-item alg-detail-name">{item.name}</td>
                   <td id={"alg_detail_id_" + item.id} className="alg-detail-item alg-detail-id">{item.id}</td>
                   <td id={"alg_detail_type_" + item.id} className="alg-detail-item alg-detail-type">{item.data_type}</td>

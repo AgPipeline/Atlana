@@ -5,12 +5,12 @@
 }
 
 .app-header {
-  background: linear-gradient(to right, #f4dfdc 15vw, #a41f3c 15vw 100vw);
+  background: linear-gradient(to right, #f4dfdc 0px 200px, #a41f3c 200px 100vw);
   min-height: 7vh;
 }
 
 .app-header-wrapper {
-  margin-left: 15vw;
+  margin-left: 200px;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -44,11 +44,12 @@
   flex-direction: row;
   justify-content: flex-start;
   border-top:  2px solid grey;
+  width: 100vw;
 }
 
 
 .workflow-list-wrapper {
-  width: 17.6vw;
+  width: 232px !important;
   height: 100vh;
   background-color: #f4dfdc;
   display: flex;

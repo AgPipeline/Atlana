@@ -1,8 +1,8 @@
 
-.edit-wrapper {
+.edit-workflow-wrapper {
     margin: 2vh 2vw 2vh 2vw;
-    width: 80vw;
-    height: 80vh;
+    min-width: 50vw;
+    min-height: 50vh;
     border: 1px solid black;
     padding: 2vh 2vw 2vh 2vw;
     background-color: beige;
@@ -17,12 +17,14 @@
     margin-bottom: 3vh;
 }
 
+
 .edit-field-wrapper {
     flex: 1;
     display: flex;
     flex-direction: row;
     align-content: flex-start;
     justify-content: space-around;
+    margin-bottom: 3vh;
 }
 
 .field-edit-item {
@@ -37,14 +39,6 @@
     margin-left: 10px;
 }
 
-.field-language-label {
-}
-
-.field-language-choice {
-    margin-right: 10px;
-    margin-left: 10px;
-}
-
 .save-edit {
     margin: 10px;
     padding: 5px;
@@ -53,12 +47,34 @@
     background-color: lightgreen;
 }
 
-.editor-wrapper {
+.workflow-wrapper {
     flex: 30;
 }
 
-.edit-area {
-    margin-top: 20px;
-    width: 80vw;
-    height: 65vh;
+.workflow-table {
+    border-size: 1px 1px 0 1px;
+    border-color: black;
+    border-style: solid;
+}
+
+.workflow-title-row {
+}
+
+.workflow-title {
+    height: calc(1em + 20px);
+    background-color: darkkhaki;
+    color: black;    
+    font-size: large;
+    font-weight: bold;
+}
+
+.workflow_item_wrapper {
+    display: flex;
+    flex-direction: row;
+    align-content: flex-start;
+    justify-content: space-around;
+}
+
+.workflow_item_name {
+    padding-right: 10px;
 }
