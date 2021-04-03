@@ -8,6 +8,7 @@ class MainMenu extends Component {
     const cur_menu = props.menu ? props.menu : [];
     const cur_callback = props.selected ? props.selected : () => {};
 
+    this.menu_click = this.menu_click.bind(this);
     this.render_submenu = this.render_submenu.bind(this);
     this.render_menu_item = this.render_menu_item.bind(this);
 
@@ -17,10 +18,17 @@ class MainMenu extends Component {
     }
   }
 
+  menu_click(menu_path) {
+    if (this.state.callback) {
+      this.state.callback(menu_path);
+    }
+  }
+
   render_submenu(menu_path, submenu_item) {
+    const submenu_path = menu_path + '/' + submenu_item.name;
     return (
-      <div id={'sub_menu_' + submenu_item.name} key={menu_path + '/' + submenu_item.name} class="main-menu-sub-item-wrapper">
-        <div id={'sub_menu_text_' + submenu_item.name} class="main-menu-sub-item">{submenu_item.name}</div>
+      <div id={'sub_menu_' + submenu_item.name} key={'submenu_' + submenu_path} className="main-menu-sub-item-wrapper" onClick={() => this.menu_click(submenu_path)}>
+        <div id={'sub_menu_text_' + submenu_item.name} key={submenu_path} className="main-menu-sub-item">{submenu_item.name}</div>
       </div>
     );
   }
@@ -29,12 +37,12 @@ class MainMenu extends Component {
     const submenu = menu_item.items ? menu_item.items : [];
 
     return (
-      <>
-        <div id={'menu_' + menu_item.name} key={menu_item.name} class="main-menu-item-wrapper">
-          <div id={'menu_text_' + menu_item.name} class="main-menu-item">{menu_item.name}</div>
+      <div key={'menu_wrap_' + menu_item.name}>
+        <div id={'menu_' + menu_item.name} key={'menu_' + menu_item.name} className="main-menu-item-wrapper">
+          <div id={'menu_text_' + menu_item.name} key={menu_item.name} className="main-menu-item">{menu_item.name}</div>
         </div>
         {submenu.map((item) => this.render_submenu(menu_item.name, item))}
-      </>
+      </div>
     );
   }
 
@@ -43,7 +51,7 @@ class MainMenu extends Component {
       return null;
     }
     return (
-      <div id='main_menu' class='main-menu-wrapper' >
+      <div id='main_menu' className='main-menu-wrapper' >
         {this.state.menu.map(this.render_menu_item)}
       </div>
     );

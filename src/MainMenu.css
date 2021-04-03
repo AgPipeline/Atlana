@@ -23,14 +23,29 @@
 }
 
 .main-menu-sub-item-wrapper {
+  color: black;
   max-width: 33vw;
-  padding-left: 6vw;
   text-align: left;
 }
 
 .main-menu-sub-item {
-  color: black;
+  min-width: 20vw;
+  padding-left: 7vw;
   font-family: 'EB Garamond', serif;
   font-size: normal;
   font-weight: normal;
+}
+
+.main-menu-sub-item:hover {
+  background-color: lightgrey;
+  text-decoration: underline;
+  color: blue;
+  cursor: pointer;
+}
+
+.main-menu-sub-item:active {
+  background-color: lightgrey;
+  text-decoration: underline;
+  color: blue;
+  cursor: pointer;
 }
