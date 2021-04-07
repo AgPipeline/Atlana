@@ -1,3 +1,4 @@
+// Main menu implementation
 import {Component} from 'react';
 import './MainMenu.css'
 
@@ -18,16 +19,17 @@ class MainMenu extends Component {
     }
   }
 
-  menu_click(menu_path) {
+  menu_click(menu_value) {
     if (this.state.callback) {
-      this.state.callback(menu_path);
+      this.state.callback(menu_value);
     }
   }
 
   render_submenu(menu_path, submenu_item) {
     const submenu_path = menu_path + '/' + submenu_item.name;
+    const submenu_value = submenu_item.hasOwnProperty('id') ? submenu_item.id : null;
     return (
-      <div id={'sub_menu_' + submenu_item.name} key={'submenu_' + submenu_path} className="main-menu-sub-item-wrapper" onClick={() => this.menu_click(submenu_path)}>
+      <div id={'sub_menu_' + submenu_item.name} key={'submenu_' + submenu_path} className="main-menu-sub-item-wrapper" onClick={() => this.menu_click(submenu_value)}>
         <div id={'sub_menu_text_' + submenu_item.name} key={submenu_path} className="main-menu-sub-item">{submenu_item.name}</div>
       </div>
     );

@@ -1,0 +1,118 @@
+
+.files-wrapper {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-content: center;
+    align-items: stretch;
+    left: 0px;
+}
+
+.files-header {
+    display: flex;
+    flex-direction: row;
+    align-content: space-between;
+    align-items:stretch;
+}
+
+.files-header-text {
+    flex: 1;
+    min-height: 5vh;
+    padding-left:10px;
+    white-space: nowrap;
+}
+
+.files-header-fill {
+    flex: 10;
+}
+
+.files-types-add-new-wrapper {
+    flex: 5;
+    display: flex;
+    flex-direction: row;
+    align-content: flex-end;
+    align-items:stretch;
+}
+
+.files-types-list-wrapper {
+    align-self: end;
+}
+
+.files-add-new-button-wrapper {
+    align-self: end;
+}
+
+.files-types-option {
+}
+
+.files-type-option-select {
+}
+
+.files-types-option-item {
+}
+
+.files-table {
+    border-width: 1px 1px 1px 1px;
+    border-color: black;
+    border-style: solid;
+}
+
+.files-table-titles {
+}
+
+.files-title-text {
+    min-width: 3vw;
+    height: calc(1em + 20px);
+    background-color: lightgrey;
+    color: black;    
+    font-size: small;
+    font-weight: bold;
+}
+
+.files-title-extra {
+}
+
+.files-add-new-button {
+    margin: 5px;
+    padding: 5px;
+    border: 1px solid black;
+    border-radius: 5px;
+    background-color: powderblue;
+    font-weight: normal !important;
+    cursor: pointer;
+}
+
+.files-detail-row {
+}
+
+.files-detail-name {
+    font-weight: bold;
+}
+
+.files-detail-type {
+}
+
+.files-detail-location {
+}
+
+.files-detail-id {
+}
+
+.files-detail-edit {
+    margin: 5px;
+    padding: 5px;
+    border: 1px solid black;
+    border-radius: 5px;
+    background-color: lightgreen;
+    max-width: 5em;
+}
+
+.files-detail-delete {
+    margin: 5px;
+    padding: 5px;
+    border: 1px solid black;
+    border-radius: 5px;
+    background-color: mistyrose;
+}
+

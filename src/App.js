@@ -1,6 +1,7 @@
 import { Component } from 'react';
 import states from './States';
 import MainMenu from './MainMenu';
+import AFiles from './AFiles';
 import './App.css';
 
 var sidemenu = [
@@ -9,11 +10,8 @@ var sidemenu = [
 var menu = [
 { name: 'Data sources',
   items: [{
-    name: 'iRODS'
-  }, {
-    name: 'Server'
-  }, {
-    name: 'Upload'
+    name: 'Files',
+    id: states.files
   }]
 }
 ];
@@ -29,8 +27,8 @@ class App extends Component {
     }
   }
 
-  main_menu_selected(menu_path) {
-    console.log(menu_path);
+  main_menu_selected(menu_id) {
+    this.setState({mode: menu_id})
   }
 
   render() {
@@ -54,6 +52,7 @@ class App extends Component {
           </span>
           <span id="main_area" className="main-area">
             {this.state.mode === states.main_menu && <MainMenu menu={main_menu} selected={this.main_menu_selected} />}
+            {this.state.mode === states.files && <AFiles />}
           </span>
         </span>
       </div>

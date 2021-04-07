@@ -1,0 +1,47 @@
+
+.file-edit-wrapper {
+    position: absolute;
+    left: 10vw;
+    top: 10vh;
+    min-width: 80%;
+    max-width: 80%;
+    min-height: 20%;
+    max-height: 80%;
+    border: 1px solid black;
+    border-radius: 10px;
+    background-color: white;
+    display: flex;
+    flex-direction: column;
+    align-content: flex-start;
+    align-items: stretch;
+}
+
+.file-edit-titlebar {
+    background-color: lightgrey;
+    border-radius: 10px 10px 0 0 ;
+    color: black;
+    font-size: large;
+    text-align: center;
+    min-height: 1.5em;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+}
+
+.file-edit-titlebar-left {
+    flex: 1;
+}
+
+.file-edit-titlebar-center {
+    flex: 5;
+}
+
+.file-edit-titlebar-right {
+    flex: 1;
+    padding-right: 10px;
+    text-align: end;
+}
+
+.file-edit-titlebar-close {
+    cursor: pointer;
+}
