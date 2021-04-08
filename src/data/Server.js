@@ -1,6 +1,6 @@
 // Server-side data browsing
-import IData from '/data/IData'
-import Utils from './Utils'
+import IData from './IData';
+import Utils from '../Utils';
 
 class Server extends IData {
 

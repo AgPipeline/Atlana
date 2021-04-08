@@ -1,5 +1,5 @@
 // Server-side data browsing
-import IData from '/data/IData'
+import IData from '/data/IData';
 
 class iRODS extends IData {
 

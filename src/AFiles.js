@@ -1,7 +1,7 @@
 // Files UI implementation
 import { Component } from 'react';
-import FileInterfaces from './FileInterfaces'
-import AFilesEdit from './AFilesEdit'
+import FileInterfaces from './FileInterfaces';
+import AFilesEdit from './AFilesEdit';
 import './AFiles.css';
 
 // Configured files
@@ -29,6 +29,8 @@ class AFiles extends Component {
     this.getTitle = this.getTitle.bind(this);
     this.updateNewType = this.updateNewType.bind(this);
 
+    this.fileInterfaces = FileInterfaces.getFileInterfaceTypes();
+
     this.state = {
       mode: null,
       mode_name: '',
@@ -46,7 +48,7 @@ class AFiles extends Component {
     }
     console.log("Add " + this.new_type_id);
     const cur_mode = this.new_type_id;
-    let cur_mode_name = FileInterfaces.find(item => ('' + item.id === '' + cur_mode));
+    let cur_mode_name = FileInterfaces.findById(cur_mode);
     if (cur_mode_name) {
       cur_mode_name = cur_mode_name.prompt;
     } else {
@@ -97,7 +99,7 @@ class AFiles extends Component {
               <div id="files_types_list_wrapper" className="files-types-list-wrapper">
                 <select name="files_types" id="files_types" onChange={this.updateNewType}>
                   <option value="" className="files-types-option files-type-option-select">--Please select--</option>
-                  {FileInterfaces.map((item) => {return (<option value={item.id} key={item.id} className="files-types-options files-types-option-item">{item.name}</option>);}
+                  {this.fileInterfaces.map((item) => {return (<option value={item.id} key={item.id} className="files-types-options files-types-option-item">{item.name}</option>);}
                   )}
                 </select>
               </div>
@@ -128,7 +130,8 @@ class AFiles extends Component {
             </tbody>
           </table>
         </div>
-        {this.state.mode !== null && <AFilesEdit title={this.state.mode_title} source={this.state.mode} name={this.state.mode_name} cancel={this.cancelEdit} submit={this.finishEdit} />}
+        {this.state.mode !== null &&
+            <AFilesEdit title={this.state.mode_title} source={this.state.mode} name={this.state.mode_name} path="/" cancel={this.cancelEdit} submit={this.finishEdit} />}
       </>
       );
   }
