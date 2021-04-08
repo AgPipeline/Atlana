@@ -34,7 +34,7 @@ class AFilesEdit extends Component {
     }
 
     // If we have a starting path, make the request
-    this.fetchRequestStart();
+    this.fetchRequestStart(this.state.cur_path);
   }
 
   fetchRequestStart(path) {
@@ -43,11 +43,8 @@ class AFilesEdit extends Component {
       alert("Unable to complete request at this time, please wait and try again");
       return;
     }
-    this.pending_fetch = new Promise();
     this.setState({fetching: true});
-  }
-
-  fetchRequestMake(path) {
+    this.pending_fetch = new Promise();
   }
 
   fetchRequestFinish(request_id, path, results) {
