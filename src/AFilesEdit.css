@@ -151,6 +151,15 @@
     overflow: scroll;
 }
 
+.file-edit-path-contents-title-wrapper {
+    display: flex;
+    flex-direction: row;
+    align-content: space-around;
+    align-items: flex-start;
+    cursor: pointer;
+    background-color: #d0d0d0;
+}
+
 .file-edit-path-display-item-wrapper {
     display: flex;
     flex-direction: row;

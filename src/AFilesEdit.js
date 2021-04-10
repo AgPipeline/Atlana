@@ -4,6 +4,8 @@ import FileInterfaces from './FileInterfaces';
 import IData from './data/IData';
 import './AFilesEdit.css';
 
+var file_display_titles = {'Name', 'Size', 'Date'};
+
 class AFilesEdit extends Component {
   constructor(props) {
     super(props);
@@ -11,6 +13,7 @@ class AFilesEdit extends Component {
     this.displayContents = this.displayContents.bind(this);
     this.displayFetchWait = this.displayFetchWait.bind(this);
     this.displayPathItem = this.displayPathItem.bind(this);
+    this.displayPathTitle = this.displayPathTitle.bind(this);
     this.fetchRequestCatch = this.fetchRequestCatch.bind(this);
     this.fetchRequestError = this.fetchRequestError.bind(this);
     this.fetchRequestFinish = this.fetchRequestFinish.bind(this);
@@ -138,6 +141,12 @@ class AFilesEdit extends Component {
     );
   }
 
+  displayPathTitle(item) {
+    return (
+      null
+    );
+  }
+
   displayContents() {
     let parent_el = document.getElementById('file_edit_path_display');
     if (!parent_el) {
@@ -164,6 +173,9 @@ class AFilesEdit extends Component {
 
     return (
       <div id="file_edit_path_display_contents" className="file-edit-path-display-contents" style={display_style}>
+      <div id="file_edit_path_contents_title_wrapper" className="file-edit-path-contents-title-wrapper">
+        {file_display_titles.map(this.displayPathTitle)}
+      </div>
         {folder_navigation && folder_navigation.map(this.displayPathItem)}
         {this.state.path_contents && this.state.path_contents.map(this.displayPathItem)}
       </div>
