@@ -4,7 +4,7 @@ import FileInterfaces from './FileInterfaces';
 import IData from './data/IData';
 import './AFilesEdit.css';
 
-var file_display_titles = {'Name', 'Size', 'Date'};
+var file_display_titles = ['Name', 'Size', 'Date'];
 
 class AFilesEdit extends Component {
   constructor(props) {
@@ -134,16 +134,28 @@ class AFilesEdit extends Component {
     const click_cb = item.type ==='file' ?  null : () => this.folderSelected(item.path);
 
     return (
-      <div id={idx + '_display-item-wrapper'} className="file-edit-path-display-item-wrapper" onClick={click_cb}>
-        <img src={image_source} alt=""/>
-        <div id={idx + '_' + item.name} key={item.name} className={'file-edit-path-display-item ' + item_class_name}>{item.name}</div>
-      </div>
+      <>
+        <div id={idx + '_display-item-wrapper'} className="file-edit-path-display-item-wrapper" onClick={click_cb}>
+          <div className="file-edit-path-item file-edit-path-display-file-wrapper">
+            <img src={image_source} alt=""/>
+            <div id={idx + '_' + item.name} key={item.name} className={'file-edit-path-display-item ' + item_class_name}>{item.name}</div>
+          </div>
+          <div id={idx + '_display_item_size'} className="file-edit-path-item file-edit-path-display-size">
+            {item.size}
+          </div>
+          <div id={idx + '_display_item_date'} className="file-edit-path-item file-edit-path-display-date">
+            {item.date}
+          </div>
+        </div>
+      </>
     );
   }
 
-  displayPathTitle(item) {
+  displayPathTitle(title_text, title_index) {
     return (
-      null
+      <div id={'title_' + title_index + '_wrapper'} className="file-edit-path-item file-edit-path-display-title-item-wrapper">
+        <div id={'title_' + title_index} className="file-edit-path-display-title-item">{title_text}</div>
+      </div>
     );
   }
 
@@ -172,13 +184,15 @@ class AFilesEdit extends Component {
     }
 
     return (
+    <>
+        <div id="file_edit_path_contents_title_wrapper" className="file-edit-path-contents-title-wrapper">
+          {file_display_titles.map(this.displayPathTitle)}
+        </div>
       <div id="file_edit_path_display_contents" className="file-edit-path-display-contents" style={display_style}>
-      <div id="file_edit_path_contents_title_wrapper" className="file-edit-path-contents-title-wrapper">
-        {file_display_titles.map(this.displayPathTitle)}
-      </div>
         {folder_navigation && folder_navigation.map(this.displayPathItem)}
         {this.state.path_contents && this.state.path_contents.map(this.displayPathItem)}
       </div>
+    </>
     );
   }
 

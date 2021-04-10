@@ -152,15 +152,26 @@
 }
 
 .file-edit-path-contents-title-wrapper {
+    width: 100%;
     display: flex;
     flex-direction: row;
     align-content: space-around;
     align-items: flex-start;
     cursor: pointer;
-    background-color: #d0d0d0;
+    background-color: #e8e8e8;
+    border-bottom: 1px solid grey;
+    margin-bottom: 5px;
+}
+
+.file-edit-path-item {
+    width: 40%;
+}
+
+.file-edit-path-display-title-item-wrapper {
 }
 
 .file-edit-path-display-item-wrapper {
+    width: 100%;
     display: flex;
     flex-direction: row;
     align-content: space-around;
@@ -177,12 +188,27 @@
     font-size: smaller;
     padding-left: 5px;
 }
+.file-edit-path-display-file-wrapper {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-content: space-around;
+    align-items: flex-start;
+    cursor: pointer;
+}
 
 .file-edit-path-display-file {
 }
 
 .file-edit-path-display-folder {
     font-weight: bold;
+}
+
+.file-edit-path-display-size {
+}
+
+.file-edit-path-display-date {
+    white-space: nowrap;
 }
 
 .file-edit-footer {
