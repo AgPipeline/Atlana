@@ -22,16 +22,24 @@ class Server extends IData {
 
   // Get the folder contents of the specified path
   listFolder(path, filter, success_cb, failure_cb) {
-    const uri = Utils.getHostOrigin().concat('/server/files');
+    let uri = Utils.getHostOrigin().concat('/server/files');
 
-    fetch(uri, {
-      method: 'GET',
-      body: JSON.stringify({path, filter}),
-      }
-    )
-    .then(response => response.json())
-    .then(success => {success_cb(success)})
-    .catch(error => {failure_cb(error);});
+    uri += '?' + encodeURIComponent('path') + '=' + encodeURIComponent(path);
+    uri += '&' + encodeURIComponent('filter') + '=' + encodeURIComponent(filter);
+
+    try {
+      fetch(uri, {
+        method: 'GET',
+        }
+      )
+      .then(response => response.json())
+      .then(success => success_cb(success))
+      .catch(error => failure_cb(error));
+
+    } catch (err) {
+      console.log("SERVER exception", err);
+      throw err;
+    }
   }
 }
 

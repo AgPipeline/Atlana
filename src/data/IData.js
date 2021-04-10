@@ -26,8 +26,7 @@ class IData {
     return null;
   }
 
-  connect(auth_info, success_cb, failure_cb) {
-    success_cb(null);
+  connect(auth_info) {
     return null;
   }
 

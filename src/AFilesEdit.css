@@ -28,6 +28,7 @@
 .file-edit-titlebar {
     background-color: lightgrey;
     border-radius: 10px 10px 0 0 ;
+    border-bottom: 1px solid grey;
     color: black;
     font-size: large;
     text-align: center;
@@ -78,7 +79,7 @@
     display: flex;
     flex-direction: row;
     align-content: flex-start;
-    align-items: stretch;
+    align-items: space-around;
     padding: 10px;
 }
 
@@ -91,6 +92,18 @@
 
 .file-edit-path-edit {
     min-width: 70%;
+}
+
+.file-edit-path-edit-go {
+    min-width: 10px;
+    height: 20px;
+    margin-left: 10px;
+    padding-right: 5px;
+    padding-left: 5px;
+    background-color: #d8ffd8;
+    border: 1px solid black;
+    border-radius: 5px;
+    font-size: small;
 }
 
 .file-edit-path-display-wrapper {
@@ -128,4 +141,69 @@
     flex-direction: row;
     align-content: space-around;
     align-items: center;
+}
+
+.file-edit-path-display-contents {
+    display: flex;
+    flex-direction: column;
+    align-content: flex-start;
+    align-items: flex-start;
+    overflow: scroll;
+}
+
+.file-edit-path-display-item-wrapper {
+    display: flex;
+    flex-direction: row;
+    align-content: space-around;
+    align-items: flex-start;
+    cursor: pointer;
+}
+
+.file-edit-path-display-item-wrapper:hover {
+    background-color: #e0e0e0;
+}
+
+.file-edit-path-display-item {
+    height: 1.5em;
+    font-size: smaller;
+    padding-left: 5px;
+}
+
+.file-edit-path-display-file {
+}
+
+.file-edit-path-display-folder {
+    font-weight: bold;
+}
+
+.file-edit-footer {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.file-edit-footer-spacer {
+    flex: 80%;
+}
+
+.file-edit-button {
+    min-width: 20px;
+    height: 20px;
+    border: 1px solid grey;
+    padding-right: 5px;
+    padding-left: 5px;
+    border-radius: 5px;
+}
+
+.file-edit-ok {
+    background-color: #d8ffd8;
+    margin-left: 20px;
+}
+
+.file-edit-cancel {
+    background-color: #e0e0e0;
+    margin-right: 20px;
 }

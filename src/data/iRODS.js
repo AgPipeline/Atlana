@@ -47,7 +47,7 @@ class iRODS extends IData {
   }
 
   // Attempt to connect to iRODS
-  connect(auth_info, success_cb, failure_cb) {
+  connect(auth_info) {
   }
 
   // Get the folder contents of the specified path

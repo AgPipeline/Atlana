@@ -131,7 +131,7 @@ class AFiles extends Component {
           </table>
         </div>
         {this.state.mode !== null &&
-            <AFilesEdit title={this.state.mode_title} source={this.state.mode} name={this.state.mode_name} path="/" cancel={this.cancelEdit} submit={this.finishEdit} />}
+            <AFilesEdit title={this.state.mode_title} source={this.state.mode} path="/" cancel={this.cancelEdit} submit={this.finishEdit} />}
       </>
       );
   }
