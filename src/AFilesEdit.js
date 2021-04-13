@@ -110,7 +110,7 @@ class AFilesEdit extends Component {
   }
 
   fetchRequestError(msg) {
-    // TODO: Display error message
+    this.displayError(msg);
     this.pending_fetch = null;
     this.setState({fetching: false});
   }
@@ -401,7 +401,7 @@ class AFilesEdit extends Component {
 
     if (this.props.hasOwnProperty('name_check')) {
       if (!this.props.name_check(name)) {
-        this.displayError("Duplicate name found. Please rename and try again.");
+        this.displayError("Duplicate or invalid name found. Please rename and try again.");
         el.focus();
         return;
       }
