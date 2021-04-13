@@ -104,6 +104,7 @@
     border: 1px solid black;
     border-radius: 5px;
     font-size: small;
+    cursor: pointer;
 }
 
 .file-edit-path-display-wrapper {
@@ -137,55 +138,45 @@
 }
 
 .file-edit-path-display-wait-wrapper {
+    position: absolute;
     display: flex;
     flex-direction: row;
     align-content: space-around;
     align-items: center;
+    background-color: rgb(230, 230, 230, .7);
 }
 
-.file-edit-path-display-contents {
-    display: flex;
-    flex-direction: column;
-    align-content: flex-start;
-    align-items: flex-start;
-    overflow: scroll;
-}
-
-.file-edit-path-contents-title-wrapper {
+.file-edit-path-contents-table-wrapper {
     width: 100%;
-    display: flex;
-    flex-direction: row;
-    align-content: space-around;
-    align-items: flex-start;
-    cursor: pointer;
-    background-color: #e8e8e8;
-    border-bottom: 1px solid grey;
-    margin-bottom: 5px;
+    overflow-y: scroll;
+    height: 30vh;
+}
+
+.file-edit-path-contents-table-header {
+    position: -webkit-sticky;
+    position: sticky;
+    top: 0;
+    background-color: #e0e0e0;
+}
+
+.file-edit-path-contents-table {
+    width: 100%;
 }
 
 .file-edit-path-item {
     width: 40%;
+    height: 1.5em;
+    font-size: smaller;
+    white-space: nowrap;
 }
 
 .file-edit-path-display-title-item-wrapper {
 }
 
-.file-edit-path-display-item-wrapper {
-    width: 100%;
-    display: flex;
-    flex-direction: row;
-    align-content: space-around;
-    align-items: flex-start;
-    cursor: pointer;
-}
-
-.file-edit-path-display-item-wrapper:hover {
-    background-color: #e0e0e0;
+.file-edit-path-display-item-row {
 }
 
 .file-edit-path-display-item {
-    height: 1.5em;
-    font-size: smaller;
     padding-left: 5px;
 }
 .file-edit-path-display-file-wrapper {
@@ -198,17 +189,25 @@
 }
 
 .file-edit-path-display-file {
+    font-style: italic;
+}
+
+.file-edit-path-display-file:hover {
+    background-color: #e0e0e0;
 }
 
 .file-edit-path-display-folder {
     font-weight: bold;
 }
 
+.file-edit-path-display-folder:hover {
+    background-color: #e0e0e0;
+}
+
 .file-edit-path-display-size {
 }
 
 .file-edit-path-display-date {
-    white-space: nowrap;
 }
 
 .file-edit-footer {
@@ -236,9 +235,11 @@
 .file-edit-ok {
     background-color: #d8ffd8;
     margin-left: 20px;
+    cursor: pointer;
 }
 
 .file-edit-cancel {
     background-color: #e0e0e0;
     margin-right: 20px;
+    cursor: pointer;
 }

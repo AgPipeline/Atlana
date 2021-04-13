@@ -4,32 +4,35 @@ import FileInterfaces from './FileInterfaces';
 import IData from './data/IData';
 import './AFilesEdit.css';
 
-var file_display_titles = ['Name', 'Size', 'Date'];
+var file_display_titles = ['Name', 'Date', 'Size'];
 
 class AFilesEdit extends Component {
   constructor(props) {
     super(props);
 
     this.displayContents = this.displayContents.bind(this);
+    this.displayError = this.displayError.bind(this);
     this.displayFetchWait = this.displayFetchWait.bind(this);
     this.displayPathItem = this.displayPathItem.bind(this);
-    this.displayPathTitle = this.displayPathTitle.bind(this);
     this.fetchRequestCatch = this.fetchRequestCatch.bind(this);
     this.fetchRequestError = this.fetchRequestError.bind(this);
     this.fetchRequestFinish = this.fetchRequestFinish.bind(this);
     this.fetchRequestStart = this.fetchRequestStart.bind(this);
     this.generateInterfaceItem = this.generateInterfaceItem.bind(this);
     this.generateInterfaceUI = this.generateInterfaceUI.bind(this);
+    this.handleDocumentKey = this.handleDocumentKey.bind(this);
+    this.handleGoButton = this.handleGoButton.bind(this);
     this.handlePathKey = this.handlePathKey.bind(this);
     this.onCancel = this.onCancel.bind(this);
     this.onNameUpdated = this.onNameUpdated.bind(this);
+    this.onOk = this.onOk.bind(this);
     this.onPathUpdated = this.onPathUpdated.bind(this);
 
     this.interface = FileInterfaces.getInterface(props.source);
     this.interface_info = this.interface.initialize();
 
     let cur_path = this.props.path ? this.props.path : '/';
-    let cur_name = this.props.name ? this.props.nam : this.interface_info.name;
+    let cur_name = this.props.edit_item ? this.props.edit_item.name : this.interface_info.name;
 
     this.state = {
       cur_path: cur_path,     // Current working path
@@ -41,15 +44,17 @@ class AFilesEdit extends Component {
 
   pending_fetch = null;       // Current pending request
   pending_fetch_id = 1;       // The ID of the current pending fetch
-  paths_trail = [];           // Array of paths browsed
+  authentication = {};        // Authentication information
 
   componentDidMount() {
-    // Hook up Enter key screening
+    // Hook up key screenings
     {
       let el = document.getElementById('file_edit_path_edit');
       if (el) {
         el.addEventListener('keydown', this.handlePathKey, false);
       }
+
+      document.addEventListener('keydown',  this.handleDocumentKey, false);
     }
 
     // If we are already fetching, display the waiting UI
@@ -66,9 +71,11 @@ class AFilesEdit extends Component {
   }
 
   componentWillUnmount() {
+    document.removeEventListener('keydown',  this.handleDocumentKey, false);
+
     let el = document.getElementById('file_edit_path_edit');
     if (el) {
-      el.removeEventListener("keydown", this.keyPress, false);
+      el.removeEventListener("keydown", this.handlePathKey, false);
     }
   }
 
@@ -92,14 +99,9 @@ class AFilesEdit extends Component {
       return;
     }
 
-    //  Save the new path if we're not there already by checking the last element on the list
-    if ((this.paths_trail.length <= 0) || (this.paths_trail[this.paths_trail.length - 1] !== path)) {
-      this.paths_trail.push(path);
-    }
-
     // Remove pending status  and update state
     this.pending_fetch = null;
-    this.setState({fetching: false, cur_path: path, path_contents: results});
+    this.setState({fetching: false, cur_path: path.replaceAll('\\', '/'), path_contents: results});
   }
 
   fetchRequestCatch(err) {
@@ -118,9 +120,14 @@ class AFilesEdit extends Component {
 
     // Check for special up-one-level folder
     if (new_path === '..') {
-      if (this.paths_trail.length > 1) {
-        this.paths_trail.pop()
-        cur_path = this.paths_trail[this.paths_trail.length - 1];
+      if (this.state.cur_path.length > 1) {
+        let parts = this.state.cur_path.split('/');
+        console.log("FOLDER",parts);
+        if (parts.length > 1) {
+          parts.pop();
+        }
+        cur_path = ('/'  + parts.join('/')).replaceAll('//', '/');
+        console.log("NEW:", cur_path);
       } else {
         cur_path = this.props.path;
       }
@@ -132,30 +139,23 @@ class AFilesEdit extends Component {
     const item_class_name = item.type ==='file' ? 'file-edit-path-display-file' : 'file-edit-path-display-folder';
     const image_source = item.type ==='file' ? 'file_image.png' : 'folder_image.png';
     const click_cb = item.type ==='file' ?  null : () => this.folderSelected(item.path);
+    const item_size = item.type ==='file' ? item.size : '';
 
     return (
-      <>
-        <div id={idx + '_display-item-wrapper'} className="file-edit-path-display-item-wrapper" onClick={click_cb}>
-          <div className="file-edit-path-item file-edit-path-display-file-wrapper">
+      <tr className="file-edit-path-display-item-row" key={'row_' + item.name} >
+        <td id={idx + '_display-item-wrapper'} className="file-edit-path-item" onClick={click_cb}>
+          <div className="file-edit-path-display-file-wrapper">
             <img src={image_source} alt=""/>
             <div id={idx + '_' + item.name} key={item.name} className={'file-edit-path-display-item ' + item_class_name}>{item.name}</div>
           </div>
-          <div id={idx + '_display_item_size'} className="file-edit-path-item file-edit-path-display-size">
-            {item.size}
-          </div>
-          <div id={idx + '_display_item_date'} className="file-edit-path-item file-edit-path-display-date">
-            {item.date}
-          </div>
-        </div>
-      </>
-    );
-  }
-
-  displayPathTitle(title_text, title_index) {
-    return (
-      <div id={'title_' + title_index + '_wrapper'} className="file-edit-path-item file-edit-path-display-title-item-wrapper">
-        <div id={'title_' + title_index} className="file-edit-path-display-title-item">{title_text}</div>
-      </div>
+        </td>
+        <td id={idx + '_display_item_date'} className="file-edit-path-item file-edit-path-display-date">
+          {item.date}
+        </td>
+        <td id={idx + '_display_item_size'} className="file-edit-path-item file-edit-path-display-size">
+          {item_size}
+        </td>
+      </tr>
     );
   }
 
@@ -177,23 +177,32 @@ class AFilesEdit extends Component {
     display_style['height'] = client_rect.height;
 
     let folder_navigation = null;
-    if (this.state.cur_path !== this.props.path) {
+    if (this.state.cur_path !== '/') {
       folder_navigation = [{
         name: '..', path: '..', type: 'folder'
       }]
     }
 
     return (
-    <>
-        <div id="file_edit_path_contents_title_wrapper" className="file-edit-path-contents-title-wrapper">
-          {file_display_titles.map(this.displayPathTitle)}
-        </div>
-      <div id="file_edit_path_display_contents" className="file-edit-path-display-contents" style={display_style}>
-        {folder_navigation && folder_navigation.map(this.displayPathItem)}
-        {this.state.path_contents && this.state.path_contents.map(this.displayPathItem)}
+      <div id="file_edit_path_contents_table_wrapper" className="file-edit-path-contents-table-wrapper">
+        <table id="file_edit_path_contents_table" className="file-edit-path-contents-table">
+          <thead>
+            <tr>
+              {file_display_titles.map((title) => {return(<th key={'file_edit_path_contents_table_' + title} className="file-edit-path-contents-table-header">{title}</th>);})}
+            </tr>
+          </thead>
+          <tbody>
+              {folder_navigation && folder_navigation.map(this.displayPathItem)}
+              {this.state.path_contents && this.state.path_contents.map(this.displayPathItem)}
+          </tbody>
+        </table>
       </div>
-    </>
     );
+  }
+
+  displayError(msg) {
+    // TODO    
+    console.log("ERROR", msg);
   }
 
   displayFetchWait() {
@@ -328,9 +337,38 @@ class AFilesEdit extends Component {
     );
   }
 
+  handleDocumentKey(ev) {
+    switch(ev.key) {
+      case'Escape':
+        this.onCancel();
+        break;
+
+      default: break;
+    }
+  }
+
+  handleGoButton(ev) {
+    let path_el = document.getElementById('file_edit_path_edit');
+
+    if (path_el && path_el.value) {
+      this.fetchRequestStart(path_el.value);
+    }
+  }
+
   handlePathKey(ev) {
-    if (ev.key === 'Enter') {
-      this.fetchRequestStart(ev.target.value);
+    switch(ev.key) {
+      case 'Enter':
+        this.fetchRequestStart(ev.target.value);
+        break;
+
+      case'Escape':
+        let el = document.getElementById('file_edit_path_edit');
+        if (el)
+          el.blur();
+        ev.stopImmediatePropagation();
+        break;
+
+      default: break;
     }
   }
 
@@ -340,7 +378,43 @@ class AFilesEdit extends Component {
 
   onNameUpdated(ev) {
     this.setState({name: ev.target.value});
-    console.log("NAME UPDATE", ev.target.value);
+  }
+
+  onOk() {
+    let el = document.getElementById('file_edit_name_edit');
+    const name = el ? el.value : '';
+
+    if (!name || (name.length <= 0)) {
+      this.displayError("Please enter a name and try again");
+      el.focus();
+      return;
+    }
+
+    el =  document.getElementById('file_edit_path_edit');
+    const path = el ? el.value : '';
+
+    if (!path || (path.length <= 0)) {
+      this.displayError("Please enter a path and try again");
+      el.focus();
+      return;
+    }
+
+    if (this.props.hasOwnProperty('name_check')) {
+      if (!this.props.name_check(name)) {
+        this.displayError("Duplicate name found. Please rename and try again.");
+        el.focus();
+        return;
+      }
+    }
+
+    let item_id = null;
+    if (this.props.hasOwnProperty('edit_item') && this.props.edit_item) {
+      if (this.props.edit_item.hasOwnProperty('id')) {
+        item_id = this.props.edit_item['id'];
+      }
+    }
+
+    this.props.submit(this.props.source, name, path, this.authentication, item_id);
   }
 
   onPathUpdated(ev) {
@@ -351,7 +425,6 @@ class AFilesEdit extends Component {
     const cur_path = this.state.cur_path;
     const cur_name = this.state.name;
 
-    // TODO Add "go" button next to path
     return (
     <div id="file_edit_background" className="file-edit-background">
       <div id="file_edit_wrapper" className="file-edit-wrapper">
@@ -374,20 +447,20 @@ class AFilesEdit extends Component {
           <div id="file_edit_path_edit_wrapper" className="file-edit-path-edit-wrapper">
             <input id="file_edit_path_edit" type="text" size="60" maxLength="1024" value={cur_path.toString()} onChange={this.onPathUpdated} className="file-edit-path-edit"></input>
           </div>
-          <div id="file_edit_path_edit_go" class="file-edit-path-edit-go">...</div>
+          <div id="file_edit_path_edit_go" className="file-edit-path-edit-go" onClick={this.handleGoButton} >...</div>
         </div>
         <div id="file_edit_path_display_wrapper" className="file-edit-path-display-wrapper">
           <div id="file_edit_path_display" className="file-edit-path-display">
           {this.state.path_contents && this.displayContents()}
-          {this.state.fetching && this.displayFetchWait()}
           </div>
         </div>
         <div name="file_edit_footer" className="file-edit-footer">
-          <div name="file_edit_ok" className="file-edit-button file-edit-ok">OK</div>
+          <div name="file_edit_ok" className="file-edit-button file-edit-ok" onClick={this.onOk}>OK</div>
           <div name="file_edit_spacer" className="file-edit-footer-spacer"></div>
-          <div name="file_edit_cancel" className="file-edit-button file-edit-cancel">Cancel</div>
+          <div name="file_edit_cancel" className="file-edit-button file-edit-cancel" onClick={this.onCancel}>Cancel</div>
         </div>
       </div>
+      {this.state.fetching && this.displayFetchWait()}
     </div>
     );
   }

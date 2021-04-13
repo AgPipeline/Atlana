@@ -2,6 +2,7 @@ import { Component } from 'react';
 import states from './States';
 import MainMenu from './MainMenu';
 import AFiles from './AFiles';
+import ConfigStore from './ConfigStore';
 import './App.css';
 
 var sidemenu = [
@@ -20,19 +21,38 @@ class App extends Component {
   constructor(props) {
     super(props);
 
-    this.main_menu_selected = this.main_menu_selected.bind(this);
+    this.addFile = this.addFile.bind(this);
+    this.getFiles = this.getFiles.bind(this);
+    this.mainMenuSelected = this.mainMenuSelected.bind(this);
 
     this.state = {
       mode: states.main_menu,
     }
   }
 
-  main_menu_selected(menu_id) {
+  addFile(new_file_def) {
+    ConfigStore.addFile(new_file_def);
+  }
+
+  deleteFile(item_id) {
+    ConfigStore.deleteItemById(item_id);
+  }
+
+  getFiles() {
+    return ConfigStore.getFiles();
+  }
+
+  mainMenuSelected(menu_id) {
     this.setState({mode: menu_id})
+  }
+
+  updateFile(old_item_id, updated_file_def) {
+    ConfigStore.updateFile(old_item_id, updated_file_def);
   }
 
   render() {
     const main_menu = menu;
+
     return (
       <div className="app">
         <header className="app-header">
@@ -51,8 +71,8 @@ class App extends Component {
             }
           </span>
           <span id="main_area" className="main-area">
-            {this.state.mode === states.main_menu && <MainMenu menu={main_menu} selected={this.main_menu_selected} />}
-            {this.state.mode === states.files && <AFiles />}
+            {this.state.mode === states.main_menu && <MainMenu menu={main_menu} selected={this.mainMenuSelected} />}
+            {this.state.mode === states.files && <AFiles files={this.getFiles} addFile={this.addFile} updateFile={this.updateFile} deleteFile={this.deleteFile}/>}
           </span>
         </span>
       </div>

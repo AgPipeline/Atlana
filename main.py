@@ -16,6 +16,26 @@ cors = CORS(app, resources={r"/files": {"origins": "http://127.0.0.1:3000"}})
 
 FILE_START_PATH = os.path.abspath(os.path.dirname(__file__))
 
+def normalizePath(path: str) -> str:
+    """Normalizes the path to the current OS separator character
+    Arguments:
+        path: the path to localize
+    Return:
+        Returns the localized path, which may be unchanged
+    """
+    if os.path.sep == '/':
+        to_replace = '\\'
+    else:
+        to_replace = '/'
+
+    parts = path.split(to_replace)
+    if len(parts) <= 1:
+        return os.path.sep.join(parts)
+
+    # Strip out doubled up separators
+    new_parts = [one_part for one_part in parts if len(parts) > 0]
+    return os.path.sep.join(parts)
+
 
 @app.route('/server/files', methods=['GET'])
 #@cross_origin()
@@ -27,16 +47,28 @@ def files() -> tuple:
         file_filter: the filter to apply to the returned names
     """
     return_names = []
+    have_error = False
 
     path = request.args['path']
     file_filter = request.args['filter']
 
-    working_path = path;
-    if working_path[0] == '/':
-        working_path = '.'  + path;
-    cur_path = os.path.abspath(os.path.join(FILE_START_PATH, working_path))
-    if not cur_path.startswith(FILE_START_PATH):
-        print('Invalid path requested: "%s"' % path, flush=True)
+    if len(path) <= 0:
+        print('Zero length path requested' % path, flush=True)
+        return 'Resource not found', 400
+
+    try:
+        working_path = normalizePath(path);
+        if working_path[0] == '/':
+            working_path = '.'  + working_path;
+        cur_path = os.path.abspath(os.path.join(FILE_START_PATH, working_path))
+        if not cur_path.startswith(FILE_START_PATH):
+            print('Invalid path requested: "%s"' % path, flush=True)
+            return 'Resource not found', 400
+    except FileNotFoundError as ex:
+        print("A file not found exception was caught:",  ex)
+        have_error = true;
+
+    if have_error:
         return 'Resource not found', 400
 
     for one_file in os.listdir(cur_path):

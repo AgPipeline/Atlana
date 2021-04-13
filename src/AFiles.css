@@ -86,6 +86,9 @@
 .files-detail-row {
 }
 
+.files-detail-item {
+}
+
 .files-detail-name {
     font-weight: bold;
 }
@@ -105,7 +108,7 @@
     border: 1px solid black;
     border-radius: 5px;
     background-color: lightgreen;
-    max-width: 5em;
+    cursor: pointer;
 }
 
 .files-detail-delete {
@@ -114,5 +117,6 @@
     border: 1px solid black;
     border-radius: 5px;
     background-color: mistyrose;
+    cursor: pointer;
 }
 
