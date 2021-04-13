@@ -1,4 +1,5 @@
 // Heirarchical file browsing definition interface
+import iRODS from './data/iRODS';
 import Server from './data/Server';
 
 // Different file implementations
@@ -7,7 +8,7 @@ var file_interface_types = [
   name: 'iRODS',
   prompt: 'iRODS Definition',
   id: 2,
-  create: () => {console.log("iRODS not implemented"); return null;}
+  create: () => {return new iRODS();}
 }, {
   name: 'Server side',
   prompt: 'Server-side Definition',

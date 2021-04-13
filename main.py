@@ -6,12 +6,15 @@ import fnmatch
 #from osgeo import gdal, osr
 #from PIL import Image
 #from flask import Flask, request, send_file, make_response, render_template
+from irods.session import iRODSSession
 import time
-from flask import Flask, request
+from flask import Flask, request, session
 from flask_cors import CORS, cross_origin
 #from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'this is not quite so secret a key'    # Replace with random string
+
 cors = CORS(app, resources={r"/files": {"origins": "http://127.0.0.1:3000"}})
 
 FILE_START_PATH = os.path.abspath(os.path.dirname(__file__))
@@ -54,7 +57,7 @@ def files() -> tuple:
 
     if len(path) <= 0:
         print('Zero length path requested' % path, flush=True)
-        return 'Resource not found', 400
+        return 'Resource not found', 404
 
     try:
         working_path = normalizePath(path);
@@ -69,7 +72,7 @@ def files() -> tuple:
         have_error = true;
 
     if have_error:
-        return 'Resource not found', 400
+        return 'Resource not found', 404
 
     for one_file in os.listdir(cur_path):
         file_path = os.path.join(cur_path, one_file)
@@ -80,6 +83,83 @@ def files() -> tuple:
                                  'date': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(os.path.getmtime(file_path))),
                                  'type': 'folder' if os.path.isdir(file_path) else 'file'
                                  })
+
+    return json.dumps(return_names)
+
+
+@app.route('/irods/connect', methods=['POST'])
+#@cross_origin()
+@cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
+def irodsConnect() -> tuple:
+    """Handles connecting to the iRODS server
+    Returns:
+        The success establishing a connection to the server
+    """
+    have_error = False
+    host, port, zone, user, password = None, None, None, None, None
+
+    # Get the fields from the request
+    try:
+        host = request.form.get('host')
+        port = request.form.get('port')
+        zone = request.form.get('zone')
+        user = request.form.get('user')
+        password = request.form.get('password')
+
+        if not host or not port or not zone or not user or not password:
+            have_error = True
+    except ValueError as ex:
+        print("A value exception was caught while fetching form data:", ex)
+        have_error = True
+
+    if have_error:
+        print ("Missing or bad value: Host:", str(host), " Port:", str(port), " Zone:", str(zone), " User:", 
+               str(user), " Password:", ('***' if password else str(password)))
+        return 'iRODS fields are missing or invalid', 400
+
+    session['connection'] = {host: host, port: port, user: user, password: password, zone: zone}
+
+    return {'path': '/{0}/home/{1}'.format(zone, user)}
+
+
+@app.route('/irods/files', methods=['GET'])
+#@cross_origin()
+@cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
+def irodsFiles() -> tuple:
+    """Handles listing folder contents
+    Arguments:
+        path: the relative path to list
+        file_filter: the filter to apply to the returned names
+    """
+    print("IRODS FILES")
+    return_names = []
+    have_error = False
+
+    path = request.args['path']
+    file_filter = request.args['filter']
+
+    conn_info = session['connection'];
+    conn = iRODSSession(host=conn_info.host, port=conn_info.port, user=conn_info.user, password=conn_info.password, zone=conn_info.zone)
+
+    if len(path) <= 0:
+        print('Zero length path requested' % path, flush=True)
+        return 'Resource not found', 404
+
+    col = conn.collections.get(path)
+    for one_obj in col.data_objects:
+        return_names.append({'name': one_obj.name,
+                             'path': one_obj.path,
+                             'size': one_obj.size,
+                             'date': time.strftime('%Y-%m-%d %H:%M:%S', one_obj.modify_time),
+                             'type': 'file'
+                             })
+    for one_obj in col.subcollections:
+        return_names.append({'name': one_obj.name,
+                             'path': one_obj.path,
+                             'size': 0,
+                             'date': '',
+                             'type': 'folder'
+                             })
 
     return json.dumps(return_names)
 

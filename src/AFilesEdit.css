@@ -107,6 +107,12 @@
     cursor: pointer;
 }
 
+.file-edit-path-edit-go-disabled {
+    background-color: #f0f0f0;
+    border-color: #e0e0e0;
+    cursor: default;
+}
+
 .file-edit-path-display-wrapper {
     margin: 0px 10px 10px 10px;
     border: 1px solid black;
@@ -120,6 +126,12 @@
 .file-edit-interface-wrapper {
 }
 
+.file-edit-interface-table {
+    width: 100%;
+    margin-right: 10px;
+    margin-left: 10px;
+}
+
 .file-edit-interface-table-titles {
 }
 
@@ -130,19 +142,36 @@
     align-items: stretch;
 }
 
+.file-edit-interface-table-item {
+}
+
+.file-edit-interface-table-prompt {
+    white-space: nowrap;
+    text-align: left;
+}
+
 .file-edit-interface-table-value {
+    width: 90%;
 }
 
 .file-edit-interface-table-value-mandatory {
+    margin-left: 10px;
     color: red;
 }
 
-.file-edit-path-display-wait-wrapper {
+.file-edit-path-display-overlay-wrapper {
     position: absolute;
     display: flex;
     flex-direction: row;
     align-content: space-around;
     align-items: center;
+}
+
+.file-edit-path-display-disabled {
+    background-color: rgb(230, 230, 230, .7);
+}
+
+.file-edit-path-display-wait {
     background-color: rgb(230, 230, 230, .7);
 }
 
@@ -232,10 +261,20 @@
     border-radius: 5px;
 }
 
+.file-edit-button-disabled {
+    border-color: #e0e0e0;
+    color: grey;
+    cursor: default;
+}
+
 .file-edit-ok {
     background-color: #d8ffd8;
     margin-left: 20px;
     cursor: pointer;
+}
+
+.file-edit-ok-disabled {
+    background-color: #f0f0f0;
 }
 
 .file-edit-cancel {
