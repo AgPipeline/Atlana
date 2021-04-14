@@ -114,7 +114,7 @@ class AFilesEdit extends Component {
 
     // If there's a callback, call it later to allow stuff to update
     if (finish_cb && (typeof finish_cb === 'function')) {
-      window.setTimeout(() => finish_cb(returned_path), 1);
+      window.setTimeout(() => {finish_cb(returned_path)}, 1);
     }
   }
 
@@ -470,7 +470,6 @@ displayResultsOverlay(msg, additional_class_names) {
       return  true;
     });
 
-    console.log("AUTHENTICATION FIELDS", fields);
     return fields;
   }
 

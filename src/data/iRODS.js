@@ -67,6 +67,7 @@ class iRODS extends IData {
     try {
       fetch(uri, {
         method: 'POST',
+        credentials: 'include',
         body: form_data
         }
       )
@@ -91,6 +92,7 @@ class iRODS extends IData {
     try {
       fetch(uri, {
         method: 'GET',
+        credentials: 'include',
         }
       )
       .then(response => response.json())

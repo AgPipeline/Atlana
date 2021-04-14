@@ -13,7 +13,7 @@ from flask_cors import CORS, cross_origin
 #from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'this is not quite so secret a key'    # Replace with random string
+app.config['SECRET_KEY'] = 'this_is_not_such_100_secret'    # Replace with random string
 
 cors = CORS(app, resources={r"/files": {"origins": "http://127.0.0.1:3000"}})
 
@@ -39,6 +39,16 @@ def normalizePath(path: str) -> str:
     new_parts = [one_part for one_part in parts if len(parts) > 0]
     return os.path.sep.join(parts)
 
+
+@app.after_request
+def add_cors_headers(response):
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+    response.headers.add('Access-Control-Allow-Headers', 'Cache-Control')
+    response.headers.add('Access-Control-Allow-Headers', 'X-Requested-With')
+    response.headers.add('Access-Control-Allow-Headers', 'Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE')
+    return response
 
 @app.route('/server/files', methods=['GET'])
 #@cross_origin()
@@ -84,6 +94,9 @@ def files() -> tuple:
                                  'type': 'folder' if os.path.isdir(file_path) else 'file'
                                  })
 
+#    resp = make_response()
+#    resp.headers['Access-Control-Allow-Credentials'] = 'true'
+
     return json.dumps(return_names)
 
 
@@ -117,7 +130,7 @@ def irodsConnect() -> tuple:
                str(user), " Password:", ('***' if password else str(password)))
         return 'iRODS fields are missing or invalid', 400
 
-    session['connection'] = {host: host, port: port, user: user, password: password, zone: zone}
+    session['connection'] = {'host': host, 'port': port, 'user': user, 'password': password, 'zone': zone}
 
     return {'path': '/{0}/home/{1}'.format(zone, user)}
 
@@ -131,7 +144,6 @@ def irodsFiles() -> tuple:
         path: the relative path to list
         file_filter: the filter to apply to the returned names
     """
-    print("IRODS FILES")
     return_names = []
     have_error = False
 
@@ -139,7 +151,7 @@ def irodsFiles() -> tuple:
     file_filter = request.args['filter']
 
     conn_info = session['connection'];
-    conn = iRODSSession(host=conn_info.host, port=conn_info.port, user=conn_info.user, password=conn_info.password, zone=conn_info.zone)
+    conn = iRODSSession(host=conn_info['host'], port=conn_info['port'], user=conn_info['user'], password=conn_info['password'], zone=conn_info['zone'])
 
     if len(path) <= 0:
         print('Zero length path requested' % path, flush=True)
@@ -150,7 +162,7 @@ def irodsFiles() -> tuple:
         return_names.append({'name': one_obj.name,
                              'path': one_obj.path,
                              'size': one_obj.size,
-                             'date': time.strftime('%Y-%m-%d %H:%M:%S', one_obj.modify_time),
+                             'date': '{0:%Y-%m-%d %H:%M:%S}'.format(one_obj.modify_time),
                              'type': 'file'
                              })
     for one_obj in col.subcollections:
