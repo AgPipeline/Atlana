@@ -43,6 +43,10 @@ class Message extends Component {
     three: 3,   // Ok-Ignore-Cancel button
   };
 
+  // TODO: add a timeout to close the window
+  componentWillUnmount() {
+  }
+
   generateButtons() {
     return (
       <>
