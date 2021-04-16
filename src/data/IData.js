@@ -27,11 +27,11 @@ class IData {
   }
 
   connect(auth_info, success_cb, failure_cb) {
-    return null;
+    return success_cb(null);
   }
 
   listFolder(path, filter, success_cb, failure_cb) {
-    return null;
+    return failure_cb("Not implemented");
   }
 }
 

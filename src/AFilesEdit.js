@@ -1,10 +1,19 @@
 //Implementation of file system interface
 import { Component } from 'react';
 import FileInterfaces from './FileInterfaces';
+import Message from './Message';
 import IData from './data/IData';
 import './AFilesEdit.css';
 
-var file_display_titles = ['Name', 'Date', 'Size'];
+// The order of these fields is important, see titleSortInd() and title_sort_map
+var file_display_titles = ['Name', 'Timestamp', 'Size'];
+var sort_column_id = {
+  name: 1,
+  date: 2,
+  size: 3,
+};
+// Map the index of a title to the sort_column_id
+var title_sort_map = {0: sort_column_id.name, 1: sort_column_id.date, 2: sort_column_id.size};
 
 class AFilesEdit extends Component {
   constructor(props) {
@@ -13,6 +22,7 @@ class AFilesEdit extends Component {
     this.connectRequestCatch = this.connectRequestCatch.bind(this);
     this.connectRequestFinish = this.connectRequestFinish.bind(this);
     this.connectRequestStart = this.connectRequestStart.bind(this);
+    this.dismissMessage = this.dismissMessage.bind(this);
     this.displayContents = this.displayContents.bind(this);
     this.displayError = this.displayError.bind(this);
     this.displayDisabledResults = this.displayDisabledResults.bind(this);
@@ -33,6 +43,12 @@ class AFilesEdit extends Component {
     this.onNameUpdated = this.onNameUpdated.bind(this);
     this.onOk = this.onOk.bind(this);
     this.onPathUpdated = this.onPathUpdated.bind(this);
+    this.sortByDate = this.sortByDate.bind(this);
+    this.sortByName = this.sortByName.bind(this);
+    this.sortBySize = this.sortBySize.bind(this);
+    this.sortResults = this.sortResults.bind(this);
+    this.titleClicked = this.titleClicked.bind(this);
+    this.titleSortInd = this.titleSortInd.bind(this);
     this.verifyMandatoryFieldsFilled = this.verifyMandatoryFieldsFilled.bind(this);
 
     this.interface = FileInterfaces.getInterface(props.source);
@@ -42,18 +58,21 @@ class AFilesEdit extends Component {
     let cur_name = this.props.edit_item ? this.props.edit_item.name : this.interface_info.name;
 
     this.state = {
-      cur_path: cur_path,     // Current working path
-      fetching: false,        // Convenience flag for UI updates
-      path_contents: null,    // Folder contents
-      name: cur_name,         // Working name of definition
-      mandatory_fields_filled: false, // Indicates mandatory fields have been filled out
+      cur_path: cur_path,               // Current working path
+      fetching: false,                  // Convenience flag for UI updates
+      path_contents: null,              // Folder contents
+      name: cur_name,                   // Working name of definition
+      mandatory_fields_filled: false,   // Indicates mandatory fields have been filled out
+      sort_column: sort_column_id.name, // Current column being sorted on
+      sort_ascending: true,             // Flag for sort direction
+      authentication_changed: false,    // Indicates when a mandatory authentication field has changed, reset when a connection is successful
+      errors: null,
     }
   }
 
   connected = false;          // Flag used to determine if we're connected
   pending_fetch = null;       // Current pending request
   pending_fetch_id = 1;       // The ID of the current pending fetch
-  authentication = {};        // Authentication information
   authentication_ids = [];    // IDs of authentication elements
   mandatory_check_ids = [];   // IDs of elements that need checks for mandatory values
 
@@ -100,17 +119,17 @@ class AFilesEdit extends Component {
   }
 
   connectRequestFinish(request_id, results, finish_cb) {
-    console.log("connectRequestFinish",results);
+    console.log("connectRequestFinish", results);
     // Ignore finished requests that are not us
     if (this.pending_fetch_id !== request_id + 1) {
       return;
     }
 
     // Remove pending status, indicate we're connected, and update state
-    const returned_path = results.hasOwnProperty('path') ? results['path'].replaceAll('\\', '/') : '/';
+    const returned_path = results && results.hasOwnProperty('path') ? results['path'].replaceAll('\\', '/') : '/';
     this.pending_fetch = null;
     this.connected = true;
-    this.setState({fetching: false, cur_path: returned_path, path_contents: null});
+    this.setState({fetching: false, cur_path: returned_path, path_contents: null, authentication_changed: false});
 
     // If there's a callback, call it later to allow stuff to update
     if (finish_cb && (typeof finish_cb === 'function')) {
@@ -138,6 +157,10 @@ class AFilesEdit extends Component {
       .catch(this.connectRequestCatch);
   }
 
+  dismissMessage() {
+    this.setState({errors: null});
+  }
+
   fetchRequestCatch(err) {
     console.log('Error: file fetch error: ', err);
     this.fetchRequestError(err.message);
@@ -158,7 +181,8 @@ class AFilesEdit extends Component {
 
     // Remove pending status  and update state
     this.pending_fetch = null;
-    this.setState({fetching: false, cur_path: path.replaceAll('\\', '/'), path_contents: results});
+    this.setState({fetching: false, cur_path: path.replaceAll('\\', '/'),
+                   path_contents: this.sortResults(this.normalizeResults(results), this.state.sort_column, this.state.sort_ascending)});
   }
 
   fetchRequestStart(path) {
@@ -228,7 +252,18 @@ class AFilesEdit extends Component {
         <table id="file_edit_path_contents_table" className="file-edit-path-contents-table">
           <thead>
             <tr>
-              {file_display_titles.map((title) => {return(<th key={'file_edit_path_contents_table_' + title} className="file-edit-path-contents-table-header">{title}</th>);})}
+              {file_display_titles.map((title, idx) => {
+                  let indicator = this.titleSortInd(title, this.state.sort_ascending);
+                  return(<th key={'file_edit_path_contents_table_' + title} className="file-edit-path-contents-table-header">
+                      <div id={'file_edit_path_contents_table_title_wrapper_' + title} className="file-edit-path-contents-table-title-wrapper" 
+                           onClick={(ev) => this.titleClicked(ev, title)}>
+                        <div id={'file_edit_path_contents_table_title_text_' + idx} className="file-edit-path-contents-table-title-text" >{title}</div>
+                        <div id={'file_edit_path_contents_table_title_ind_' + idx} 
+                             className="file-edit-path-contents-table-title-indicator" >{indicator}</div>
+                      </div>
+                    </th>
+                  );
+              })}
             </tr>
           </thead>
           <tbody>
@@ -245,8 +280,8 @@ class AFilesEdit extends Component {
   }
 
   displayError(msg) {
-    // TODO    
     console.log("ERROR", msg);
+    this.setState({errors: msg});
   }
 
   displayFetchWait() {
@@ -475,6 +510,14 @@ displayResultsOverlay(msg, additional_class_names) {
 
   handleDocumentKey(ev) {
     switch(ev.key) {
+      case 'Enter':
+        if (this.state.authentication_changed) {
+          this.handleGoButton();
+        } else if  (this.verifyMandatoryFieldsFilled()) {
+          this.onOk();
+        }
+        break;
+
       case'Escape':
         this.onCancel();
         break;
@@ -483,14 +526,16 @@ displayResultsOverlay(msg, additional_class_names) {
     }
   }
 
-  handleGoButton(ev) {
+  handleGoButton() {
     let path_el = document.getElementById('file_edit_path_edit');
-
+    console.log("GO");
 
     if (path_el && path_el.value) {
-      if (this.connected === false) {
+      if (this.connected === false || this.state.authentication_changed) {
+        console.log("  CONNECT");
         this.connectRequestStart(() => this.fetchRequestStart(path_el.value));
       } else {
+        console.log("  ASK");
         this.fetchRequestStart(path_el.value);
       }
     }
@@ -517,6 +562,26 @@ displayResultsOverlay(msg, additional_class_names) {
     return el_id.substr('file_edit_interface_table_value_'.length);
   }
 
+  normalizeResults(results) {
+    if (results) {
+      for (let ii = 0; ii < results.length; ii++) {
+        results[ii]['lower_name'] = results[ii]['name'].toLowerCase();
+        results[ii]['size'] = results[ii]['size'] ? parseInt(results[ii]['size']) : 0;
+
+        if (results[ii].hasOwnProperty('date')) {
+          let cleaned_date = results[ii]['date'];
+          while (cleaned_date.indexOf('  ') !== -1)  {
+            cleaned_date.replaceAll('  ',' ');
+          }
+          results[ii]['date'] = cleaned_date;
+        } else {
+          results[ii]['date'] = '';
+        }
+      }
+    }
+    return results;
+  }
+
   onCancel() {
     this.props.cancel(this.props.source);
   }
@@ -534,9 +599,13 @@ displayResultsOverlay(msg, additional_class_names) {
           return true;
         });
 
+    let new_state = {authentication_changed: true};
+
     if (res !== this.state.mandatory_fields_filled) {
-      this.setState({mandatory_fields_filled: res});
+      new_state['mandatory_fields_filled'] = res;
     }
+
+    this.setState(new_state);
   }
 
   onNameUpdated(ev) {
@@ -567,7 +636,7 @@ displayResultsOverlay(msg, additional_class_names) {
       return;
     }
 
-    if (this.props.hasOwnKeyword('name_check')) {
+    if (this.props.hasOwnProperty('name_check')) {
       if (!this.props.name_check(name)) {
         this.displayError("Duplicate or invalid name found. Please rename and try again.");
         el.focus();
@@ -576,19 +645,127 @@ displayResultsOverlay(msg, additional_class_names) {
     }
 
     let item_id = null;
-    if (this.props.hasOwnKeyword('edit_item') && this.props.edit_item) {
-      if (this.props.edit_item.hasOwnKeyword('id')) {
+    if (this.props.hasOwnProperty('edit_item') && this.props.edit_item) {
+      if (this.props.edit_item.hasOwnProperty('id')) {
         item_id = this.props.edit_item['id'];
       }
     }
 
-    // TODO: get authentication information
-
-    this.props.submit(this.props.source, name, path, this.authentication, item_id);
+    this.props.submit(this.props.source, name, path, this.getAuthenticationFields(), item_id);
   }
 
   onPathUpdated(ev) {
     this.setState({cur_path: ev.target.value});
+  }
+
+  sortByDate(first, second, sort_asc) {
+    // Handle empty dates by putting them at the end
+    if (first.date.length <= 0) {
+      return second.date.length > 0 ? (sort_asc ? 1 : -1) : 0;
+    } else if (second.date.length <= 0) {
+      return (sort_asc ? -1 : 1);
+    }
+
+    const first_parts = first.date.replace(' ', '-').replace(':', '-').split('-');
+    const second_parts = second.date.replace(' ', '-').replace(':', '-').split('-');
+
+    // Return at the first sign of differences
+    for (let ii = 0; ii < first_parts.length; ii++) {
+      // Proceed with date comparisons
+      if (ii < second_parts.length) {
+        if (first_parts[ii] < second_parts[ii]) {
+          return sort_asc ? -1 : 1;
+        } else if (first_parts[ii] > second_parts[ii]) {
+          return sort_asc ? 1 : -1;
+        }
+      } else {
+        // For some reason the second date has fewer parts
+        return 1;
+      }
+    }
+
+    // So far the timestamps are equal
+    return first_parts === second_parts ? 0 : -1;
+  }
+
+  sortByName(first, second, sort_asc) {
+    const lf = first['lower_name'];
+    const ls = second['lower_name'];
+
+    if (lf < ls) {
+      return sort_asc ? -1 : 1;
+    }
+    else if (lf > ls) {
+      return sort_asc ? 1 : -1;
+    }
+    else return 0;
+  }
+
+  sortBySize(first, second, sort_asc) {
+    // Sort so that folders are at the end, sort folders by name
+    if (first.type === 'folder') {
+      if (second.type === 'folder') {
+        return this.sortByName(first, second, sort_asc);
+      } else {
+        return sort_asc ? 1 : -1;
+      }
+    } else if (second.type === 'folder') {
+      return sort_asc ? -1 : 1;
+    } else {
+      if (parseInt(first.size) === parseInt(second.size)) {
+        return 0;
+      } else if (first.size < second.size) {
+        return sort_asc ? -1 : 1;
+      } else {
+        return sort_asc ? 1 : -1;
+      }
+    }
+  }
+
+  sortResults(results, sort_column, sort_ascending) {
+    const sort_asc = !(sort_ascending === false);   // Normalize for missing or non-boolean value
+
+    switch (sort_column) {
+      default:
+      case sort_column_id.name:
+        return results.sort((first, second) => this.sortByName(first, second, sort_asc));
+
+      case sort_column_id.size:
+        return results.sort((first, second) => this.sortBySize(first, second, sort_asc));
+
+      case sort_column_id.date:
+        return results.sort((first, second) => this.sortByDate(first, second, sort_asc));
+    } 
+  }
+
+  titleClicked(ev, title) {
+    const found_idx = file_display_titles.findIndex((item) => item === title);
+
+    if (found_idx >= 0) {
+      if (this.state.sort_column === title_sort_map[found_idx]) {
+        const sorted_results = this.sortResults(this.state.path_contents, this.state.sort_column, !this.state.sort_ascending);
+        this.setState({sort_ascending: !this.state.sort_ascending, path_contents: sorted_results});
+      } else {
+        const sorted_results = this.sortResults(this.state.path_contents, title_sort_map[found_idx], true);
+        this.setState({sort_column: title_sort_map[found_idx], sort_ascending: true, path_contents: sorted_results})
+      }
+    }
+  }
+
+  titleSortInd(title, sort_asc) {
+    const found_idx = file_display_titles.findIndex((item) => item === title);
+
+    if (found_idx >= 0) {
+      if (this.state.sort_column === title_sort_map[found_idx]) {
+        if (sort_asc) {
+          return "\u2227";  // Up caret
+        } else {
+          return "\u2228";  // Down caret
+        }
+      }
+    }
+
+    return " ";
   }
 
   verifyMandatoryFieldsFilled() {
@@ -633,10 +810,13 @@ displayResultsOverlay(msg, additional_class_names) {
     const cur_name = this.state.name;
     const missing_data = !this.state.mandatory_fields_filled;
     const go_button_classes = 'file-edit-path-edit-go ' + (missing_data ? 'file-edit-path-edit-go-disabled' : '');
-    const ok_button_classes = 'file-edit-button file-edit-ok ' + (missing_data ? 'file-edit-button-disabled file-edit-ok-disabled' : '');
+    const ok_button_disabled = missing_data || this.state.authentication_changed;
+    const ok_button_classes = 'file-edit-button file-edit-ok ' + (ok_button_disabled ? 'file-edit-button-disabled file-edit-ok-disabled' : '');
+    const have_errors = this.state.errors !== null;
 
     return (
     <div id="file_edit_background" className="file-edit-background">
+      {have_errors && <Message msg={this.state.errors} type={Message.type.warning} ok={this.dismissMessage} cancel={this.dismissMessage} />}
       <div id="file_edit_wrapper" className="file-edit-wrapper">
         <div id="file_edit_titlebar" className="file-edit-titlebar">
           <div id="file_edit_titlebar_left" className="file-edit-titlebar-left"></div>

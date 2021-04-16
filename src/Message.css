@@ -1,0 +1,137 @@
+
+.message-window {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-content: flex-start;
+    align-items: center;
+    z-index: 9999;
+}
+
+.message-window-spacing {
+    flex: 20;
+}
+
+.message-window-body {
+    display: flex;
+    flex-direction: column;
+    align-content: flex-start;
+    align-items: center;
+    border: 1px solid black;
+    border-radius: 10px;
+    z-index: 9999;
+    min-width:50vw;
+}
+
+.message-window-error {
+    background-color: #fff1f1;
+    border-width: 2px;
+    border-color: #fc8080;
+}
+
+.message-window-warning {
+    background-color: #e0ffff;
+    border-color: cornflowerblue;
+}
+
+.message-window-information {
+    background-color: azure;
+    border-color: grey;
+}
+
+.message-window-title-wrapper {
+    display: flex;
+    flex-direction: row;
+    align-content: space-between;
+    align-items: center;
+    width: 100%;
+    border-bottom: 1px solid grey;
+    border-top-left-radius: 7px;
+    border-top-right-radius: 7px;
+    overflow: hidden;
+    padding-bottom: 5px;
+}
+
+.message-window-title-left {
+    flex: 1;
+    margin-left: 10px;
+}
+
+.message-window-title-text {
+    font-weight: bold;
+}
+
+.message-window-title-middle {
+    flex: 20;
+}
+
+.message-window-title-right {
+    flex: 1;
+    margin-right: 2px;
+}
+
+.message-window-title-close-error {
+    border: 1px solid #fff1f1;;
+}
+
+.message-window-title-close-warning {
+    border: 1px solid #e0ffff;;
+}
+
+.message-window-title-close-information {
+    border: 1px solid azure;
+}
+
+.message-window-title-close {
+    padding-right: 2px;
+    padding-left: 2px;
+}
+
+#message_window_title_close:hover {
+    border: 1px solid black;
+    cursor: pointer;
+}
+
+.message-window-message-wrapper {
+    margin-top: 5px;
+}
+
+.message-window-message {
+}
+
+.message-window-buttons-wrapper {
+    display: flex;
+    flex-direction: row;
+    align-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+    margin-top: 10px;
+}
+
+.message-window-button-speparator {
+    flex: 20;
+}
+
+.message-window-button {
+    flex: 1;
+    border: 1px solid black;
+    border-radius: 5px;
+    cursor: pointer;
+    padding-right: 5px;
+    padding-left: 5px;
+}
+
+.message-window-button-ok {
+    background-color: #d8ffd8;
+}
+
+.message-window-button-information {
+    background-color: cornsilk;
+}
+
+.message-window-button-cancel {
+    background-color: #e0e0e0;
+}

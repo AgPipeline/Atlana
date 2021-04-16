@@ -16,6 +16,22 @@
     align-items:stretch;
 }
 
+.files-header-back {
+    border: 1px solid darkgrey;
+    border-radius: 7px;
+    background-color: #e0e0e0;
+    text-align: center;
+    max-height: 1.3em;
+    padding-right: 3px;
+    padding-left: 3px;
+    font-size: small;
+}
+
+.files-header-back:hover {
+    border-width: 2px;
+    border-color: black;
+}
+
 .files-header-text {
     flex: 1;
     min-height: 5vh;

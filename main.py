@@ -3,11 +3,12 @@
 import json
 import os
 import fnmatch
+import time
 #from osgeo import gdal, osr
 #from PIL import Image
 #from flask import Flask, request, send_file, make_response, render_template
 from irods.session import iRODSSession
-import time
+import irods.exception
 from flask import Flask, request, session
 from flask_cors import CORS, cross_origin
 #from werkzeug.utils import secure_filename
@@ -19,7 +20,7 @@ cors = CORS(app, resources={r"/files": {"origins": "http://127.0.0.1:3000"}})
 
 FILE_START_PATH = os.path.abspath(os.path.dirname(__file__))
 
-def normalizePath(path: str) -> str:
+def normalize_path(path: str) -> str:
     """Normalizes the path to the current OS separator character
     Arguments:
         path: the path to localize
@@ -37,7 +38,7 @@ def normalizePath(path: str) -> str:
 
     # Strip out doubled up separators
     new_parts = [one_part for one_part in parts if len(parts) > 0]
-    return os.path.sep.join(parts)
+    return os.path.sep.join(new_parts)
 
 
 @app.after_request
@@ -70,16 +71,16 @@ def files() -> tuple:
         return 'Resource not found', 404
 
     try:
-        working_path = normalizePath(path);
+        working_path = normalize_path(path)
         if working_path[0] == '/':
-            working_path = '.'  + working_path;
+            working_path = '.'  + working_path
         cur_path = os.path.abspath(os.path.join(FILE_START_PATH, working_path))
         if not cur_path.startswith(FILE_START_PATH):
             print('Invalid path requested: "%s"' % path, flush=True)
             return 'Resource not found', 400
     except FileNotFoundError as ex:
         print("A file not found exception was caught:",  ex)
-        have_error = true;
+        have_error = True
 
     if have_error:
         return 'Resource not found', 404
@@ -103,7 +104,7 @@ def files() -> tuple:
 @app.route('/irods/connect', methods=['POST'])
 #@cross_origin()
 @cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
-def irodsConnect() -> tuple:
+def irods_connect() -> tuple:
     """Handles connecting to the iRODS server
     Returns:
         The success establishing a connection to the server
@@ -126,7 +127,7 @@ def irodsConnect() -> tuple:
         have_error = True
 
     if have_error:
-        print ("Missing or bad value: Host:", str(host), " Port:", str(port), " Zone:", str(zone), " User:", 
+        print ("Missing or bad value: Host:", str(host), " Port:", str(port), " Zone:", str(zone), " User:",
                str(user), " Password:", ('***' if password else str(password)))
         return 'iRODS fields are missing or invalid', 400
 
@@ -138,40 +139,47 @@ def irodsConnect() -> tuple:
 @app.route('/irods/files', methods=['GET'])
 #@cross_origin()
 @cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
-def irodsFiles() -> tuple:
+def irods_files() -> tuple:
     """Handles listing folder contents
     Arguments:
         path: the relative path to list
         file_filter: the filter to apply to the returned names
     """
     return_names = []
-    have_error = False
 
     path = request.args['path']
     file_filter = request.args['filter']
 
-    conn_info = session['connection'];
+    conn_info = session['connection']
     conn = iRODSSession(host=conn_info['host'], port=conn_info['port'], user=conn_info['user'], password=conn_info['password'], zone=conn_info['zone'])
 
     if len(path) <= 0:
         print('Zero length path requested' % path, flush=True)
         return 'Resource not found', 404
 
-    col = conn.collections.get(path)
-    for one_obj in col.data_objects:
-        return_names.append({'name': one_obj.name,
-                             'path': one_obj.path,
-                             'size': one_obj.size,
-                             'date': '{0:%Y-%m-%d %H:%M:%S}'.format(one_obj.modify_time),
-                             'type': 'file'
-                             })
-    for one_obj in col.subcollections:
-        return_names.append({'name': one_obj.name,
-                             'path': one_obj.path,
-                             'size': 0,
-                             'date': '',
-                             'type': 'folder'
-                             })
+    try:
+        col = conn.collections.get(path)
+        for one_obj in col.data_objects:
+            if not one_obj.name == '.' and (not file_filter or (file_filter and fnmatch.fnmatch(one_obj.name, file_filter))):
+                return_names.append({'name': one_obj.name,
+                                     'path': one_obj.path,
+                                     'size': one_obj.size,
+                                     'date': '{0:%Y-%m-%d %H:%M:%S}'.format(one_obj.modify_time),
+                                     'type': 'file'
+                                     })
+        for one_obj in col.subcollections:
+            return_names.append({'name': one_obj.name,
+                                 'path': one_obj.path,
+                                 'size': 0,
+                                 'date': '',
+                                 'type': 'folder'
+                                 })
+    except irods.exception.NetworkException as ex:
+        print('Network exception caught for iRODS listing: ', path, ex)
+        return 'Unable to complete iRODS listing request: %s' % path, 504
+    except irods.exception.CAT_INVALID_USER as ex:
+        print('Invalid user exception caught for iRODS listing: ', path, ex)
+        return 'Invalid user specified for iRODS listing request: %s' % path, 401
 
     return json.dumps(return_names)
 

@@ -49,11 +49,18 @@
 .file-edit-titlebar-right {
     flex: 1;
     padding-right: 10px;
-    text-align: end;
+    text-align: center;
+    align-self: center;
 }
 
 .file-edit-titlebar-close {
     cursor: pointer;
+    margin-top: 2px;
+}
+
+.file-edit-titlebar-close:hover {
+    border: 1px solid black;
+    border-radius: 5px;
 }
 
 .file-edit-name-wrapper {
@@ -186,6 +193,23 @@
     position: sticky;
     top: 0;
     background-color: #e0e0e0;
+}
+
+.file-edit-path-contents-table-title-wrapper {
+    display: flex;
+    flex-direction: row;
+    align-content: space-between;
+    align-items: center;
+    cursor: pointer;
+}
+
+.file-edit-path-contents-table-title-text {
+    flex: 10;
+}
+
+.file-edit-path-contents-table-title-indicator {
+    flex: 1;
+    color: grey;
 }
 
 .file-edit-path-contents-table {

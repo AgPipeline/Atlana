@@ -28,6 +28,7 @@ class AFiles extends Component {
     this.finishEdit = this.finishEdit.bind(this);
     this.getTitle = this.getTitle.bind(this);
     this.nameCheck = this.nameCheck.bind(this);
+    this.onGoBack = this.onGoBack.bind(this);
     this.updateNewType = this.updateNewType.bind(this);
 
     this.file_interfaces = FileInterfaces.getFileInterfaceTypes();
@@ -138,14 +139,15 @@ class AFiles extends Component {
 
   nameCheck(name) {
     const found_item = this.state.files_list.find((item) => item.name === name);
-    console.log("FOUND:", name, found_item);
     if (this.state.edit_add) {
-      console.log("ADD");
       return found_item === undefined;
     } else {
-      console.log("EDIT");
       return found_item !== undefined;
     }
+  }
+
+  onGoBack() {
+
   }
 
   updateNewType(ev) {
@@ -157,6 +159,7 @@ class AFiles extends Component {
       <>
         <div id="files_wrapper" className="files-wrapper">
           <div id="files_header" className="files-header">
+            <div id="files_header_back" className="files-header-back" onClick={this.onGoBack}>&lt;-&nbsp;back</div>
             <div id="files_header_text" className="files-header-text">
               Connect to files stored in a heirarchy
             </div>
