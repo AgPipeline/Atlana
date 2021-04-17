@@ -1,7 +1,8 @@
 
 let states = {
     main_menu: 1,
-    files: 2,
+    data_files: 20,
+    workflow_image: 30,
 }
 
 export default states;

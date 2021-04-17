@@ -31,6 +31,9 @@ class Message extends Component {
     };
   }
 
+  timer_id = null;      // The ID of the current timer
+  timeout = 3000;       // The total number of ms to show the window
+
   static type = {
     error: 0,
     warning: 1,
@@ -43,8 +46,13 @@ class Message extends Component {
     three: 3,   // Ok-Ignore-Cancel button
   };
 
-  // TODO: add a timeout to close the window
   componentWillUnmount() {
+    let current_id = this.timer_id;
+    this.timer_id = null;
+
+    if (current_id !== null) {
+      window.clearTimeout(current_id);
+    }
   }
 
   generateButtons() {
@@ -115,6 +123,10 @@ class Message extends Component {
         window_type_style += 'message-window-information ';
         close_button_style += 'message-window-title-close-information ';
         break;
+    }
+
+    if (this.timer_id === null) {
+      this.timer_id = window.setTimeout(() => {this.timer_id = null;this.onOk()}, this.timeout);
     }
 
     return (

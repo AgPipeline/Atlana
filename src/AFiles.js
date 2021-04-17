@@ -2,6 +2,8 @@
 import { Component } from 'react';
 import FileInterfaces from './FileInterfaces';
 import AFilesEdit from './AFilesEdit';
+import WorkspaceTitlebar from './WorkspaceTitlebar';
+import Message from './Message';
 import Utils from './Utils';
 import './AFiles.css';
 
@@ -26,6 +28,7 @@ class AFiles extends Component {
     this.editItem = this.editItem.bind(this);
     this.finishAdd = this.finishAdd.bind(this);
     this.finishEdit = this.finishEdit.bind(this);
+    this.generateNewFileUI = this.generateNewFileUI.bind(this);
     this.getTitle = this.getTitle.bind(this);
     this.nameCheck = this.nameCheck.bind(this);
     this.onGoBack = this.onGoBack.bind(this);
@@ -39,13 +42,14 @@ class AFiles extends Component {
     }
 
     this.state = {
-      mode: null,
-      mode_name: '',
-      mode_title: '',
-      mode_path: '/',
-      edit_add: true,
-      edit_item: null,
-      files_list,
+      mode: null,               // What data source we're adding/editing
+      mode_name: '',            // Working name when adding/editing
+      mode_title: '',           // Working title for adding/editing
+      mode_path: '/',           // The working path
+      edit_add: true,           // Indicates if we're adding an item or editing it
+      edit_item: null,          // The item we're editing, if we're editing an item
+      files_list,               // The list of file information
+      errors: null,             // Error information
     }
   }
 
@@ -89,6 +93,7 @@ class AFiles extends Component {
   }
 
   displayError(msg) {
+    this.setState({errors: msg});
   }
 
   editItem(ev, item_id) {
@@ -126,6 +131,23 @@ class AFiles extends Component {
     this.setState(new_state);
   }
 
+  generateNewFileUI() {
+    return (
+      <>
+        <div id="files_types_list_wrapper" className="files-types-list-wrapper">
+          <select name="files_types" id="files_types" onChange={this.updateNewType}>
+            <option value="" className="files-types-option files-type-option-item">--Please select--</option>
+            {this.file_interfaces.map((item) => {return (<option value={item.id} key={item.id} className="files-types-option files-type-option-item">{item.name}</option>);}
+            )}
+          </select>
+        </div>
+        <div id="files_add_new_button_wrapper" className="files-add-new-button-wrapper">
+          <span id="add_new_button" className="files-add-new-button" onClick={this.addItem}>New</span>
+        </div>
+      </>
+    );
+  }
+
   getTitle(item, idx) {
     if (item && (item.length > 0) && (item[0] !== '_')) {
       if (item !== ' ') {
@@ -147,36 +169,21 @@ class AFiles extends Component {
   }
 
   onGoBack() {
-
+    this.props.done();
   }
 
   updateNewType(ev) {
-    this.new_type_id = ev.target.value;
+    this.new_type_id = ev.target.value !== '' ? ev.target.value : null;
   }
 
   render()  {
+    const have_errors = this.state.errors !== null;
+
     return (
       <>
+        {have_errors && <Message msg={this.state.errors} type={Message.type.warning} ok={this.dismissMessage} cancel={this.dismissMessage} />}
         <div id="files_wrapper" className="files-wrapper">
-          <div id="files_header" className="files-header">
-            <div id="files_header_back" className="files-header-back" onClick={this.onGoBack}>&lt;-&nbsp;back</div>
-            <div id="files_header_text" className="files-header-text">
-              Connect to files stored in a heirarchy
-            </div>
-            <div className="files-header-fill">&nbsp;</div>
-            <div id="files_types_add_new_wrapper" className="files-types-add-new-wrapper">
-              <div id="files_types_list_wrapper" className="files-types-list-wrapper">
-                <select name="files_types" id="files_types" onChange={this.updateNewType}>
-                  <option value="" className="files-types-option files-type-option-select">--Please select--</option>
-                  {this.file_interfaces.map((item) => {return (<option value={item.id} key={item.id} className="files-types-options files-types-option-item">{item.name}</option>);}
-                  )}
-                </select>
-              </div>
-              <div id="files_add_new_button_wrapper" className="files-add-new-button-wrapper">
-                <span id="add_new_button" className="files-add-new-button" onClick={this.addItem}>New</span>
-              </div>
-            </div>
-          </div>
+          <WorkspaceTitlebar title="Connect to files stored in a heirarchy" back={this.props.done} extra={this.generateNewFileUI}/>
           <table id="files_table" className="files-table">
             <thead className="files-table-titles">
               <tr>
@@ -191,8 +198,8 @@ class AFiles extends Component {
                     <td id={'files_detail_type_' + item.id} className="files-detail-item files-detail-type">{item.data_type}</td>
                     <td id={'files_detail_loc_' + item.id} className="files-detail-item files-detail-location">{item.location}</td>
                     <td id={'files_detail_id_' + item.id} className="files-detail-item files-detail-id">{item.id}</td>
-                    <td id={'files-detail_edit_' + item.id} className="files-detail-item files-detail-edit" onClick={(ev) => this.editItem(ev, item.id)}>Edit</td>
-                    <td id={'files-detail_del_' + item.id} className="files-detail-item files-detail-delete" onClick={(ev) => this.deleteItem(ev, item.id)}>Delete</td>
+                    <td id={'files_detail_edit_' + item.id} className="files-detail-item files-detail-edit" onClick={(ev) => this.editItem(ev, item.id)}>Edit</td>
+                    <td id={'files_detail_del_' + item.id} className="files-detail-item files-detail-delete" onClick={(ev) => this.deleteItem(ev, item.id)}>Delete</td>
                   </tr>
                 ); 
               })}
@@ -203,7 +210,7 @@ class AFiles extends Component {
             <AFilesEdit title={this.state.mode_title} source={this.state.mode} path={this.state.mode_path} edit_item={this.state.edit_item}
                         cancel={this.cancelEdit} submit={this.state.edit_cb} name_check={this.nameCheck} />}
       </>
-      );
+    );
   }
 }
 

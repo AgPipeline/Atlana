@@ -2,6 +2,7 @@ import { Component } from 'react';
 import states from './States';
 import MainMenu from './MainMenu';
 import AFiles from './AFiles';
+import AWorkflow from './AWorkflow';
 import ConfigStore from './ConfigStore';
 import './App.css';
 
@@ -9,10 +10,17 @@ var sidemenu = [
 ];
 
 var menu = [
-{ name: 'Data sources',
+{ 
+  name: 'Data sources',
   items: [{
     name: 'Files',
-    id: states.files
+    id: states.data_files
+  }]
+}, {
+  name: 'Workflows',
+  items: [{
+    name: 'Image',
+    id: states.workflow_image
   }]
 }
 ];
@@ -24,6 +32,7 @@ class App extends Component {
     this.addFile = this.addFile.bind(this);
     this.getFiles = this.getFiles.bind(this);
     this.mainMenuSelected = this.mainMenuSelected.bind(this);
+    this.setMainMenu = this.setMainMenu.bind(this);
 
     this.state = {
       mode: states.main_menu,
@@ -46,12 +55,17 @@ class App extends Component {
     this.setState({mode: menu_id})
   }
 
+  setMainMenu() {
+    this.setState({mode: states.main_menu});
+  }
+
   updateFile(old_item_id, updated_file_def) {
     ConfigStore.updateFile(old_item_id, updated_file_def);
   }
 
   render() {
     const main_menu = menu;
+    // TODO: map menu to side menu when not on main page (new component?)
 
     return (
       <div className="app">
@@ -59,7 +73,7 @@ class App extends Component {
           <span id="app-header-wrapper" className="app-header-wrapper">
           </span>
         </header>
-        <span id="app_name" className="app-title-text"><img src="logo.png" alt="Atlana" /></span>
+        <div id="app_name" className="app-title-text" onClick={this.setMainMenu}><img src="logo.png" alt="Atlana" /></div>
         <span id="app_body" className="body-wrapper">
           <span id="app_sidemenu" className="sidemenu-wrapper">
             {sidemenu.map((item) => {
@@ -72,7 +86,11 @@ class App extends Component {
           </span>
           <span id="main_area" className="main-area">
             {this.state.mode === states.main_menu && <MainMenu menu={main_menu} selected={this.mainMenuSelected} />}
-            {this.state.mode === states.files && <AFiles files={this.getFiles} addFile={this.addFile} updateFile={this.updateFile} deleteFile={this.deleteFile}/>}
+            <div id="atlana_workspace">
+              {this.state.mode === states.data_files && <AFiles files={this.getFiles} addFile={this.addFile} updateFile={this.updateFile}
+                                                           deleteFile={this.deleteFile} done={this.setMainMenu} />}
+              {this.state.mode === states.workflow_image && <AWorkflow done={this.setMainMenu} />}
+            </div>
           </span>
         </span>
       </div>

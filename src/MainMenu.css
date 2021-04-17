@@ -1,50 +1,51 @@
 
 .main-menu-wrapper {
-  min-width: 100vw;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  left: 0px;
+    min-width: 100vw;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    left: 0px;
 }
 
 .main-menu-item-wrapper {
-  max-width: 20vw;
-  text-align: left;
-  padding-left: 3vw;
+    margin-top: 10px;
+    max-width: 20vw;
+    text-align: left;
+    padding-left: 3vw;
 }
 
 .main-menu-item {
-  color: black;
-  font-family: 'EB Garamond', serif;
-  font-size: x-large;
-  font-weight: bold;
+    color: black;
+    font-family: 'EB Garamond', serif;
+    font-size: x-large;
+    font-weight: bold;
 }
 
 .main-menu-sub-item-wrapper {
-  color: black;
-  max-width: 20vw;
-  text-align: left;
+    color: black;
+    max-width: 20vw;
+    text-align: left;
 }
 
 .main-menu-sub-item {
-  min-width: 10vw;
-  padding-left: 7vw;
-  font-family: 'EB Garamond', serif;
-  font-size: normal;
-  font-weight: normal;
+    min-width: 10vw;
+    padding-left: 7vw;
+    font-family: 'EB Garamond', serif;
+    font-size: normal;
+    font-weight: normal;
 }
 
 .main-menu-sub-item:hover {
-  background-color: lightgrey;
-  text-decoration: underline;
-  color: blue;
-  cursor: pointer;
+    background-color: lightgrey;
+    text-decoration: underline;
+    color: blue;
+    cursor: pointer;
 }
 
 .main-menu-sub-item:active {
-  background-color: lightgrey;
-  text-decoration: underline;
-  color: blue;
-  cursor: pointer;
+    background-color: lightgrey;
+    text-decoration: underline;
+    color: blue;
+    cursor: pointer;
 }

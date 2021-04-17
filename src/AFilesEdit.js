@@ -34,6 +34,7 @@ class AFilesEdit extends Component {
     this.fetchRequestStart = this.fetchRequestStart.bind(this);
     this.generateInterfaceItem = this.generateInterfaceItem.bind(this);
     this.generateInterfaceUI = this.generateInterfaceUI.bind(this);
+    this.generateMandatoryUI = this.generateMandatoryUI.bind(this);
     this.getAuthenticationFields = this.getAuthenticationFields.bind(this);
     this.handleDocumentKey = this.handleDocumentKey.bind(this);
     this.handleGoButton = this.handleGoButton.bind(this);
@@ -360,7 +361,7 @@ displayResultsOverlay(msg, additional_class_names) {
       return (
         <div id="file_edit_interface_table_value_wrapper" className="file-edit-interface-table-value-wrapper">
           <input id={element_id} type="text" size="50" className="file-edit-interface-table-value" {...props}></input>
-          {is_mandatory && <span className="file-edit-interface-table-value-mandatory">*</span>}
+          {is_mandatory && this.generateMandatoryUI()}
         </div>
       );
     } else {
@@ -380,7 +381,7 @@ displayResultsOverlay(msg, additional_class_names) {
           <select id={element_id} {...props}>
             {item.choices.map((value) => {return(<option key={item.name + '.' + value} value={value}>{value}</option>);})}
           </select>
-          {is_mandatory && <span className="file-edit-interface-table-value-mandatory">*</span>}
+          {is_mandatory && this.generateMandatoryUI()}
         </div>
       );
     }
@@ -407,7 +408,7 @@ displayResultsOverlay(msg, additional_class_names) {
     return (
       <div id="file_edit_interface_table_value_wrapper" className="file-edit-interface-table-value-wrapper">
         <input id={element_id} type="password" className="file-edit-interface-table-value" {...props}></input>
-        {is_mandatory && <span className="file-edit-interface-table-value-mandatory">*</span>}
+        {is_mandatory && this.generateMandatoryUI()}
       </div>
     );
   }
@@ -434,7 +435,7 @@ displayResultsOverlay(msg, additional_class_names) {
     return (
       <div id="file_edit_interface_table_value_wrapper" className="file-edit-interface-table-value-wrapper">
         <input id={element_id} type="password" className="file-edit-interface-table-value" {...props}></input>
-        {is_mandatory && <span className="file-edit-interface-table-value-mandatory">*</span>}
+        {is_mandatory && this.generateMandatoryUI()}
       </div>
     );
   }
@@ -474,7 +475,7 @@ displayResultsOverlay(msg, additional_class_names) {
             <tbody>
               {interface_ui.map((item) => {
                 return (
-                  <tr id={'file_edit_interface_table_row_' + item.name} key={item.name} className="files-detail-row">
+                  <tr id={'file_edit_interface_table_row_' + item.name} key={item.name} className="file-detail-row">
                     <td id={'file_edit_interface_table_name_' + item.name} className="file-edit-interface-table-item file-edit-interface-table-prompt">{item.prompt}</td>
                     <td id={'file_edit_interface_table_type_' + item.name} className="file-edit-interface-table-item file-edit-interface-table-value">
                       {this.generateInterfaceItem(item)}
@@ -486,6 +487,10 @@ displayResultsOverlay(msg, additional_class_names) {
         </table>
       </div>
     );
+  }
+
+  generateMandatoryUI() {
+    return (<span className="file-edit-interface-value-mandatory">*</span>);
   }
 
   getAuthenticationFields() {
@@ -815,46 +820,46 @@ displayResultsOverlay(msg, additional_class_names) {
     const have_errors = this.state.errors !== null;
 
     return (
-    <div id="file_edit_background" className="file-edit-background">
-      {have_errors && <Message msg={this.state.errors} type={Message.type.warning} ok={this.dismissMessage} cancel={this.dismissMessage} />}
-      <div id="file_edit_wrapper" className="file-edit-wrapper">
-        <div id="file_edit_titlebar" className="file-edit-titlebar">
-          <div id="file_edit_titlebar_left" className="file-edit-titlebar-left"></div>
-          <div id="file_edit_titlebar_center" className="file-edit-titlebar-center">{this.props.title}</div>
-          <div id="file_edit_titlebar_right" className="file-edit-titlebar-right">
-            <div id="file_edit_titlebar_cancel" className="file-edit-titlebar-close" onClick={this.onCancel} >x</div>
+      <div id="file_edit_background" className="file-edit-background">
+        {have_errors && <Message msg={this.state.errors} type={Message.type.warning} ok={this.dismissMessage} cancel={this.dismissMessage} />}
+        <div id="file_edit_wrapper" className="file-edit-wrapper">
+          <div id="file_edit_titlebar" className="file-edit-titlebar">
+            <div id="file_edit_titlebar_left" className="file-edit-titlebar-left"></div>
+            <div id="file_edit_titlebar_center" className="file-edit-titlebar-center">{this.props.title}</div>
+            <div id="file_edit_titlebar_right" className="file-edit-titlebar-right">
+              <div id="file_edit_titlebar_cancel" className="file-edit-titlebar-close" onClick={this.onCancel} >x</div>
+            </div>
+          </div>
+          <div id="file_edit_name_wrapper" className="file-edit-name-wrapper">
+            <div id="file_edit_name_prompt" className="file-edit-name-prompt">Name</div>
+            <div id="file_edit_name_edit_wrapper" className="file-edit-name-edit-wrapper">
+              <input id="file_edit_name_edit" type="text" maxLength="150" value={cur_name} onChange={this.onNameUpdated} className="file-edit-name-edit"></input>
+            </div>
+            {this.generateMandatoryUI()}
+          </div>
+          {this.interface && this.generateInterfaceUI()}
+          <div id="file_edit_path_wrapper" className="file-edit-path-wrapper">
+            <div id="file_edit_path_prompt" className="file-edit-path-prompt">Path</div>
+            <div id="file_edit_path_edit_wrapper" className="file-edit-path-edit-wrapper">
+              <input id="file_edit_path_edit" type="text" size="60" maxLength="1024" value={cur_path.toString()} onChange={this.onPathUpdated} 
+                     className="file-edit-path-edit" disabled={missing_data}></input>
+            </div>
+            <div id="file_edit_path_edit_go" className={go_button_classes} onClick={missing_data ? null : this.handleGoButton} >...</div>
+          </div>
+          <div id="file_edit_path_display_wrapper" className="file-edit-path-display-wrapper">
+            <div id="file_edit_path_display" className="file-edit-path-display">
+            {this.state.path_contents && this.displayContents()}
+            </div>
+          </div>
+          <div name="file_edit_footer" className="file-edit-footer">
+            <div name="file_edit_ok" className={ok_button_classes} onClick={missing_data ? null : this.onOk}>OK</div>
+            <div name="file_edit_spacer" className="file-edit-footer-spacer"></div>
+            <div name="file_edit_cancel" className="file-edit-button file-edit-cancel" onClick={this.onCancel}>Cancel</div>
           </div>
         </div>
-        <div id="file_edit_name_wrapper" className="file-edit-name-wrapper">
-          <div id="file_edit_name_prompt" className="file-edit-name-prompt">Name</div>
-          <div id="file_edit_name_edit_wrapper" className="file-edit-name-edit-wrapper">
-            <input id="file_edit_name_edit" type="text" maxLength="150" value={cur_name} onChange={this.onNameUpdated} className="file-edit-name-edit"></input>
-          </div>
-          <span className="file-edit-interface-table-value-mandatory">*</span>
-        </div>
-        {this.interface && this.generateInterfaceUI()}
-        <div id="file_edit_path_wrapper" className="file-edit-path-wrapper">
-          <div id="file_edit_path_prompt" className="file-edit-path-prompt">Path</div>
-          <div id="file_edit_path_edit_wrapper" className="file-edit-path-edit-wrapper">
-            <input id="file_edit_path_edit" type="text" size="60" maxLength="1024" value={cur_path.toString()} onChange={this.onPathUpdated} 
-                   className="file-edit-path-edit" disabled={missing_data}></input>
-          </div>
-          <div id="file_edit_path_edit_go" className={go_button_classes} onClick={missing_data ? null : this.handleGoButton} >...</div>
-        </div>
-        <div id="file_edit_path_display_wrapper" className="file-edit-path-display-wrapper">
-          <div id="file_edit_path_display" className="file-edit-path-display">
-          {this.state.path_contents && this.displayContents()}
-          </div>
-        </div>
-        <div name="file_edit_footer" className="file-edit-footer">
-          <div name="file_edit_ok" className={ok_button_classes} onClick={missing_data ? null : this.onOk}>OK</div>
-          <div name="file_edit_spacer" className="file-edit-footer-spacer"></div>
-          <div name="file_edit_cancel" className="file-edit-button file-edit-cancel" onClick={this.onCancel}>Cancel</div>
-        </div>
+        {this.state.fetching && this.displayFetchWait()}
+        {missing_data && this.displayDisabledResults()}
       </div>
-      {this.state.fetching && this.displayFetchWait()}
-      {missing_data && this.displayDisabledResults()}
-    </div>
     );
   }
 }

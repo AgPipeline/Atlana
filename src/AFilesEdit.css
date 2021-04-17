@@ -67,7 +67,7 @@
     display: flex;
     flex-direction: row;
     align-content: flex-start;
-    align-items: stretch;
+    align-items: center;
     padding: 10px;
 }
 
@@ -139,6 +139,9 @@
     margin-left: 10px;
 }
 
+.file-detail-row {
+}
+
 .file-edit-interface-table-titles {
 }
 
@@ -161,7 +164,7 @@
     width: 90%;
 }
 
-.file-edit-interface-table-value-mandatory {
+.file-edit-interface-value-mandatory {
     margin-left: 10px;
     color: red;
 }

@@ -2,6 +2,7 @@
 class ConfigStore {
 
   static files = [];
+  static workflows = [];
 
   static getFiles() {
     return ConfigStore.files;

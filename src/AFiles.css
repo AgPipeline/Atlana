@@ -25,11 +25,12 @@
     padding-right: 3px;
     padding-left: 3px;
     font-size: small;
+    cursor: pointer;
 }
 
 .files-header-back:hover {
-    border-width: 2px;
     border-color: black;
+    box-shadow: 2px 2px 2px grey;
 }
 
 .files-header-text {
@@ -62,10 +63,7 @@
 .files-types-option {
 }
 
-.files-type-option-select {
-}
-
-.files-types-option-item {
+.files-type-option-item {
 }
 
 .files-table {
@@ -97,6 +95,10 @@
     background-color: powderblue;
     font-weight: normal !important;
     cursor: pointer;
+}
+
+.files-add-new-button:hover {
+    box-shadow: 2px 2px 2px grey;
 }
 
 .files-detail-row {

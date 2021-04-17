@@ -1,0 +1,62 @@
+
+.workflow-wrapper {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-content: center;
+    align-items: stretch;
+    left: 0px;
+}
+
+.workflow-table {
+    border-width: 1px 1px 1px 1px;
+    border-color: black;
+    border-style: solid;
+}
+
+.workflow-table-titles {    
+}
+
+
+.workflow-title-text {
+    min-width: 3vw;
+    height: calc(1em + 20px);
+    background-color: lightgrey;
+    color: black;    
+    font-size: small;
+    font-weight: bold;
+}
+
+.workflow-types-list-wrapper {
+    align-self: end;
+}
+
+.workflow-add-new-button-wrapper {
+    align-self: end;
+}
+
+.workflow-types-option {
+}
+
+.workflow-type-option-item {
+}
+
+.workflow-add-new-button {
+    margin: 5px;
+    padding: 5px;
+    border: 1px solid black;
+    border-radius: 5px;
+    background-color: powderblue;
+    font-weight: normal !important;
+    cursor: pointer;
+}
+
+.workflow-add-new-button:hover {
+    box-shadow: 2px 2px 2px grey;
+}
+
+
+
+
+

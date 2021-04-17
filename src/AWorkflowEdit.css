@@ -1,0 +1,172 @@
+
+.workflow-edit-background {
+    background-color: rgb(128, 128, 128, .25);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: row;
+    align-content: space-around;
+    align-items: flex-start;
+}
+
+.workflow-edit-spacing {
+    flex: 20;
+}
+
+.workflow-edit-wrapper {
+    margin-top: 50px;
+    min-width: 60%;
+    max-width: 80%;
+    min-height: 20%;
+    max-height: 80%;
+    border: 1px solid black;
+    border-radius: 10px;
+    background-color: white;
+    display: flex;
+    flex-direction: column;
+    align-content: space-around;
+    align-items: flex-start;
+}
+
+.workflow-edit-titlebar {
+    background-color: lightgrey;
+    border-radius: 10px 10px 0 0 ;
+    border-bottom: 1px solid grey;
+    color: black;
+    font-size: large;
+    text-align: center;
+    min-height: 1.5em;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    width: 100%;
+}
+
+.workflow-edit-titlebar-left {
+    flex: 1;
+}
+
+.workflow-edit-titlebar-center {
+    flex: 20;
+    white-space: nowrap;
+}
+
+.workflow-edit-titlebar-right {
+    flex: 1;
+    padding-right: 10px;
+    text-align: center;
+    align-self: center;
+}
+
+.workflow-edit-titlebar-close {
+    cursor: pointer;
+    margin-top: 2px;
+}
+
+.workflow-edit-titlebar-close:hover {
+    border: 1px solid black;
+    border-radius: 5px;
+}
+
+.workflow-edit-name-wrapper {
+    display: flex;
+    flex-direction: row;
+    align-content: flex-start;
+    align-items: center;
+    padding: 10px;
+}
+
+.workflow-edit-name-prompt {
+}
+
+.workflow-edit-name-edit-wrapper {
+    padding-left: 10px;
+}
+
+.workflow-edit-name-edit {
+    min-width: 70%;
+}
+
+.workflow-edit-interface-value-mandatory {
+    margin-left: 10px;
+    color: red;
+}
+
+.workflow-edit-interface-wrapper {
+    margin-bottom: 10px;
+}
+
+.workflow-edit-interface-table {
+    width: 100%;
+    margin-right: 10px;
+    margin-left: 10px;
+}
+
+.workflow-detail-row {
+}
+
+.workflow-edit-interface-step-wrapper {
+    text-align: left;
+    font-size: small;
+}
+
+.workflow-edit-interface-table-item {
+}
+
+.workflow-edit-interface-table-prompt {
+    white-space: nowrap;
+    text-align: left;
+}
+
+.workflow-edit-interface-table-value {
+    width: 90%;
+}
+
+.workflow-edit-footer {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.workflow-edit-footer-spacer {
+    flex: 80%;
+}
+
+.workflow-edit-button {
+    min-width: 20px;
+    height: 20px;
+    border: 1px solid grey;
+    padding-right: 10px;
+    padding-left: 10px;
+    border-radius: 5px;
+}
+
+.workflow-edit-button-disabled {
+    border-color: #e0e0e0;
+    color: grey;
+    cursor: default;
+}
+
+.workflow-edit-ok {
+    background-color: #d8ffd8;
+    margin-left: 20px;
+    cursor: pointer;
+}
+
+.workflow-edit-ok-disabled {
+    background-color: #f0f0f0;
+}
+
+.workflow-edit-cancel {
+    background-color: #e0e0e0;
+    margin-right: 20px;
+    padding-right: 20px;
+    cursor: pointer;
+}
+
