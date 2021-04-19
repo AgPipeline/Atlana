@@ -135,7 +135,7 @@ class AWorkflows extends Component {
         </div>
         {this.state.cur_item_index !== null && 
               <AWorkflowEdit title={this.state.cur_item_title} name={this.state.cur_item_name} template={cur_template}
-                             onCancel={this.onCancelEdit}/>
+                             files={this.props.files} onCancel={this.onCancelEdit}/>
         }
       </>
     );

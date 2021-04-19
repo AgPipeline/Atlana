@@ -122,7 +122,27 @@
 }
 
 .workflow-edit-interface-table-value {
-    width: 90%;
+    width: 80%;
+}
+
+.workflow-edit-interface-table-value-wrapper {
+    display: flex;
+    flex-direction: row;
+    align-content: flex-start;
+    align-items: stretch;
+}
+
+.workflow-edit-interface-table-browse {
+    min-width: 10px;
+    height: 20px;
+    margin-left: 5px;
+    padding-left: 2px;
+    padding-right: 2px;
+    border: 1px solid black;
+    border-radius: 5px;
+    background-color: lightgrey;
+    font-size: small;
+    cursor: pointer;
 }
 
 .workflow-edit-footer {

@@ -1,0 +1,134 @@
+
+.browse-folder-background {
+    background-color: rgb(128, 128, 128, .25);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: row;
+    align-content: space-around;
+    align-items: flex-start;
+}
+
+.browse-folder-edit-spacing {
+    flex: 20;
+}
+
+.browse-folder-wrapper {
+    margin-top: 80px;
+    min-width: 40%;
+    max-width: 80%;
+    border: 1px solid black;
+    border-radius: 10px;
+    background-color: white;
+    display: flex;
+    flex-direction: column;
+    align-content: space-around;
+    align-items: flex-start;
+}
+
+.browse-folder-titlebar {
+    background-color: lightgrey;
+    border-radius: 10px 10px 0 0 ;
+    border-bottom: 1px solid grey;
+    color: black;
+    font-size: large;
+    text-align: center;
+    min-height: 1.5em;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    width: 100%;
+}
+
+.browse-folder-titlebar-left {
+    flex: 1;
+}
+
+.browse-folder-titlebar-center {
+    flex: 20;
+    white-space: nowrap;
+}
+
+.browse-folder-titlebar-right {
+    flex: 1;
+    padding-right: 10px;
+    text-align: center;
+    align-self: center;
+}
+
+.browse-folder-titlebar-close {
+    cursor: pointer;
+    margin-top: 2px;
+}
+
+.browse-folder-titlebar-close:hover {
+    border: 1px solid black;
+    border-radius: 5px;
+}
+
+.browse-folder-folders-wrapper {
+    width: 100%;
+}
+
+.browse-folder-no-folder-wrapper {
+    margin-top: 20px;
+}
+
+.browse-folder-no-folder {
+    text-align: center;
+    font-weight: bold;
+}
+
+.browse-folder-footer {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.browse-folder-footer-spacer {
+    flex: 80%;
+}
+
+.browse-folder-button {
+    min-width: 20px;
+    height: 20px;
+    border: 1px solid grey;
+    padding-right: 10px;
+    padding-left: 10px;
+    border-radius: 5px;
+}
+
+.browse-folder-button-disabled {
+    border-color: #e0e0e0;
+    color: grey;
+    cursor: default;
+}
+
+.browse-folder-ok {
+    background-color: #d8ffd8;
+    margin-left: 20px;
+    cursor: pointer;
+}
+
+.browse-folder-ok-disabled {
+    background-color: #f0f0f0;
+}
+
+.browse-folder-cancel {
+    background-color: #e0e0e0;
+    margin-right: 20px;
+    padding-right: 20px;
+    cursor: pointer;
+}
+
+
+
+
+
+

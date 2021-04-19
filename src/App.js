@@ -89,7 +89,7 @@ class App extends Component {
             <div id="atlana_workspace">
               {this.state.mode === states.data_files && <AFiles files={this.getFiles} addFile={this.addFile} updateFile={this.updateFile}
                                                            deleteFile={this.deleteFile} done={this.setMainMenu} />}
-              {this.state.mode === states.workflow_image && <AWorkflow done={this.setMainMenu} />}
+              {this.state.mode === states.workflow_image && <AWorkflow done={this.setMainMenu} files={this.getFiles} />}
             </div>
           </span>
         </span>

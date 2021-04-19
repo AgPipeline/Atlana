@@ -1,14 +1,18 @@
 // Workflow interface
 import {Component} from 'react';
-import workflowDefinitions from './WorkflowDefinitions';
+import BrowseFolders from './BrowseFolders';
 import './AWorkflowEdit.css';
 
 class AWorkflowEdit extends Component {
   constructor(props) {
     super(props);
 
-    console.log(props);
-
+    this.browseFiles = this.browseFiles.bind(this);
+    this.generateBrowseUI = this.generateBrowseUI.bind(this);
+    this.generateFileUI = this.generateFileUI.bind(this);
+    this.generateFloatUI = this.generateFloatUI.bind(this);
+    this.generateFolderUI = this.generateFolderUI.bind(this);
+    this.generateIntegerUI = this.generateIntegerUI.bind(this);
     this.generateMandatoryUI = this.generateMandatoryUI.bind(this);
     this.generatePlainUI = this.generatePlainUI.bind(this);
     this.generatePasswordUI = this.generatePasswordUI.bind(this);
@@ -17,21 +21,140 @@ class AWorkflowEdit extends Component {
     this.generateWorkflowStep = this.generateWorkflowStep.bind(this);
     this.generateWorkflowUI = this.generateWorkflowUI.bind(this);
     this.onCancel = this.onCancel.bind(this);
+    this.onCancelBrowse = this.onCancelBrowse.bind(this);
+    this.onNameUpdated = this.onNameUpdated.bind(this);
     this.onOk = this.onOk.bind(this);
 
     let cur_name = this.props.edit_item ? this.props.edit_item.name : this.props.title;
+    const all_files = this.props.files();
+
+    this.files = all_files.filter((item) => item.path_is_file === true);
+    this.folders = all_files.filter((item) => item.path_is_file !== true);
 
     this.state = {
       name: cur_name,           // The working name
       missing_data: false,      // Flag indicating we're missing data
+      browse_file: null,        // Boolean flag for file or folder browsing, set to null to hide
+      browse_target_id: null,   // The target of browsing completion
+      browse_title: '',         // The title of the browse window
     };
   }
 
   generated_ids = [];           // IDs of all elements we generated
   mandatory_check_ids = [];     // IDs of mandatory elements we generated
 
-  generateMandatoryUI() {
-    return (<span className="workflow-edit-interface-value-mandatory">*</span>);
+  browseFiles(ev, select_item) {
+    this.setState({browse_file: true, browse_target_id: ev.target.id, browse_title: select_item.prompt});
+  }
+
+  generateBrowseUI(item, choices, browse_cb) {
+    var props = {};
+    const is_mandatory = item.hasOwnProperty('mandatory') ? item.mandatory : true;
+    const have_browse_callback = (typeof browse_cb === 'function') ? true : false;
+
+    const element_id = 'workflow_edit_interface_table_value_' + item.name;
+    this.generated_ids.push(element_id);
+
+    if (item.hasOwnProperty('default')) {
+      props['defaultValue'] = item.default;
+    }
+    if (is_mandatory) {
+      props['required'] = 'required';
+      props['onChange'] = this.onMandatoryCheck;
+      this.mandatory_check_ids.push(element_id);
+    }
+
+    return (
+      <div id="workflow_edit_interface_table_value_wrapper" className="workflow-edit-interface-table-value-wrapper">
+        <select name={element_id} id={element_id} {...props}>
+          {choices.map((item, idx) => {return (
+              <option value={item.name + '_' + idx} key={item.name + '_' + idx}
+                      className="edit-interface-table-value-option edit-interface-table-value-option-item">{item.name}</option>
+            );}
+          )}
+        </select>
+        {this.generateMandatoryUI(is_mandatory)}
+        {have_browse_callback && 
+            <div id={'edit_interface_table_value_option_browse_' + item.id} className="workflow-edit-interface-table-browse"
+                 onClick={(ev) => browse_cb(ev, item)}>
+              ...
+            </div>
+        }
+      </div>
+    );
+  }
+
+  generateFileUI(item) {
+    return this.generateBrowseUI(item, this.files, this.browseFiles);
+  }
+
+  generateFloatUI(item) {
+    var props = {};
+    const minimum = item.hasOwnProperty('lowerbound') ? item.lowerbound : null;
+    const maximum = item.hasOwnProperty('upperbound') ? item.upperbound : null;
+    const step = item.hasOwnProperty('step') ? item.step : '0.01';
+    const is_mandatory = item.hasOwnProperty('mandatory') ? item.mandatory : true;
+
+    const element_id = 'workflow_edit_interface_table_value_' + item.name;
+    this.generated_ids.push(element_id);
+
+    if (minimum) props['min'] = '' + minimum;
+    if (maximum) props['max'] = '' + maximum;
+    if (step) props['step']  = '' + step; 
+    if (item.hasOwnProperty('default')) {
+      props['defaultValue'] = item.default;
+    }
+    if (is_mandatory) {
+      props['required'] = 'required';
+      props['onChange'] = this.onMandatoryCheck;
+      this.mandatory_check_ids.push(element_id);
+    }
+
+    return (
+      <div id="workflow_edit_interface_table_value_wrapper" className="workflow-edit-interface-table-value-wrapper">
+        <input id={element_id} type="number" size="15" className="workflow-edit-interface-table-value" {...props}></input>
+        {this.generateMandatoryUI(is_mandatory)}
+      </div>
+    );
+  }
+
+  generateFolderUI(item) {
+    return this.generateBrowseUI(item, this.folders);
+  }
+
+  generateIntegerUI(item) {
+    var props = {};
+    const minimum = item.hasOwnProperty('lowerbound') ? item.lowerbound : null;
+    const maximum = item.hasOwnProperty('upperbound') ? item.upperbound : null;
+    const step = item.hasOwnProperty('step') ? item.step : null;
+    const is_mandatory = item.hasOwnProperty('mandatory') ? item.mandatory : true;
+
+    const element_id = 'workflow_edit_interface_table_value_' + item.name;
+    this.generated_ids.push(element_id);
+
+    if (minimum) props['min'] = '' + minimum;
+    if (maximum) props['max'] = '' + maximum;
+    if (step) props['step']  = '' + step; 
+    if (item.hasOwnProperty('default')) {
+      props['defaultValue'] = item.default;
+    }
+    if (is_mandatory) {
+      props['required'] = 'required';
+      props['onChange'] = this.onMandatoryCheck;
+      this.mandatory_check_ids.push(element_id);
+    }
+
+    return (
+      <div id="workflow_edit_interface_table_value_wrapper" className="workflow-edit-interface-table-value-wrapper">
+        <input id={element_id} type="number" size="15" className="workflow-edit-interface-table-value" {...props}></input>
+        {this.generateMandatoryUI(is_mandatory)}
+      </div>
+    );
+  }
+
+  generateMandatoryUI(is_mandatory) {
+    const cur_mandatory = is_mandatory || (is_mandatory === null) || (is_mandatory === undefined);
+    return (<span className="workflow-edit-interface-value-mandatory">{cur_mandatory ? '*' : ' '}</span>);
   }
 
   generatePlainUI(item) {
@@ -42,7 +165,7 @@ class AWorkflowEdit extends Component {
     const is_mandatory = item.hasOwnProperty('mandatory') ? item.mandatory : true;
 
     if (!is_dropdown) {
-      const element_id = 'file_edit_interface_table_value_' + item.name;
+      const element_id = 'workflow_edit_interface_table_value_' + item.name;
       this.generated_ids.push(element_id);
 
       if (min_length) props['minlength'] = '' + min_length;
@@ -51,14 +174,15 @@ class AWorkflowEdit extends Component {
         props['defaultValue'] = item.default;
       }
       if (is_mandatory) {
+        props['required'] = 'required';
         props['onChange'] = this.onMandatoryCheck;
         this.mandatory_check_ids.push(element_id);
       }
 
       return (
-        <div id="file_edit_interface_table_value_wrapper" className="file-edit-interface-table-value-wrapper">
-          <input id={element_id} type="text" size="50" className="file-edit-interface-table-value" {...props}></input>
-          {is_mandatory && this.generateMandatoryUI()}
+        <div id="workflow_edit_interface_table_value_wrapper" className="workflow-edit-interface-table-value-wrapper">
+          <input id={element_id} type="text" size="50" className="workflow-edit-interface-table-value" {...props}></input>
+          {this.generateMandatoryUI(is_mandatory)}
         </div>
       );
     } else {
@@ -69,52 +193,27 @@ class AWorkflowEdit extends Component {
         props['defaultValue'] = item.default;
       }
       if (is_mandatory) {
+        props['required'] = 'required';
         props['onChange'] = this.onMandatoryCheck;
         this.mandatory_check_ids.push(element_id);
       }
 
       return (
-        <div id="file_edit_interface_table_value_wrapper" className="file-edit-interface-table-value-wrapper">
+        <div id="workflow_edit_interface_table_value_wrapper" className="workflow-edit-interface-table-value-wrapper">
           <select id={element_id} {...props}>
             {item.choices.map((value) => {return(<option key={item.name + '.' + value} value={value}>{value}</option>);})}
           </select>
-          {is_mandatory && this.generateMandatoryUI()}
+          {this.generateMandatoryUI(is_mandatory)}
         </div>
       );
     }
-  }
-
-  generateSecretUI(item) {
-    const min_length = item.hasOwnProperty('minlength') ? item.minlength : null;
-    const max_length = item.hasOwnProperty('maxlength') ? item.maxlength : null;
-    const is_mandatory = item.hasOwnProperty('mandatory') ? item.mandatory : true;
-    const element_id = 'file_edit_interface_table_value_' + item.name;
-    this.generated_ids.push(element_id);
-
-    var props = {};
-    if (min_length) props['minlength'] = '' + min_length;
-    if (max_length) props['maxlength'] = '' + max_length;
-    if (item.hasOwnProperty('default')) {
-      props['defaultValue'] = item.default;
-    }
-    if (is_mandatory) {
-      props['onChange'] = this.onMandatoryCheck;
-      this.mandatory_check_ids.push(element_id);
-    }
-
-    return (
-      <div id="file_edit_interface_table_value_wrapper" className="file-edit-interface-table-value-wrapper">
-        <input id={element_id} type="password" className="file-edit-interface-table-value" {...props}></input>
-        {is_mandatory && this.generateMandatoryUI()}
-      </div>
-    );
   }
 
   generatePasswordUI(item) {
     const min_length = item.hasOwnProperty('minlength') ? item.minlength : null;
     const max_length = item.hasOwnProperty('maxlength') ? item.maxlength : null;
     const is_mandatory = item.hasOwnProperty('mandatory') ? item.mandatory : true;
-    const element_id = 'file_edit_interface_table_value_' + item.name;
+    const element_id = 'workflow_edit_interface_table_value_' + item.name;
     this.generated_ids.push(element_id);
 
     // TODO: Add checkbox for showing password in plain text
@@ -125,14 +224,42 @@ class AWorkflowEdit extends Component {
       props['defaultValue'] = item.default;
     }
     if (is_mandatory) {
+      props['required'] = 'required';
       props['onChange'] = this.onMandatoryCheck;
       this.mandatory_check_ids.push(element_id);
     }
 
     return (
-      <div id="file_edit_interface_table_value_wrapper" className="file-edit-interface-table-value-wrapper">
-        <input id={element_id} type="password" className="file-edit-interface-table-value" {...props}></input>
-        {is_mandatory && this.generateMandatoryUI()}
+      <div id="workflow_edit_interface_table_value_wrapper" className="workflow-edit-interface-table-value-wrapper">
+        <input id={element_id} type="password" className="workflow-edit-interface-table-value" {...props}></input>
+        {this.generateMandatoryUI(is_mandatory)}
+      </div>
+    );
+  }
+
+  generateSecretUI(item) {
+    const min_length = item.hasOwnProperty('minlength') ? item.minlength : null;
+    const max_length = item.hasOwnProperty('maxlength') ? item.maxlength : null;
+    const is_mandatory = item.hasOwnProperty('mandatory') ? item.mandatory : true;
+    const element_id = 'workflow_edit_interface_table_value_' + item.name;
+    this.generated_ids.push(element_id);
+
+    var props = {};
+    if (min_length) props['minlength'] = '' + min_length;
+    if (max_length) props['maxlength'] = '' + max_length;
+    if (item.hasOwnProperty('default')) {
+      props['defaultValue'] = item.default;
+    }
+    if (is_mandatory) {
+      props['required'] = 'required';
+      props['onChange'] = this.onMandatoryCheck;
+      this.mandatory_check_ids.push(element_id);
+    }
+
+    return (
+      <div id="workflow_edit_interface_table_value_wrapper" className="workflow-edit-interface-table-value-wrapper">
+        <input id={element_id} type="password" className="workflow-edit-interface-table-value" {...props}></input>
+        {this.generateMandatoryUI(is_mandatory)}
       </div>
     );
   }
@@ -140,10 +267,10 @@ class AWorkflowEdit extends Component {
   generateWorkflowItem(item, idx) {
     switch(item.type) {
       case 'integer':
-        return null;
+        return this.generateIntegerUI(item);
 
       case 'float':
-        return null;
+        return this.generateFloatUI(item);
 
       default:
       case 'plain':
@@ -156,28 +283,26 @@ class AWorkflowEdit extends Component {
         return this.generatePasswordUI(item);
 
       case 'file':
-        return null;
+        return this.generateFileUI(item);
 
       case 'folder':
-        return null;
+        return this.generateFolderUI(item);
     }
   }
 
   generateWorkflowStep(item, idx) {
-    return (
-      <tr id={'workflow_edit_interface_table_row_' + item.name} key={item.name} className="workflow-detail-row">
-        {item.fields.map((item, idx) => {
+    let items = item.fields.map((item, idx) => {
           return (
-            <>
+            <tr id={'workflow_edit_interface_table_row_' + item.name} key={item.name + '_' + idx} className="workflow-detail-row">
               <td id={'workflow_edit_interface_table_name_' + item.name} className="workflow-edit-interface-table-item workflow-edit-interface-table-prompt">{item.prompt}</td>
               <td id={'workflow_edit_interface_table_type_' + item.name} className="workflow-edit-interface-table-item workflow-edit-interface-table-value">
                 {this.generateWorkflowItem(item)}
               </td>
-            </>
+            </tr>
           );
-        })}
-      </tr>
-    );
+        });
+
+    return (items);
   }
 
   generateWorkflowUI(template) {
@@ -195,8 +320,16 @@ class AWorkflowEdit extends Component {
     );
   }
 
+  mapGeneratedIdToName(el_id) {
+    return el_id.substr('workflow_edit_interface_table_value_'.length);
+  }
+
   onCancel() {
     this.props.onCancel();
+  }
+
+  onCancelBrowse() {
+    this.setState({browse_file: null});
   }
 
   onNameUpdated(ev) {
@@ -204,7 +337,6 @@ class AWorkflowEdit extends Component {
   }
 
   onOk() {
-
   }
 
   render() {
@@ -241,6 +373,8 @@ class AWorkflowEdit extends Component {
           </div>
         </div>
         <div className="workflow-edit-spacing"></div>
+        {this.state.browse_file === true &&
+              <BrowseFolders folders={this.folders} title={this.state.browse_title} cancel={this.onCancelBrowse} />}
       </div>
     );
   }

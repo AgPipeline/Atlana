@@ -177,6 +177,9 @@ def irods_files() -> tuple:
     except irods.exception.NetworkException as ex:
         print('Network exception caught for iRODS listing: ', path, ex)
         return 'Unable to complete iRODS listing request: %s' % path, 504
+    except irods.exception.CAT_INVALID_AUTHENTICATION as ex:
+        print('Invalid authentication exception caught for iRODS listing: ', path, ex)
+        return 'Invalid password specified for iRODS listing request: %s' % path, 401
     except irods.exception.CAT_INVALID_USER as ex:
         print('Invalid user exception caught for iRODS listing: ', path, ex)
         return 'Invalid user specified for iRODS listing request: %s' % path, 401

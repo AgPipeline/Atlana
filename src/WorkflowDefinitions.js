@@ -67,6 +67,7 @@ var workflowDefinitions = [{
       type: 'float',
       lowerbound: 0.0,
       upperbound: 1.0,
+      default: 1.0,
     }]  // End  of fields
   }, {
     name: 'Plot Clip',
@@ -91,7 +92,7 @@ var workflowDefinitions = [{
       visibility: 'ui',
       prompt: 'Experiment file',
       description: 'YAML file containing experiment data',
-      tyep: 'file',
+      type: 'file',
       mandatory: false,
     }]  // End  of fields
   }]  // End of steps

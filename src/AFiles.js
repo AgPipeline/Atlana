@@ -12,6 +12,7 @@ var files_titles = [
   'Name',
   'Type',
   'Location',
+  'File',
   'ID',
   ' ',
   ' ',
@@ -28,6 +29,7 @@ class AFiles extends Component {
     this.editItem = this.editItem.bind(this);
     this.finishAdd = this.finishAdd.bind(this);
     this.finishEdit = this.finishEdit.bind(this);
+    this.generateIsFileUI = this.generateIsFileUI.bind(this);
     this.generateNewFileUI = this.generateNewFileUI.bind(this);
     this.getTitle = this.getTitle.bind(this);
     this.nameCheck = this.nameCheck.bind(this);
@@ -110,25 +112,37 @@ class AFiles extends Component {
                    mode_path: found_item.location, edit_cb: this.finishEdit, edit_add: false, edit_item: found_item});
   }
 
-  finishAdd(edit_type, name, path, auth) {
+  finishAdd(edit_type, name, path, is_file, auth) {
     let new_state = {mode: null, mode_name: '', mode_title: ''};
 
-    const new_entry = {name, location: path, auth, data_type: edit_type, id: Utils.getUuid()};
+    const new_entry = {name, location: path, path_is_file: is_file, auth, data_type: edit_type, id: Utils.getUuid()};
     this.props.addFile(new_entry);
     new_state['files_list'] = this.props.files();
 
     this.setState(new_state);
   }
 
-  finishEdit(edit_type, name, path, auth, item_id) {
+  finishEdit(edit_type, name, path, is_file, auth, item_id) {
     let new_state = {mode: null, mode_name: '', mode_title: ''};
 
-    const new_entry = {name, location: path, auth, data_type: edit_type, id: item_id};
+    const new_entry = {name, location: path, path_is_file: is_file, auth, data_type: edit_type, id: item_id};
     const old_entry = this.state.files_list.find((item) => item.id === item_id);
     this.props.updateFile(old_entry.id, new_entry);
     new_state['files_list'] = this.props.files();
 
     this.setState(new_state);
+  }
+
+  generateIsFileUI(item){
+    const checkmark_on = (item.path_is_file !== null && item.path_is_file !== undefined) ? item.path_is_file : null;
+
+    var file_checkmark_classes = 'files-detail-checkmark ' + (checkmark_on ? 'files-detail-checkmark-on' : 'files-detail-checkmark-off');
+
+    return (
+      <td id={'files_detail_is_file_' + item.name} className="files-detail-item files-detail-is-file">
+        {checkmark_on !== null && <div id={'files_detail_is_file_check_' + item.name} class={file_checkmark_classes} />}
+      </td>
+    );
   }
 
   generateNewFileUI() {
@@ -197,6 +211,7 @@ class AFiles extends Component {
                     <td id={'files_detail_name_' + item.id} className="files-detail-item files-detail-name">{item.name}</td>
                     <td id={'files_detail_type_' + item.id} className="files-detail-item files-detail-type">{item.data_type}</td>
                     <td id={'files_detail_loc_' + item.id} className="files-detail-item files-detail-location">{item.location}</td>
+                    {this.generateIsFileUI(item)}
                     <td id={'files_detail_id_' + item.id} className="files-detail-item files-detail-id">{item.id}</td>
                     <td id={'files_detail_edit_' + item.id} className="files-detail-item files-detail-edit" onClick={(ev) => this.editItem(ev, item.id)}>Edit</td>
                     <td id={'files_detail_del_' + item.id} className="files-detail-item files-detail-delete" onClick={(ev) => this.deleteItem(ev, item.id)}>Delete</td>

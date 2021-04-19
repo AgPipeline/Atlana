@@ -32,6 +32,8 @@ class AFilesEdit extends Component {
     this.fetchRequestError = this.fetchRequestError.bind(this);
     this.fetchRequestFinish = this.fetchRequestFinish.bind(this);
     this.fetchRequestStart = this.fetchRequestStart.bind(this);
+    this.fileSelected = this.fileSelected.bind(this);
+    this.folderSelected = this.folderSelected.bind(this);
     this.generateInterfaceItem = this.generateInterfaceItem.bind(this);
     this.generateInterfaceUI = this.generateInterfaceUI.bind(this);
     this.generateMandatoryUI = this.generateMandatoryUI.bind(this);
@@ -60,6 +62,7 @@ class AFilesEdit extends Component {
 
     this.state = {
       cur_path: cur_path,               // Current working path
+      is_file: null,                    // Flag for current path being a file or folder
       fetching: false,                  // Convenience flag for UI updates
       path_contents: null,              // Folder contents
       name: cur_name,                   // Working name of definition
@@ -182,7 +185,7 @@ class AFilesEdit extends Component {
 
     // Remove pending status  and update state
     this.pending_fetch = null;
-    this.setState({fetching: false, cur_path: path.replaceAll('\\', '/'),
+    this.setState({fetching: false, cur_path: path.replaceAll('\\', '/'), is_file: false,
                    path_contents: this.sortResults(this.normalizeResults(results), this.state.sort_column, this.state.sort_ascending)});
   }
 
@@ -204,6 +207,10 @@ class AFilesEdit extends Component {
       .catch(this.fetchRequestCatch);
   }
 
+  fileSelected(new_path) {
+    this.setState({cur_path: new_path.replaceAll('\\', '/'), is_file: true});
+  }
+
   folderSelected(new_path) {
     let cur_path = new_path;
 
@@ -211,12 +218,10 @@ class AFilesEdit extends Component {
     if (new_path === '..') {
       if (this.state.cur_path.length > 1) {
         let parts = this.state.cur_path.split('/');
-        console.log("FOLDER",parts);
         if (parts.length > 1) {
           parts.pop();
         }
         cur_path = ('/'  + parts.join('/')).replaceAll('//', '/');
-        console.log("NEW:", cur_path);
       } else {
         cur_path = this.props.path;
       }
@@ -242,7 +247,7 @@ class AFilesEdit extends Component {
     display_style['height'] = client_rect.height;
 
     let folder_navigation = null;
-    if (this.state.cur_path !== '/') {
+    if (this.state.cur_path !== '/' && (this.state.is_file === false)) {
       folder_navigation = [{
         name: '..', path: '..', type: 'folder'
       }]
@@ -292,7 +297,7 @@ class AFilesEdit extends Component {
   displayPathItem(item, idx) {
     const item_class_name = item.type ==='file' ? 'file-edit-path-display-file' : 'file-edit-path-display-folder';
     const image_source = item.type ==='file' ? 'file_image.png' : 'folder_image.png';
-    const click_cb = item.type ==='file' ?  null : () => this.folderSelected(item.path);
+    const click_cb = item.type ==='file' ?  () => this.fileSelected(item.path) : () => this.folderSelected(item.path);
     const item_size = item.type ==='file' ? item.size : '';
 
     return (
@@ -354,6 +359,7 @@ displayResultsOverlay(msg, additional_class_names) {
         props['defaultValue'] = item.default;
       }
       if (is_mandatory) {
+        props['required'] = 'required';
         props['onChange'] = this.onMandatoryCheck;
         this.mandatory_check_ids.push(element_id);
       }
@@ -372,6 +378,7 @@ displayResultsOverlay(msg, additional_class_names) {
         props['defaultValue'] = item.default;
       }
       if (is_mandatory) {
+        props['required'] = 'required';
         props['onChange'] = this.onMandatoryCheck;
         this.mandatory_check_ids.push(element_id);
       }
@@ -401,6 +408,7 @@ displayResultsOverlay(msg, additional_class_names) {
       props['defaultValue'] = item.default;
     }
     if (is_mandatory) {
+      props['required'] = 'required';
       props['onChange'] = this.onMandatoryCheck;
       this.mandatory_check_ids.push(element_id);
     }
@@ -428,6 +436,7 @@ displayResultsOverlay(msg, additional_class_names) {
       props['defaultValue'] = item.default;
     }
     if (is_mandatory) {
+      props['required'] = 'required';
       props['onChange'] = this.onMandatoryCheck;
       this.mandatory_check_ids.push(element_id);
     }
@@ -500,7 +509,7 @@ displayResultsOverlay(msg, additional_class_names) {
       let el = document.getElementById(el_id);
       if (el) {
         let val = el.value;
-        let name = this.mapAuthenticationIdToName(el_id);
+        let name = this.mapGeneratedIdToName(el_id);
 
         if (name && val && (name.length > 0)) {
           fields[name] = val;
@@ -533,14 +542,11 @@ displayResultsOverlay(msg, additional_class_names) {
 
   handleGoButton() {
     let path_el = document.getElementById('file_edit_path_edit');
-    console.log("GO");
 
     if (path_el && path_el.value) {
       if (this.connected === false || this.state.authentication_changed) {
-        console.log("  CONNECT");
         this.connectRequestStart(() => this.fetchRequestStart(path_el.value));
       } else {
-        console.log("  ASK");
         this.fetchRequestStart(path_el.value);
       }
     }
@@ -563,7 +569,7 @@ displayResultsOverlay(msg, additional_class_names) {
     }
   }
 
-  mapAuthenticationIdToName(el_id) {
+  mapGeneratedIdToName(el_id) {
     return el_id.substr('file_edit_interface_table_value_'.length);
   }
 
@@ -656,7 +662,7 @@ displayResultsOverlay(msg, additional_class_names) {
       }
     }
 
-    this.props.submit(this.props.source, name, path, this.getAuthenticationFields(), item_id);
+    this.props.submit(this.props.source, name, path, this.state.is_file, this.getAuthenticationFields(), item_id);
   }
 
   onPathUpdated(ev) {
@@ -814,7 +820,7 @@ displayResultsOverlay(msg, additional_class_names) {
     const cur_path = this.state.cur_path;
     const cur_name = this.state.name;
     const missing_data = !this.state.mandatory_fields_filled;
-    const go_button_classes = 'file-edit-path-edit-go ' + (missing_data ? 'file-edit-path-edit-go-disabled' : '');
+    const go_button_classes = 'file-edit-path-edit-go ' + ((missing_data || this.state.is_file === true) ? 'file-edit-path-edit-go-disabled' : '');
     const ok_button_disabled = missing_data || this.state.authentication_changed;
     const ok_button_classes = 'file-edit-button file-edit-ok ' + (ok_button_disabled ? 'file-edit-button-disabled file-edit-ok-disabled' : '');
     const have_errors = this.state.errors !== null;
