@@ -1,19 +1,10 @@
 //Implementation of file system interface
 import { Component } from 'react';
 import FileInterfaces from './FileInterfaces';
+import AFilesList from './AFilesList';
 import Message from './Message';
 import IData from './data/IData';
 import './AFilesEdit.css';
-
-// The order of these fields is important, see titleSortInd() and title_sort_map
-var file_display_titles = ['Name', 'Timestamp', 'Size'];
-var sort_column_id = {
-  name: 1,
-  date: 2,
-  size: 3,
-};
-// Map the index of a title to the sort_column_id
-var title_sort_map = {0: sort_column_id.name, 1: sort_column_id.date, 2: sort_column_id.size};
 
 class AFilesEdit extends Component {
   constructor(props) {
@@ -23,11 +14,9 @@ class AFilesEdit extends Component {
     this.connectRequestFinish = this.connectRequestFinish.bind(this);
     this.connectRequestStart = this.connectRequestStart.bind(this);
     this.dismissMessage = this.dismissMessage.bind(this);
-    this.displayContents = this.displayContents.bind(this);
     this.displayError = this.displayError.bind(this);
     this.displayDisabledResults = this.displayDisabledResults.bind(this);
     this.displayFetchWait = this.displayFetchWait.bind(this);
-    this.displayPathItem = this.displayPathItem.bind(this);
     this.fetchRequestCatch = this.fetchRequestCatch.bind(this);
     this.fetchRequestError = this.fetchRequestError.bind(this);
     this.fetchRequestFinish = this.fetchRequestFinish.bind(this);
@@ -46,12 +35,6 @@ class AFilesEdit extends Component {
     this.onNameUpdated = this.onNameUpdated.bind(this);
     this.onOk = this.onOk.bind(this);
     this.onPathUpdated = this.onPathUpdated.bind(this);
-    this.sortByDate = this.sortByDate.bind(this);
-    this.sortByName = this.sortByName.bind(this);
-    this.sortBySize = this.sortBySize.bind(this);
-    this.sortResults = this.sortResults.bind(this);
-    this.titleClicked = this.titleClicked.bind(this);
-    this.titleSortInd = this.titleSortInd.bind(this);
     this.verifyMandatoryFieldsFilled = this.verifyMandatoryFieldsFilled.bind(this);
 
     this.interface = FileInterfaces.getInterface(props.source);
@@ -67,8 +50,6 @@ class AFilesEdit extends Component {
       path_contents: null,              // Folder contents
       name: cur_name,                   // Working name of definition
       mandatory_fields_filled: false,   // Indicates mandatory fields have been filled out
-      sort_column: sort_column_id.name, // Current column being sorted on
-      sort_ascending: true,             // Flag for sort direction
       authentication_changed: false,    // Indicates when a mandatory authentication field has changed, reset when a connection is successful
       errors: null,
     }
@@ -185,8 +166,7 @@ class AFilesEdit extends Component {
 
     // Remove pending status  and update state
     this.pending_fetch = null;
-    this.setState({fetching: false, cur_path: path.replaceAll('\\', '/'), is_file: false,
-                   path_contents: this.sortResults(this.normalizeResults(results), this.state.sort_column, this.state.sort_ascending)});
+    this.setState({fetching: false, cur_path: path.replaceAll('\\', '/'), is_file: false, path_contents: this.normalizeResults(results)});
   }
 
   fetchRequestStart(path) {
@@ -229,58 +209,6 @@ class AFilesEdit extends Component {
     this.fetchRequestStart(cur_path);
   }
 
-  displayContents() {
-    let parent_el = document.getElementById('file_edit_path_display');
-    if (!parent_el) {
-      parent_el = document.getElementById('file_edit_path_display_wrapper');
-    }
-    if (!parent_el) {
-      return null;
-    }
-
-    var display_style = {};
-    const client_rect = parent_el.getBoundingClientRect();
-
-    display_style['left'] = client_rect.x;
-    display_style['top'] = client_rect.y;
-    display_style['width'] = client_rect.width;
-    display_style['height'] = client_rect.height;
-
-    let folder_navigation = null;
-    if (this.state.cur_path !== '/' && (this.state.is_file === false)) {
-      folder_navigation = [{
-        name: '..', path: '..', type: 'folder'
-      }]
-    }
-
-    return (
-      <div id="file_edit_path_contents_table_wrapper" className="file-edit-path-contents-table-wrapper">
-        <table id="file_edit_path_contents_table" className="file-edit-path-contents-table">
-          <thead>
-            <tr>
-              {file_display_titles.map((title, idx) => {
-                  let indicator = this.titleSortInd(title, this.state.sort_ascending);
-                  return(<th key={'file_edit_path_contents_table_' + title} className="file-edit-path-contents-table-header">
-                      <div id={'file_edit_path_contents_table_title_wrapper_' + title} className="file-edit-path-contents-table-title-wrapper" 
-                           onClick={(ev) => this.titleClicked(ev, title)}>
-                        <div id={'file_edit_path_contents_table_title_text_' + idx} className="file-edit-path-contents-table-title-text" >{title}</div>
-                        <div id={'file_edit_path_contents_table_title_ind_' + idx} 
-                             className="file-edit-path-contents-table-title-indicator" >{indicator}</div>
-                      </div>
-                    </th>
-                  );
-              })}
-            </tr>
-          </thead>
-          <tbody>
-              {folder_navigation && folder_navigation.map(this.displayPathItem)}
-              {this.state.path_contents && this.state.path_contents.map(this.displayPathItem)}
-          </tbody>
-        </table>
-      </div>
-    );
-  }
-
   displayDisabledResults() {
     return this.displayResultsOverlay('', 'file-edit-path-display-disabled');
   }
@@ -294,31 +222,7 @@ class AFilesEdit extends Component {
     return this.displayResultsOverlay('Waiting...', 'file-edit-path-display-wait');
   }
 
-  displayPathItem(item, idx) {
-    const item_class_name = item.type ==='file' ? 'file-edit-path-display-file' : 'file-edit-path-display-folder';
-    const image_source = item.type ==='file' ? 'file_image.png' : 'folder_image.png';
-    const click_cb = item.type ==='file' ?  () => this.fileSelected(item.path) : () => this.folderSelected(item.path);
-    const item_size = item.type ==='file' ? item.size : '';
-
-    return (
-      <tr className="file-edit-path-display-item-row" key={'row_' + item.name} >
-        <td id={idx + '_display-item-wrapper'} className="file-edit-path-item" onClick={click_cb}>
-          <div className="file-edit-path-display-file-wrapper">
-            <img src={image_source} alt=""/>
-            <div id={idx + '_' + item.name} key={item.name} className={'file-edit-path-display-item ' + item_class_name}>{item.name}</div>
-          </div>
-        </td>
-        <td id={idx + '_display_item_date'} className="file-edit-path-item file-edit-path-display-date">
-          {item.date}
-        </td>
-        <td id={idx + '_display_item_size'} className="file-edit-path-item file-edit-path-display-size">
-          {item_size}
-        </td>
-      </tr>
-    );
-  }
-
-displayResultsOverlay(msg, additional_class_names) {
+  displayResultsOverlay(msg, additional_class_names) {
     let parent_el = document.getElementById('file_edit_path_display');
     if (!parent_el) {
       parent_el = document.getElementById('file_edit_path_display_wrapper');
@@ -669,116 +573,6 @@ displayResultsOverlay(msg, additional_class_names) {
     this.setState({cur_path: ev.target.value});
   }
 
-  sortByDate(first, second, sort_asc) {
-    // Handle empty dates by putting them at the end
-    if (first.date.length <= 0) {
-      return second.date.length > 0 ? (sort_asc ? 1 : -1) : 0;
-    } else if (second.date.length <= 0) {
-      return (sort_asc ? -1 : 1);
-    }
-
-    const first_parts = first.date.replace(' ', '-').replace(':', '-').split('-');
-    const second_parts = second.date.replace(' ', '-').replace(':', '-').split('-');
-
-    // Return at the first sign of differences
-    for (let ii = 0; ii < first_parts.length; ii++) {
-      // Proceed with date comparisons
-      if (ii < second_parts.length) {
-        if (first_parts[ii] < second_parts[ii]) {
-          return sort_asc ? -1 : 1;
-        } else if (first_parts[ii] > second_parts[ii]) {
-          return sort_asc ? 1 : -1;
-        }
-      } else {
-        // For some reason the second date has fewer parts
-        return 1;
-      }
-    }
-
-    // So far the timestamps are equal
-    return first_parts === second_parts ? 0 : -1;
-  }
-
-  sortByName(first, second, sort_asc) {
-    const lf = first['lower_name'];
-    const ls = second['lower_name'];
-
-    if (lf < ls) {
-      return sort_asc ? -1 : 1;
-    }
-    else if (lf > ls) {
-      return sort_asc ? 1 : -1;
-    }
-    else return 0;
-  }
-
-  sortBySize(first, second, sort_asc) {
-    // Sort so that folders are at the end, sort folders by name
-    if (first.type === 'folder') {
-      if (second.type === 'folder') {
-        return this.sortByName(first, second, sort_asc);
-      } else {
-        return sort_asc ? 1 : -1;
-      }
-    } else if (second.type === 'folder') {
-      return sort_asc ? -1 : 1;
-    } else {
-      if (parseInt(first.size) === parseInt(second.size)) {
-        return 0;
-      } else if (first.size < second.size) {
-        return sort_asc ? -1 : 1;
-      } else {
-        return sort_asc ? 1 : -1;
-      }
-    }
-  }
-
-  sortResults(results, sort_column, sort_ascending) {
-    const sort_asc = !(sort_ascending === false);   // Normalize for missing or non-boolean value
-
-    switch (sort_column) {
-      default:
-      case sort_column_id.name:
-        return results.sort((first, second) => this.sortByName(first, second, sort_asc));
-
-      case sort_column_id.size:
-        return results.sort((first, second) => this.sortBySize(first, second, sort_asc));
-
-      case sort_column_id.date:
-        return results.sort((first, second) => this.sortByDate(first, second, sort_asc));
-    } 
-  }
-
-  titleClicked(ev, title) {
-    const found_idx = file_display_titles.findIndex((item) => item === title);
-
-    if (found_idx >= 0) {
-      if (this.state.sort_column === title_sort_map[found_idx]) {
-        const sorted_results = this.sortResults(this.state.path_contents, this.state.sort_column, !this.state.sort_ascending);
-        this.setState({sort_ascending: !this.state.sort_ascending, path_contents: sorted_results});
-      } else {
-        const sorted_results = this.sortResults(this.state.path_contents, title_sort_map[found_idx], true);
-        this.setState({sort_column: title_sort_map[found_idx], sort_ascending: true, path_contents: sorted_results})
-      }
-    }
-  }
-
-  titleSortInd(title, sort_asc) {
-    const found_idx = file_display_titles.findIndex((item) => item === title);
-
-    if (found_idx >= 0) {
-      if (this.state.sort_column === title_sort_map[found_idx]) {
-        if (sort_asc) {
-          return "\u2227";  // Up caret
-        } else {
-          return "\u2228";  // Down caret
-        }
-      }
-    }
-
-    return " ";
-  }
-
   verifyMandatoryFieldsFilled() {
     let el = document.getElementById('file_edit_name_edit');
     if (el) {
@@ -854,7 +648,10 @@ displayResultsOverlay(msg, additional_class_names) {
           </div>
           <div id="file_edit_path_display_wrapper" className="file-edit-path-display-wrapper">
             <div id="file_edit_path_display" className="file-edit-path-display">
-            {this.state.path_contents && this.displayContents()}
+              {this.state.path_contents && 
+                <AFilesList parent_id={'file_edit_path_display'} path={this.state.cur_path} contents={this.state.path_contents} 
+                            folder_sel={this.folderSelected} file_sel={this.fileSelected} />
+              }
             </div>
           </div>
           <div name="file_edit_footer" className="file-edit-footer">

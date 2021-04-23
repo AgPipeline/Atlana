@@ -140,7 +140,7 @@ class AFiles extends Component {
 
     return (
       <td id={'files_detail_is_file_' + item.name} className="files-detail-item files-detail-is-file">
-        {checkmark_on !== null && <div id={'files_detail_is_file_check_' + item.name} class={file_checkmark_classes} />}
+        {checkmark_on !== null && <div id={'files_detail_is_file_check_' + item.name} className={file_checkmark_classes} />}
       </td>
     );
   }

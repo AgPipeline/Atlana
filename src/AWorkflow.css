@@ -32,6 +32,24 @@
     align-self: end;
 }
 
+.workflow-new_wrapper {
+    width: 100%;
+    background-color: #e5e5e5;
+    min-height: 20%;
+}
+
+.workflow-new-title {
+    width: 100%;
+    text-align: center;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    font-weight: bold;
+}
+
+.workflow-new-items-table {
+    width: 100%;
+}
+
 .workflow-add-new-button-wrapper {
     align-self: end;
 }

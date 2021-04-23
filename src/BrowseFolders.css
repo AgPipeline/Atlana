@@ -18,7 +18,7 @@
 
 .browse-folder-wrapper {
     margin-top: 80px;
-    min-width: 40%;
+    min-width: 60%;
     max-width: 80%;
     border: 1px solid black;
     border-radius: 10px;
@@ -82,6 +82,57 @@
     font-weight: bold;
 }
 
+.browse-folder-selector {
+    margin-top:5px;
+    margin-bottom:5px;
+}
+
+.browse-folder-browse-wrapper {
+    margin-bottom: 5px;
+    display: flex;
+    flex-direction: column;
+    align-content: flex-start;
+    align-items: flex-start;
+}
+
+.browse-folder-browse-item-wrapper {
+    display: flex;
+    flex-direction: row;
+    align-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.browse-folder-browse-path-prompt {
+    margin-left: 10px;
+}
+
+.browse-folder-browse-path-value {
+    margin-left:  5px;
+}
+
+.browse-folder-browse-display-wrapper {
+    margin: 0px 10px 10px 10px;
+    border: 1px solid black;
+    width: 93%;
+}
+
+.browse-folder-browse-display {
+    height: 30vh;
+}
+
+.browse-folder-display-wait {
+    background-color: rgb(230, 230, 230, .7);
+}
+
+.browse-folder-display-overlay-wrapper {
+    position: absolute;
+    display: flex;
+    flex-direction: row;
+    align-content: space-around;
+    align-items: center;
+}
+
 .browse-folder-footer {
     width: 100%;
     display: flex;
@@ -126,9 +177,4 @@
     padding-right: 20px;
     cursor: pointer;
 }
-
-
-
-
-
 

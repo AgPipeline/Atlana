@@ -1,0 +1,85 @@
+
+.files-list-contents-table-wrapper {
+    width: 100%;
+    overflow-y: scroll;
+    height: 30vh;
+}
+
+.files-list-contents-table {
+    width: 100%;
+}
+
+.files-list-contents-table-header {
+    position: -webkit-sticky;
+    position: sticky;
+    top: 0;
+    background-color: #e0e0e0;
+}
+
+.files-list-contents-table-title-wrapper {
+    display: flex;
+    flex-direction: row;
+    align-content: space-between;
+    align-items: center;
+    cursor: pointer;
+}
+
+.files-list-contents-table-title-text {
+    flex: 10;
+}
+
+.files-list-contents-table-title-indicator {
+    flex: 1;
+    color: grey;
+}
+
+.files-list-display-item-row {
+}
+
+.files-list-path-display-item {
+    margin-left: 5px;
+}
+
+.files-list-display-file {
+    font-style: italic;
+}
+
+.files-list-display-file:hover {
+    background-color: #e0e0e0;
+}
+
+.files-list-display-folder {
+    font-weight: bold;
+}
+
+.files-list-display-folder:hover {
+    background-color: #e0e0e0;
+}
+
+.files-list-item {
+    width: 40%;
+    height: 1.5em;
+    font-size: smaller;
+    white-space: nowrap;
+}
+
+.files-list-display-item {
+    padding-left: 5px;
+}
+
+.files-list-display-file-wrapper {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-content: space-around;
+    align-items: flex-start;
+    cursor: pointer;
+}
+
+.files-list-display-size {
+}
+
+.files-list-display-date {
+}
+
+

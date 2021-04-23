@@ -1,0 +1,52 @@
+
+.template-ui-value-mandatory {
+    margin-left: 10px;
+    color: red;
+}
+
+.template-ui-table-item {
+}
+
+.template-ui-table-value-cell {
+    text-align: left;
+}
+
+.template-ui-table-prompt {
+    white-space: nowrap;
+    text-align: left;
+}
+
+.template-ui-table-value {
+    width: 80%;
+}
+
+.template-ui-table-value-wrapper {
+    display: flex;
+    flex-direction: row;
+    align-content: flex-start;
+    align-items: stretch;
+    align-items: left;
+}
+
+.template-ui-table-select {
+    min-width: 100px;
+}
+
+.template-ui-table-value-option {
+}
+
+.template-ui-table-value-option-item {
+}
+
+.template-ui-table-browse {
+    min-width: 10px;
+    height: 20px;
+    margin-left: 5px;
+    padding-left: 2px;
+    padding-right: 2px;
+    border: 1px solid black;
+    border-radius: 5px;
+    background-color: lightgrey;
+    font-size: small;
+    cursor: pointer;
+}

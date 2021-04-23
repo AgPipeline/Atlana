@@ -52,7 +52,6 @@ class iRODS extends IData {
 
   // Attempt to connect to iRODS
   connect(auth_info, success_cb, failure_cb) {
-    console.log("CONNECT");
     const uri = Utils.getHostOrigin().concat('/irods/connect');
 
     const form_data = new FormData();
@@ -83,7 +82,6 @@ class iRODS extends IData {
 
   // Get the folder contents of the specified path
   listFolder(path, filter, success_cb, failure_cb) {
-    console.log("LIST");
     let uri = Utils.getHostOrigin().concat('/irods/files');
 
     uri += '?' + encodeURIComponent('path') + '=' + encodeURIComponent(path);
