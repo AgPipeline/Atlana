@@ -46,7 +46,7 @@ var workflowDefinitions = [{
 }, {
   name: 'Ratio Canopy Cover',
   description:  'Plot level canopy cover calculation using a ratio-based soil mask',
-  id: 1,
+  id: 2,
   steps: [{
     name: 'Mask Soil on Image',
     description: 'Masks soil from a copy of an image using a green-to-red ratio',
@@ -66,7 +66,7 @@ var workflowDefinitions = [{
       description: 'Lower bound of green:red ratio for non-soil pixels',
       type: 'float',
       lowerbound: 0.0,
-      upperbound: 1.0,
+      upperbound: 5.0,
       default: 1.0,
     }]  // End  of fields
   }, {

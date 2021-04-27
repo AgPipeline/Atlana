@@ -4,6 +4,7 @@ import WorkspaceTitlebar from './WorkspaceTitlebar';
 import TemplateUIElement from './TemplateUIElement';
 import BrowseFolders  from './BrowseFolders';
 import workflowDefinitions from './WorkflowDefinitions';
+import Utils from './Utils';
 import './AWorkflow.css';
 
 // Table header names
@@ -58,6 +59,10 @@ class AWorkflows extends Component {
     this.files = all_files.filter((item) => item.path_is_file === true);
     this.folders = all_files.filter((item) => item.path_is_file !== true);
 
+    for (let ii = 0; ii < workflow_defs.length; ii++) {
+      this.workflow_configs[workflow_defs[ii].id] = {};
+    }
+
     this.state = {
       mode: workflow_modes.main,    // The current display mode
       browse_files: null,           // Flag used to browse files, folders, or no-browse(=null)
@@ -74,7 +79,8 @@ class AWorkflows extends Component {
 
   generated_ids = [];           // IDs of all elements we generated
   mandatory_ids = [];           // IDs of mandatory elements we generated
-  new_workflow_idx = null;      // The ID of a new workflow to specify
+  new_workflow_idx = null;      // The index of a new workflow to specify
+  workflow_configs = {};        // The configurations for workflows
 
   addItem() {
     if (this.new_workflow_idx == null) {
@@ -83,26 +89,39 @@ class AWorkflows extends Component {
       return;
     }
     const cur_index = this.new_workflow_idx;
-    let cur_name = this.state.workflow_defs[cur_index].name;
+    const cur_template = this.state.workflow_defs[cur_index];
+    let cur_name = cur_template.name;
+    const title_name = cur_name;
+    if (this.workflow_configs[cur_template.id].hasOwnProperty('cur_item_name')) {
+      cur_name = this.workflow_configs[cur_template.id]['cur_item_name'];
+    }
 
     this.setState({mode: workflow_modes.new, cur_item_index: cur_index, cur_item_name: cur_name, 
                    cur_item_title: 'New ' +  cur_name, edit_cb: this.finishAdd, edit_add: true, edit_item: null});
   }
 
   browseFiles(ev, element_id, item) {
-    console.log("FILES",ev,element_id,item);
-    this.setState({browse_files: true, browse_cb: (path) => {this.finishBrowse(path, element_id, item)}});
+    this.setState({browse_files: true, browse_cb: (path, folder_type) => {this.finishBrowse(path, element_id, item, folder_type)}});
   }
 
   finishAdd() {
 
   }
 
-  finishBrowse(file_path, el_id, item) {
+  finishBrowse(file_path, el_id, item, folder_id) {
     const cur_template = this.state.workflow_defs[this.state.cur_item_index];
+    let cur_config = this.workflow_configs[cur_template.id];
+    const cur_folder = this.folders.find((item) => item.id === folder_id);
 
-    console.log("FINISH BROWSE:", file_path, el_id, item);
-    console.log("   ", this.generated_ids, this.state, this.props);
+    if (cur_config.hasOwnProperty(item.item_save_name)) {
+      cur_config[item.item_save_name].location = file_path;
+      cur_config[item.item_save_name].auth = cur_folder.auth;
+      cur_config[item.item_save_name].data_type = cur_folder.data_type;
+    } else {
+      cur_config[item.item_save_name] = {location: file_path, id: el_id, auth: cur_folder.auth,
+                                         data_type: cur_folder.data_type, path_is_file: true, name: file_path};
+    }
+
     this.setState({browse_files: null, browse_cb: null});
   }
 
@@ -125,8 +144,18 @@ class AWorkflows extends Component {
     );
   }
 
-  generateStepUI(item, idx) {
-    return (item.fields.map((item) => {
+  generateStepUI(parent, idx, default_values) {
+    const field_lookup_prefix = idx + '_' + parent.command + '_';
+
+    return (parent.fields.map((item) => {
+        let item_save_name = field_lookup_prefix + item.name;
+        item.item_save_name = item_save_name;
+
+        const found_value = default_values.hasOwnProperty(item_save_name) ? default_values[item_save_name] : null;
+        if (found_value !== null) {
+          item['default'] = found_value;
+        }
+
         let props = {};
         if (item.type === 'file') {
           props['files'] = this.files;
@@ -134,9 +163,10 @@ class AWorkflows extends Component {
         } else if (item.type === 'folder') {
           props['folders'] = this.folders;
         }
+
         return(
           <tr id={item.name + '_' + idx} key={item.name + '_' + idx}>
-            <TemplateUIElement template={item} id_prefix={id_prefix} new_id={this.newIdAdded} change={this.onItemCheck} {...props}/>
+            <TemplateUIElement template={item} id_prefix={id_prefix} new_id={this.newIdAdded} change={(ev) => {this.onItemCheck(ev, item_save_name);}} {...props}/>
           </tr>
         );
       })
@@ -173,12 +203,14 @@ class AWorkflows extends Component {
 
       case workflow_modes.new:
         const cur_template = this.state.workflow_defs[this.state.cur_item_index];
+        const cur_values = this.workflow_configs[cur_template.id];
         let cur_name_ui = name_ui_def;
         cur_name_ui.default = this.state.cur_item_name;
 
         this.mandatory_check_ids = [];
         this.authentication_ids = [];
-        console.log("NEW",cur_template);
+
+        console.log("DRAW NAME:",cur_name_ui);
 
         return (
           <div id="workflow_new_wrapper" className="workflow-new_wrapper">
@@ -188,7 +220,7 @@ class AWorkflows extends Component {
                 <tr>
                   <TemplateUIElement template={cur_name_ui} id_prefix={id_prefix} new_id={this.newIdAdded} change={this.onNameChange} />
                 </tr>
-                {cur_template.steps.map(this.generateStepUI)}
+                {cur_template.steps.map((item, idx) => {return this.generateStepUI(item, idx, cur_values);})}
               </tbody>
             </table>
           </div>
@@ -235,12 +267,21 @@ class AWorkflows extends Component {
     this.setState({mode: workflow_modes.main, cur_item_index: null, cur_item_name: null, cur_item_title: null});
   }
 
-  onItemCheck(ev) {
-    // TODO: Save updated info
+  onItemCheck(ev, item_save_name) {
+    const cur_template = this.state.workflow_defs[this.state.cur_item_index];
+    let cur_config = this.workflow_configs[cur_template.id];
+
+    console.log("ITEMCHECK", ev, item_save_name);
+
+    cur_config[item_save_name] =  ev.target.value;
+    console.log("  ", cur_config);
   }
 
   onNameChange(ev) {
-    // TODO: update name
+    let cur_id = this.state.workflow_defs[this.new_workflow_idx].id;
+    this.workflow_configs[cur_id]['cur_item_name'] = ev.target.value;
+
+    this.setState({cur_item_name: ev.target.value});
   }
 
   updateNewType(ev) {

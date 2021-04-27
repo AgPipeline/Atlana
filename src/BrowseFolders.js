@@ -100,6 +100,7 @@ class BrowseFolders extends Component {
 
   displayError(msg) {
     console.log('ERROR: ', msg);
+    // TODO: display error
   }
 
   displayFetchWait() {
@@ -255,7 +256,7 @@ class BrowseFolders extends Component {
   }
 
   onOk() {
-    this.props.selected(this.state.cur_path);
+    this.props.selected(this.state.cur_path, this.folder_instance.id);
   }
 
   render() {

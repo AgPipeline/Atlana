@@ -29,11 +29,15 @@ class TemplateUIElement extends Component {
 
     if (item.hasOwnProperty('default')) {
       props['defaultValue'] = item.default;
-    } else {
-      if (!choices || (choices.length <= 0)) {
-        props['disabled'] = 'disabled';
+      if (choices.find((val) => val === item.default) === undefined) {
+        choices = [...choices, item.default];
       }
     }
+
+    if (!choices || (choices.length <= 0)) {
+      props['disabled'] = 'disabled';
+    }
+
     if (is_mandatory) {
       props['required'] = 'required';
     }
