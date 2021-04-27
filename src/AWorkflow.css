@@ -74,7 +74,28 @@
     box-shadow: 2px 2px 2px grey;
 }
 
+.workflow-new-footer-wrapper {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-content: center;
+    align-items: flex-start;
+}
 
+.workflow-new-footer-run {
+    margin: 5px;
+    padding: 5px;
+    border: 1px solid black;
+    border-radius: 5px;
+    background-color: powderblue;
+    font-weight: normal !important;
+    cursor: pointer;
+}
 
-
+.workflow-new-footer-disabled {
+    border-color: #e0e0e0;
+    color: grey;
+    background-color: #f0f0f0;
+    cursor: default;
+}
 

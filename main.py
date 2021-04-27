@@ -4,14 +4,10 @@ import json
 import os
 import fnmatch
 import time
-#from osgeo import gdal, osr
-#from PIL import Image
-#from flask import Flask, request, send_file, make_response, render_template
 from irods.session import iRODSSession
 import irods.exception
 from flask import Flask, request, session
 from flask_cors import CORS, cross_origin
-#from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'this_is_not_such_100_secret'    # Replace with random string
@@ -185,6 +181,21 @@ def irods_files() -> tuple:
         return 'Invalid user specified for iRODS listing request: %s' % path, 401
 
     return json.dumps(return_names)
+
+
+@app.route('/workflow/start', methods=['POST'])
+#@cross_origin()
+@cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
+def workflow_start() -> tuple:
+    """Handles starting a workflow
+    Arguments:
+        config: the workflow configuration to run
+    """
+    workflow_data = request.get_json(force=True)
+
+    # Start the process of getting the files
+
+    # Next steps?
 
 
 if __name__ == '__main__':

@@ -17,14 +17,15 @@ class TemplateUIElement extends Component {
     this.generateSecretUI = this.generateSecretUI.bind(this);
     this.generateWorkflowItem = this.generateWorkflowItem.bind(this);
 
-    this.default_id_prefix = this.props.id_prefix ? '' + this.props.id_prefix : 'template_item_';
+    this.default_id_prefix = this.props.hasOwnProperty('id_prefix') && this.props.id_prefix ? '' + this.props.id_prefix : 'template_item_';
+    this.item_id = this.props.hasOwnProperty('id') && this.props.id ? this.props.id : null;
   }
 
   generateBrowseUI(item, choices, browse_cb) {
     var props = {};
     const is_mandatory = item.hasOwnProperty('mandatory') ? item.mandatory : true;
     const have_browse_callback = (typeof browse_cb === 'function') ? true : false;
-    const element_id = this.default_id_prefix + item.name;
+    const element_id = this.item_id !== null ? this.item_id : this.default_id_prefix + item.name;
     if (this.props.new_id) this.props.new_id(item, element_id);
 
     if (item.hasOwnProperty('default')) {
@@ -76,7 +77,7 @@ class TemplateUIElement extends Component {
     const maximum = item.hasOwnProperty('upperbound') ? item.upperbound : null;
     const step = item.hasOwnProperty('step') ? item.step : '0.01';
     const is_mandatory = item.hasOwnProperty('mandatory') ? item.mandatory : true;
-    const element_id = this.default_id_prefix + item.name;
+    const element_id = this.item_id !== null ? this.item_id : this.default_id_prefix + item.name;
     if (this.props.new_id) this.props.new_id(item, element_id);
 
     var props = {};
@@ -112,7 +113,7 @@ class TemplateUIElement extends Component {
     const maximum = item.hasOwnProperty('upperbound') ? item.upperbound : null;
     const step = item.hasOwnProperty('step') ? item.step : null;
     const is_mandatory = item.hasOwnProperty('mandatory') ? item.mandatory : true;
-    const element_id = this.default_id_prefix + item.name;
+    const element_id = this.item_id !== null ? this.item_id : this.default_id_prefix + item.name;
     if (this.props.new_id) this.props.new_id(item, element_id);
 
     var props = {};
@@ -148,7 +149,7 @@ class TemplateUIElement extends Component {
     const max_length = item.hasOwnProperty('maxlength') ? item.maxlength : null;
     const is_dropdown = item.hasOwnProperty('choices');
     const is_mandatory = item.hasOwnProperty('mandatory') ? item.mandatory : true;
-    const element_id = this.default_id_prefix + item.name;
+    const element_id = this.item_id !== null ? this.item_id : this.default_id_prefix + item.name;
     if (this.props.new_id) this.props.new_id(item, element_id);
 
     var props = {};
@@ -190,7 +191,7 @@ class TemplateUIElement extends Component {
     const min_length = item.hasOwnProperty('minlength') ? item.minlength : null;
     const max_length = item.hasOwnProperty('maxlength') ? item.maxlength : null;
     const is_mandatory = item.hasOwnProperty('mandatory') ? item.mandatory : true;
-    const element_id = this.default_id_prefix + item.name;
+    const element_id = this.item_id !== null ? this.item_id : this.default_id_prefix + item.name;
     if (this.props.new_id) this.props.new_id(item, element_id);
 
     // TODO: Add checkbox for showing password in plain text
@@ -220,7 +221,7 @@ class TemplateUIElement extends Component {
     const min_length = item.hasOwnProperty('minlength') ? item.minlength : null;
     const max_length = item.hasOwnProperty('maxlength') ? item.maxlength : null;
     const is_mandatory = item.hasOwnProperty('mandatory') ? item.mandatory : true;
-    const element_id = this.default_id_prefix + item.name;
+    const element_id = this.item_id !== null ? this.item_id : this.default_id_prefix + item.name;
     if (this.props.new_id) this.props.new_id(item, element_id);
 
     var props = {};

@@ -43,7 +43,8 @@ class AFilesList extends Component {
   componentDidUpdate(prev_props) {
     if ((prev_props.path !== this.props.path) || ((prev_props.contents === null) && (this.props.contents !== null))) {
       const cur_item = this.props.contents.find((item) => item.path === this.props.path);
-      const cur_is_file = cur_item && cur_item.hasOwnProperty('type') && cur_item['type'] === 'file' ? true : false;
+      const is_path = (this.props.contents.length > 0) && (this.props.contents[0].path.startsWith(this.props.path) && (this.props.contents[0].path[this.props.path.length] === '/'));
+      const cur_is_file = (!is_path) || (cur_item && cur_item.hasOwnProperty('type') && cur_item['type'] === 'file' ? true : false);
       this.setState({cur_path: this.props.path, is_file: cur_is_file,
                      path_contents: this.sortResults(this.props.contents, this.state.sort_column, this.state.sort_ascending)});
     }

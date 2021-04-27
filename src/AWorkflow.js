@@ -4,7 +4,6 @@ import WorkspaceTitlebar from './WorkspaceTitlebar';
 import TemplateUIElement from './TemplateUIElement';
 import BrowseFolders  from './BrowseFolders';
 import workflowDefinitions from './WorkflowDefinitions';
-import Utils from './Utils';
 import './AWorkflow.css';
 
 // Table header names
@@ -23,7 +22,7 @@ var workflow_modes = {
 };
 
 var name_ui_def =  {
-  name: 'name',
+  name: 'workflow_name',
   prompt: 'Name',
   description: 'Name of workflow',
   default: '',
@@ -45,15 +44,17 @@ class AWorkflows extends Component {
     this.generateStepUI = this.generateStepUI.bind(this);
     this.generateWorkflowUI = this.generateWorkflowUI.bind(this);
     this.getTitle = this.getTitle.bind(this);
+    this.haveRequiredWorkflowParameters = this.haveRequiredWorkflowParameters.bind(this);
     this.newIdAdded = this.newIdAdded.bind(this);
     this.onBack = this.onBack.bind(this);
     this.onCancelBrowse = this.onCancelBrowse.bind(this);
     this.onCancelEdit = this.onCancelEdit.bind(this);
     this.onItemCheck= this.onItemCheck.bind(this);
     this.onNameChange= this.onNameChange.bind(this);
+    this.runWorkflow = this.runWorkflow.bind(this);
     this.updateNewType = this.updateNewType.bind(this);
 
-    const workflow_defs = workflowDefinitions;
+    const workflow_defs = [...workflowDefinitions];
 
     const all_files = this.props.files();
     this.files = all_files.filter((item) => item.path_is_file === true);
@@ -74,6 +75,7 @@ class AWorkflows extends Component {
       workflow_list: [],            // The list of defined workflows
       workflow_defs,                // The workflow definitions
       browse_cb: null,              // The callback to handle the users file choices
+      met_requirements: false,      // Flag indicating requirements have been met
     };
   }
 
@@ -81,6 +83,13 @@ class AWorkflows extends Component {
   mandatory_ids = [];           // IDs of mandatory elements we generated
   new_workflow_idx = null;      // The index of a new workflow to specify
   workflow_configs = {};        // The configurations for workflows
+
+  componentDidMount() {
+    const have_met_requirements = this.haveRequiredWorkflowParameters();
+    if (this.state.met_requirements !== have_met_requirements) {
+      this.setState({met_requirements: have_met_requirements});
+    }
+  }
 
   addItem() {
     if (this.new_workflow_idx == null) {
@@ -97,7 +106,7 @@ class AWorkflows extends Component {
     }
 
     this.setState({mode: workflow_modes.new, cur_item_index: cur_index, cur_item_name: cur_name, 
-                   cur_item_title: 'New ' +  cur_name, edit_cb: this.finishAdd, edit_add: true, edit_item: null});
+                   cur_item_title: 'New ' +  title_name, edit_cb: this.finishAdd, edit_add: true, edit_item: null});
   }
 
   browseFiles(ev, element_id, item) {
@@ -122,7 +131,7 @@ class AWorkflows extends Component {
                                          data_type: cur_folder.data_type, path_is_file: true, name: file_path};
     }
 
-    this.setState({browse_files: null, browse_cb: null});
+    this.setState({browse_files: null, browse_cb: null, met_requirements: this.haveRequiredWorkflowParameters()});
   }
 
   generateTitleRightUI() {
@@ -166,7 +175,8 @@ class AWorkflows extends Component {
 
         return(
           <tr id={item.name + '_' + idx} key={item.name + '_' + idx}>
-            <TemplateUIElement template={item} id_prefix={id_prefix} new_id={this.newIdAdded} change={(ev) => {this.onItemCheck(ev, item_save_name);}} {...props}/>
+            <TemplateUIElement template={item} id={item_save_name} id_prefix={id_prefix} new_id={this.newIdAdded}
+                               change={(ev) => {this.onItemCheck(ev, item_save_name);}} {...props}/>
           </tr>
         );
       })
@@ -204,13 +214,12 @@ class AWorkflows extends Component {
       case workflow_modes.new:
         const cur_template = this.state.workflow_defs[this.state.cur_item_index];
         const cur_values = this.workflow_configs[cur_template.id];
+        const workflow_run_classes = "workflow-new-footer-run " + (this.state.met_requirements ? "" : "workflow-new-footer-disabled ");
         let cur_name_ui = name_ui_def;
         cur_name_ui.default = this.state.cur_item_name;
 
         this.mandatory_check_ids = [];
         this.authentication_ids = [];
-
-        console.log("DRAW NAME:",cur_name_ui);
 
         return (
           <div id="workflow_new_wrapper" className="workflow-new_wrapper">
@@ -223,6 +232,9 @@ class AWorkflows extends Component {
                 {cur_template.steps.map((item, idx) => {return this.generateStepUI(item, idx, cur_values);})}
               </tbody>
             </table>
+            <div id="workflow_new_footer_wrapper" className="workflow-new-footer-wrapper">
+              <div id="workflow_new_footer_run" className={workflow_run_classes} onClick={this.runWorkflow}>Run</div>
+            </div>
           </div>
         );
     }
@@ -239,6 +251,14 @@ class AWorkflows extends Component {
     return null;
   }
 
+  haveRequiredWorkflowParameters() {
+    const invalid_values = [null, undefined, ''];
+
+    return (this.mandatory_ids.length > 0) && this.mandatory_ids.every((el_id) => {
+      return !invalid_values.includes(document.getElementById(el_id).value)
+    });
+  }
+
   newIdAdded(item, new_id) {
     const found = this.generated_ids.find((cur_id) => cur_id === new_id);
     if (found !== undefined) {
@@ -249,6 +269,7 @@ class AWorkflows extends Component {
     if (item.mandatory !== false) {
       this.mandatory_ids.push(new_id);
     }
+    item._ui_id = new_id;
   }
 
   onBack(ev) {
@@ -271,10 +292,7 @@ class AWorkflows extends Component {
     const cur_template = this.state.workflow_defs[this.state.cur_item_index];
     let cur_config = this.workflow_configs[cur_template.id];
 
-    console.log("ITEMCHECK", ev, item_save_name);
-
     cur_config[item_save_name] =  ev.target.value;
-    console.log("  ", cur_config);
   }
 
   onNameChange(ev) {
@@ -282,6 +300,65 @@ class AWorkflows extends Component {
     this.workflow_configs[cur_id]['cur_item_name'] = ev.target.value;
 
     this.setState({cur_item_name: ev.target.value});
+  }
+
+  runWorkflow() {
+    const cur_template = this.state.workflow_defs[this.state.cur_item_index];
+    let cur_config = this.workflow_configs[cur_template.id];
+    console.log("RUN:",cur_template,cur_config,this.generated_ids);
+
+    let values = this.generated_ids.map((el_id) => {
+      let el = document.getElementById(el_id);
+      if (el !== null) {
+        let param_info = {id: el_id, value: el.value};
+        if (el_id.startsWith(id_prefix)) {
+          param_info['name'] = el_id.substring(id_prefix.length);
+        } else {
+          param_info['name'] = el_id.split('_').pop();
+        }
+
+        // Try to find the  element in our stored configuration values
+        if (!el_id.startsWith(id_prefix)) {
+          // We assume we have a workflow configuration item
+          const key_parts = el_id.split('_');
+          param_info['step_idx'] = parseInt(key_parts.shift());
+          key_parts.pop();
+          param_info['step_name'] = key_parts.join('_');
+
+          let found_key = Object.keys(cur_config).find((id) => cur_config[id].id === el_id);
+          if (found_key !== undefined) {
+            param_info['config'] = cur_config[found_key];
+          }
+        }
+        return param_info;
+      }
+
+      return undefined;
+    });
+
+    // Assemble the workflow JSON
+    let workflow_data = {
+      id: cur_template.id,
+      params: [],
+    };
+    for (const param of values) {
+      console.log("  param", param);
+      let param_info = {};
+      if (param.hasOwnProperty('step_idx')) {
+        param_info['command'] = cur_template.steps[param.step_idx].command;
+        param_info['field_name'] = param.name;
+      }
+      if (param.hasOwnProperty('config')) {
+        param_info['auth'] = param.config.auth;
+        param_info['data_type'] = param.config.data_type;
+        param_info['value'] = param.config.location;
+      } else {
+        param_info[param.name] = param.value;
+      }
+      workflow_data.params.push(param_info);
+    }
+
+    console.log("Workflow data:", workflow_data);
   }
 
   updateNewType(ev) {
