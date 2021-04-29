@@ -4,6 +4,7 @@ import WorkspaceTitlebar from './WorkspaceTitlebar';
 import TemplateUIElement from './TemplateUIElement';
 import BrowseFolders  from './BrowseFolders';
 import workflowDefinitions from './WorkflowDefinitions';
+import Utils from './Utils';
 import './AWorkflow.css';
 
 // Table header names
@@ -359,6 +360,22 @@ class AWorkflows extends Component {
     }
 
     console.log("Workflow data:", workflow_data);
+
+    const uri = Utils.getHostOrigin().concat('/workflow/start');
+    try {
+      fetch(uri, {
+        method: 'POST',
+        credentials: 'include',
+        body: JSON.stringify(workflow_data)
+        }
+      )
+      .then(response => response.json())
+      .then(success => console.log(success))
+      .catch(error => console.log("ERROR",error));
+    } catch (err) {
+      console.log("iRODS connect exception", err);
+      throw err;
+    }
   }
 
   updateNewType(ev) {
