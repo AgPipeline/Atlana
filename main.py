@@ -9,6 +9,7 @@ import hashlib
 import base64
 import uuid
 import tempfile
+from typing import Union
 from irods.session import iRODSSession
 from irods.data_object import chunks
 import irods.exception
@@ -22,9 +23,56 @@ app.config['SECRET_KEY'] = 'this_is_not_such_100_secret'    # Replace with rando
 
 cors = CORS(app, resources={r"/files": {"origins": "http://127.0.0.1:3000"}})
 
+# Starting point for seaching for files on server
 FILE_START_PATH = os.path.abspath(os.path.dirname(__file__))
 
+# Status codes for checking on processes
+STATUS_NOT_STARTED = 0
+STATUS_RUNNNG = 1
+STATUS_FINISHED = 2
+
+# Number of tries to download from iRODS before giving up
 IRODS_DOWNLOAD_RETRIES = 2
+
+# Number of times to try to access queue status; should not exceed delays defined in FILE_PROCESS_QUEUE_STATUS_TIMEOUTS
+FILE_PROCESS_QUEUE_STATUS_RETRIES = 3
+
+# Number of times to try to access queue status; should not exceed delays defined in FILE_PROCESS_QUEUE_MESSAGE_TIMEOUTS
+FILE_PROCESS_QUEUE_MESSAGES_RETRIES = 3
+
+# Delay times to access the queue status before giving up
+FILE_PROCESS_QUEUE_STATUS_TIMEOUTS = [0.1, 0.2, 0.4, 0.7]
+
+# Delay times to a access the queue messages before giving up
+FILE_PROCESS_QUEUE_MESSAGE_TIMEOUTS = [0.1, 0.2, 0.1, 0.2, 0.4]
+
+
+def _clean_for_json(dirty: object) -> dict:
+    """Cleans the dictionary of non-JSON compatible elements
+    Arguments:
+        dirty: the dictionary to clean
+    Return:
+        Returns a copy of the dictionary that has been cleaned
+    """
+    if isinstance(dirty, dict):
+        cleaned =  {}
+        for key, item in dirty.items():
+            # We don't want callable objects to be returned
+            print("-> ",key,callable(item),item)
+            if not callable(item):
+                print("  handling",type(item))
+                cleaned[key] = _clean_for_json(item)
+
+        return cleaned
+
+    if isinstance(dirty, list):
+        return [_clean_for_json(el) for el in dirty if not callable(el)]
+    if isinstance(dirty, tuple):
+        return (_clean_for_json(el) for el in dirty if not callable(el))
+    if isinstance(dirty, set):
+        return set((_clean_for_json(el) for el in dirty if not callable(el)))
+
+    return dirty
 
 
 def normalize_path(path: str) -> str:
@@ -141,13 +189,69 @@ FILE_HANDLERS = {
     }
 }
 
-
-def run_one_process(cur_command: dict):
-    """Handles running one command
+def get_queue_path(working_folder: str) -> str:
+    """ Gets the path to the working queue
     Arguments:
-        cur_command: the command to run
+        working_folder: path to the working folder
+    Return:
+        Returns the path to the queue
     """
-    print("Starting command ", cur_command['step'], " with working folder '", cur_command['working_folder'], "'")
+    return os.path.join(working_folder, 'queue')
+
+
+def queue_start(workflow_id: str, working_folder: str, recover: bool) -> dict:
+    """ Handles starting queueing a set of processes
+    Arguments:
+        workflow_id: the  workflow ID
+        working_folder: string representing the working folder
+        recover: flag indicating this is an attempt to restart a workflow
+    Return:
+        Returns information on this process as a dictionary
+    """
+    print("Begin queueing workflow", workflow_id)
+
+    cleanup = False
+    queue_path = get_queue_path(working_folder)
+    if recover is True:
+        # Make sure we have something to recover
+        if not os.path.isfile(queue_path):
+            msg = "ERROR: Attempting to recover a missing workflow %s" % (working_folder)
+            print (msg)
+            raise RuntimeError("ERROR: Attempting to recover a missing workflow %s" % (working_folder))
+        # TODO: Signal recover
+    else:
+        # Check if  our queue is valid and restart it if not
+        starting_queue = True
+        if os.path.isfile(queue_path):
+            try:
+                with open(queue_path, 'r') as in_file:
+                    res = json.load(in_file)
+                    if isinstance(res, list):
+                        starting_queue = False
+            except Exception:
+                pass
+
+            if starting_queue:
+                os.unlink(starting_queue)
+                # TODO: Signal cleanup
+                cleanup = True
+
+        # Begin the starting queue
+        with open(queue_path, 'w') as out_file:
+            json.dump([], out_file)
+
+    return {'recover': recover, 'cleanup': cleanup}
+
+
+def queue_one_process(workflow_id: str, cur_command: dict, working_folder: str, process_info: dict):
+    """Handles queueing one command
+    Arguments:
+        workflow_id: the  workflow ID
+        cur_command: the command to queue
+        working_folder: string representing the working folder
+        process_info: dictionary returned by starting process call
+    """
+    print("Current command ", cur_command['step'], " with working folder '", cur_command['working_folder'], "'", cur_command)
 
     print("    Checking for files")
     for one_parameter in cur_command['parameters']:
@@ -156,17 +260,149 @@ def run_one_process(cur_command: dict):
             dest_path = os.path.join(cur_command['working_folder'], os.path.basename(one_parameter['value']))
             print("Downloading file '", one_parameter['value'], "' to '", dest_path, "'")
             one_parameter['getFile'](one_parameter['auth'], one_parameter['value'], dest_path)
+            one_parameter['value'] = dest_path
 
-    print("Run workflow step",  cur_command['step'], cur_command['command'])
+    print("Run workflow step", workflow_id, cur_command['step'], cur_command['command'])
+    queue_path = get_queue_path(working_folder)
+
+    if 'recover' in process_info and process_info['recover'] is True:
+        # TODO: Signal recover
+        return
+
+    with open(queue_path, 'r') as in_file:
+        current_workflow = json.load(in_file)
+
+    print("Appending command to workflow: ", current_workflow)
+    current_workflow.append(_clean_for_json(cur_command))
+
+    print("Current workflow: ", current_workflow)
+    with open(queue_path, 'w') as out_file:
+        json.dump(current_workflow, out_file, indent=2)
 
 
-def start_workflow(workflow_template: dict, data: list, file_handlers: list, working_folder: str):
+def queue_finish(workflow_id: str, working_folder: str, process_info: dict):
+    """Finishes queueing workflow processes
+    Arguments:
+        workflow_id: the  workflow ID
+        working_folder: string representing the working folder
+        process_info: dictionary returned by starting process call
+    """
+    # pylint: disable=unused-argument
+    print("Finished queueing", workflow_id)
+
+
+def queue_status(workflow_id: str, working_folder: str) -> Union[dict, str, None]:
+    """Reurns the status of the workflow
+    Arguments:
+        workflow_id: the ID of the current workflow
+        working_folder: the working folder for the workflow
+    Return:
+        Returns None if the workflow isn't started, an empty status if it's running but has no status yet,
+        the current status, or a string indicating the completion status. A generic status is
+        returned if the real status can't be obtained
+    """
+    print("Checking queue status", workflow_id, working_folder)
+    status_path = os.path.join(working_folder, 'status.json')
+    if not os.path.exists(status_path):
+        return None
+
+    cur_status = None
+    caught_exception = False
+    for one_attempt in range(0, FILE_PROCESS_QUEUE_STATUS_RETRIES):
+        caught_exception = True
+        try:
+            with open(status_path, 'r') as in_file:
+                try:
+                    cur_status = json.load(in_file)
+                    caught_exception = False
+                except json.JSONDecodeError as ex:
+                    print("A JSON decode error was caught while loading status information", ex)
+                except Exception as ex:
+                    print("An unknown exception was caught while checking workflow status", ex)
+        except OSError as ex:
+            msg = 'An OS exception was caught while trying to open status file "%s"' % status_path
+            print(msg, ex)
+        except Exception as ex:
+            msg = 'Unknown exception caught while trying to access the status file "%s"' % status_path
+            print(msg, ex)
+
+        if cur_status is None:
+            print("Sleeping before trying to get status again")
+            time.sleep(FILE_PROCESS_QUEUE_STATUS_TIMEOUTS[one_attempt])
+        else:
+            break
+
+    if cur_status and 'completion' in cur_status:
+        cur_status = cur_status['completion']
+
+    return cur_status if not caught_exception else {'status': 'Pending...'}
+
+
+def queue_messages(workflow_id: str, working_folder: str) -> tuple:
+    """Reurns the messages of the workflow
+    Arguments:
+        workflow_id: the ID of the current workflow
+        working_folder: the working folder for the workflow
+    Return:
+        A 2-tuple of: normal messages and error messages as separate lists. None is returned if the messages can't be loaded
+    """
+    messages, errors = None, None
+    print("Checking queue messages", workflow_id, working_folder)
+
+    cur_path = os.path.join(working_folder, 'output.txt')
+    if os.path.exists(cur_path):
+        for one_attempt in range(0, FILE_PROCESS_QUEUE_STATUS_RETRIES):
+            try:
+                with open(cur_path, 'r') as in_file:
+                    messages = in_file.readlines()
+            except OSError as ex:
+                msg = 'An OS exception was caught while trying to read output file "%s"' % cur_path
+                print(msg, ex)
+            except Exception as ex:
+                msg = 'An unknown exception was caught while trying to read output file "%s"' % cur_path
+                print(msg, ex)
+
+            if messages is None:
+                msg = 'Sleeping %d before trying to get messages again "%s"' % (one_attempt, cur_path)
+                print(msg)
+                time.sleep(FILE_PROCESS_QUEUE_MESSAGE_TIMEOUTS[one_attempt])
+            else:
+                break
+
+    cur_path = os.path.join(working_folder, 'error.txt')
+    if os.path.exists(cur_path):
+        for one_attempt in range(0, FILE_PROCESS_QUEUE_STATUS_RETRIES):
+            try:
+                with open(cur_path, 'r') as in_file:
+                    errors = in_file.readlines()
+            except OSError as ex:
+                msg = 'An OS exception was caught while trying to read error file "%s"' % cur_path
+                print(msg, ex)
+            except Exception as ex:
+                msg = 'An unknown exception was caught while trying to read error file "%s"' % cur_path
+                print(msg, ex)
+
+            if errors is None:
+                msg = 'Sleeping %d before trying to get errors again "%s"' % (one_attempt, cur_path)
+                print(msg)
+                time.sleep(FILE_PROCESS_QUEUE_MESSAGE_TIMEOUTS[one_attempt])
+            else:
+                break
+
+    return messages, errors
+
+
+def workflow_start(workflow_id: str, workflow_template: dict, data: list, file_handlers: list, working_folder: str, recover: bool=False):
     """Starts a workflow
     Arguments:
+        workflow_id: the ID of the current workflow
         workflow_template: the template of the workflow to run
         data: the data used by the template for processing
         file_handlers: the list of known file handlers
+        working_folder: the working folder for the workflow
+        recover: flag to indicate we're trying to recover a workflow that had a problem
     """
+    # pylint: disable=too-many-nested-blocks
     workflow = []
 
     for one_step in workflow_template['steps']:
@@ -185,7 +421,8 @@ def start_workflow(workflow_template: dict, data: list, file_handlers: list, wor
                                 cur_parameter['type'] = one_field['type']
                                 break
                         else:
-                            cur_parameter = {'field_name': one_data['field_name'], 'value': one_data[one_data['field_name']], 'type': one_field['type']}
+                            cur_parameter = {'field_name': one_data['field_name'], 'value': one_data[one_data['field_name']],
+                                             'type': one_field['type']}
                             print("   ", cur_parameter)
                             break
 
@@ -196,10 +433,48 @@ def start_workflow(workflow_template: dict, data: list, file_handlers: list, wor
                         print("Unable to find parameter for step ", one_step['name'], ' field ', one_field['name'])
                         raise RuntimeError("Missing mandatory value for %s on workflow step %s" % (one_field['name'], one_step['name']))
 
-        workflow.append({'step': one_step['name'], 'command': one_step['command'], 'parameters': parameters, 'working_folder': working_folder})
+        workflow.append({'step': one_step['name'], 'command': one_step['command'], 'parameters': parameters,
+                         'working_folder': working_folder})
 
+    process_info = queue_start(workflow_id, working_folder, recover)
     for one_process in workflow:
-        run_one_process(one_process)
+        queue_one_process(workflow_id, one_process, working_folder, process_info)
+    queue_finish(workflow_id, working_folder, process_info)
+
+
+def workflow_status(workflow_id: str, working_folder: str) -> dict:
+    """Returns the status of the workflow
+    Arguments:
+        workflow_id: the ID of the current workflow
+        working_folder: the working folder for the workflow
+    Return:
+        Returns a dict containing a status ID and the status returned by the workflow query
+    """
+    print("Checking workflow status", workflow_id, working_folder)
+    cur_status = queue_status(workflow_id, working_folder)
+    if cur_status is None:
+        return {'result': STATUS_NOT_STARTED}
+
+    if isinstance(cur_status, dict):
+        return {'result': STATUS_RUNNNG, 'status': cur_status}
+
+    return {'result': STATUS_FINISHED, 'status': str(cur_status)}
+
+
+def workflow_messages(workflow_id: str, working_folder: str) -> dict:
+    """Returns the messages from the workflow
+    Arguments:
+        workflow_id: the ID of the current workflow
+        working_folder: the working folder for the workflow
+    Return:
+        Returns a dict containing any normal and error messages from the workflow query
+    """
+    print("Checking workflow messages", workflow_id, working_folder)
+
+    messages, errors = queue_messages(workflow_id, working_folder)
+
+    return {'messages': messages if messages is not None else [],
+            'errors': errors if errors is not None else []}
 
 
 @app.after_request
@@ -221,7 +496,7 @@ def add_cors_headers(response):
 @app.route('/server/files', methods=['GET'])
 #@cross_origin()
 @cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
-def files() -> tuple:
+def handle_files() -> tuple:
     """Handles listing folder contents
     Request args:
         path: the relative path to list
@@ -268,7 +543,7 @@ def files() -> tuple:
 @app.route('/irods/connect', methods=['POST'])
 #@cross_origin()
 @cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
-def irods_connect() -> tuple:
+def handle_irods_connect() -> tuple:
     """Handles connecting to the iRODS server
     Request args:
         host: the CyVerse host to access
@@ -309,7 +584,7 @@ def irods_connect() -> tuple:
 @app.route('/irods/files', methods=['GET'])
 #@cross_origin()
 @cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
-def irods_files() -> tuple:
+def handle_irods_files() -> tuple:
     """Handles listing folder contents
     Request args:
         path: the relative path to list
@@ -361,7 +636,7 @@ def irods_files() -> tuple:
 @app.route('/workflow/start', methods=['POST'])
 #@cross_origin()
 @cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
-def workflow_start() -> tuple:
+def handle_workflow_start() -> tuple:
     """Handles starting a workflow
     Request body:
         config: the workflow configuration to run
@@ -387,20 +662,63 @@ def workflow_start() -> tuple:
     os.makedirs(working_dir, exist_ok=True)
     print('Workflow ID and folder', workflow_id, working_dir)
 
-    start_workflow(cur_workflow, workflow_data['params'], FILE_HANDLERS, working_dir)
+    workflow_start(workflow_id, cur_workflow, workflow_data['params'], FILE_HANDLERS, working_dir)
+
+    # Keep workflow IDs in longer term storage
+    if 'workflows' not in session or session['workflows'] is None:
+        session['workflows'] = [workflow_id]
+    else:
+        session['workflows'] = session['workflows'].append(workflow_id)
 
     return json.dumps({'id': workflow_id})
 
 
-@app.route('/workflow/status/<string:status_id>', methods=['GET'])
+@app.route('/workflow/status/<string:workflow_id>', methods=['GET'])
 #@cross_origin()
 @cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
-def workflow_status(status_id: str) -> tuple:
+def handle_workflow_status(workflow_id: str) -> tuple:
     """Rreturns the status of a workflow
     Arguments:
-        status_id: the id of the workflow to query
+        workflow_id: the id of the workflow to query
     """
-    print("Workflow status", status_id)
+    print("Workflow status", workflow_id)
+    cur_workflows = session['workflows']
+    if not cur_workflows or workflow_id not in cur_workflows:
+        msg = "ERROR: attempt made to access invalid workflow %s" % workflow_id
+        print(msg)
+        return msg, 400     # Bad request
+
+    working_dir = os.path.join(tempfile.gettempdir(), 'atlana', workflow_id)
+    if not os.path.isdir(working_dir):
+        msg = "ERROR: requested workflow no longer exists"
+        print(msg)
+        return msg, 404     # Not found
+
+    return json.dumps(workflow_status(workflow_id, working_dir))
+
+
+@app.route('/workflow/outputs/<string:workflow_id>', methods=['GET'])
+#@cross_origin()
+@cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
+def get_workflow_messages(workflow_id: str) -> tuple:
+    """Rreturns the messages from the workflow
+    Arguments:
+        workflow_id: the id of the workflow to query
+    """
+    print("Workflow status", workflow_id)
+    cur_workflows = session['workflows']
+    if not cur_workflows or workflow_id not in cur_workflows:
+        msg = "ERROR: attempt made to access invalid workflow %s" % workflow_id
+        print(msg)
+        return msg, 400     # Bad request
+
+    working_dir = os.path.join(tempfile.gettempdir(), 'atlana', workflow_id)
+    if not os.path.isdir(working_dir):
+        msg = "ERROR: requested workflow no longer exists"
+        print(msg)
+        return msg, 404     # Not found
+
+    return json.dumps(workflow_messages(workflow_id, working_dir))
 
 
 if __name__ == '__main__':
