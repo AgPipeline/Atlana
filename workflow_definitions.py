@@ -30,6 +30,13 @@ WORKFLOW_DEFINTIONS = [
       'description': 'GeoJSON file containing plot geometries',
       'type': 'file',
       'mandatory': True,
+      }, {
+      'name': 'image',
+      'visibility': 'server',
+      'description': 'Source image to process',
+      'type': 'file',
+      'mandatory': True,
+      'prev_command_path': 'file:path',
     }]  # End  of fields
   }, {
     'name': 'Find files',
