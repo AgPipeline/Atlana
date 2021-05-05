@@ -3,7 +3,6 @@
 
 import os
 import argparse
-from shutil import copyfile
 import io
 import json
 import random
@@ -11,6 +10,7 @@ import time
 import shutil
 import subprocess
 from typing import Optional
+from threading import Event, Thread
 # TODO: logging
 
 DOCKER_IMAGE = 'agdrone/drone-workflow:1.1'
@@ -222,17 +222,17 @@ def _replace_folder_path(path: str, from_folder: str, to_folder: str) -> Optiona
     return os.path.join(to_folder, rem)
 
 
-def  _consume_output(reader: io.BufferedReader, output_filename: str):
+def  _consume_output(reader: io.BufferedReader, output_filename: str, done_event: Event):
     """Consumes the output from reader and writes it to the file
     Arguments:
         reader: object to read from
         output_filename: the path of the file to write to
+        done_event: the event to set when we're done
     """
     if reader is None:
         return
 
     lines = []
-    print("READING")
     while True:
         try:
             line = reader.readline()
@@ -243,61 +243,17 @@ def  _consume_output(reader: io.BufferedReader, output_filename: str):
                 print(line.rstrip('\n'))
                 lines.append(line)
                 if len(lines) >= MAX_CACHED_OUTPUT_LINES:
-                    print("   writing log", out_files[idx])
-                    _write_log_file(out_files[idx], lines, True)
+                    _write_log_file(output_filename, lines, True)
                     lines = []
             else:
                 break
-    except Exception as ex:
-        print("Ignoring exception while waiting on messages: %s", str(ex))
+        except Exception as ex:
+            print("Ignoring exception while waiting on messages: %s", str(ex))
 
     if lines:
-        print("   finishing up write")
-        _write_log_file(out_files[idx], lines, True)
+        _write_log_file(output_filename, lines, True)
 
-
-def _consume_proc_output(stdout: io.BufferedReader, stderr: io.BufferedReader, msg_filename: str, err_filename: str):
-    """Consumes output from the specified process
-    Arguments:
-        stdout: the stream to read messages from
-        stderr: the stream to read errors from
-        msg_filename: the file to  write messages to
-        err_filename: the file to write errors to
-    Notes:
-        Assumes the process was started with stdout being piped
-    """
-    # pylint: disable=too-many-nested-blocks
-    file_readers = [stdout, stderr]
-    out_files = [msg_filename, err_filename]
-
-    try:
-        for idx in range(0, 2):
-            reader = file_readers[idx]
-            if reader is not None:
-                lines = []
-                print("READING", idx)
-                while True:
-                    line = reader.readline()
-                    if line:
-                        if isinstance(line, bytes):
-                            print("  decode line")
-                            line = line.decode('UTF-8')
-
-                        print(line.rstrip('\n'))
-                        lines.append(line)
-                        if len(lines) >= MAX_CACHED_OUTPUT_LINES:
-                            print("   writing log", out_files[idx])
-                            _write_log_file(out_files[idx], lines, True)
-                            lines = []
-                    else:
-                        break
-
-                if lines:
-                    print("   finishing up write")
-                    _write_log_file(out_files[idx], lines, True)
-
-    except Exception as ex:
-        print("Ignoring exception while waiting on messages: %s", str(ex))
+    done_event.set()
 
 
 def _write_command_json(json_file_path: str, json_args: object):
@@ -325,7 +281,8 @@ def _write_command_json(json_file_path: str, json_args: object):
             raise RuntimeError(msg) from  ex
 
 
-def _run_command(command: str, input_folder: str, output_folder: str, json_file_path: str, msg_file: str, err_file: str):
+def _run_command(command: str, input_folder: str, output_folder: str, json_file_path: str, msg_file: str, err_file: str,
+                 additional_mounts: tuple=None):
     """Handles the details of executing the docker image command
     Arguments:
         command: the command string to run
@@ -334,6 +291,7 @@ def _run_command(command: str, input_folder: str, output_folder: str, json_file_
         json_file_path: the JSON file to pass to the command
         msg_file: file to write messages to
         err_file: file to write errors to
+        additional_mounts: tuple of additional mount commands for the docker command; one or more [source_path, mount_point] pairs
     """
     run_command = ['docker',
                    'run',
@@ -343,11 +301,22 @@ def _run_command(command: str, input_folder: str, output_folder: str, json_file_
                    '-v',
                    output_folder + ':/output',
                    '-v',
-                   json_file_path + ':/scif/apps/src/jx-args.json',
-                   DOCKER_IMAGE,
-                   'run',
-                   command
-                  ]
+                   json_file_path + ':/scif/apps/src/jx-args.json'
+                   ]
+
+    if additional_mounts is not None:
+        for one_mount in additional_mounts:
+            if len(one_mount) == 2:
+                run_command.append('-v')
+                run_command.append(one_mount[0] + ':' + one_mount[1])
+            else:
+                msg1 = 'Warning: bad additional mount specified: %s' % str(one_mount)
+                msg2 = '         should consist of a [source path, mount path] pair'
+                print(msg1)
+                print(msg2)
+                _write_log_file(msg_file, (msg1, msg2), True)
+
+    run_command.extend([DOCKER_IMAGE, 'run', command])
 
     print("Running command", run_command)
     # pylint: disable=consider-using-with
@@ -355,15 +324,19 @@ def _run_command(command: str, input_folder: str, output_folder: str, json_file_
 
     return_value = -1
     if proc:
+        msg_event = Event()
+        err_event = Event()
+        msg_event.clear()
+        err_event.clear()
+        msg_thread = Thread(target=_consume_output, args=(proc.stdout, msg_file, msg_event), daemon=True)
+        err_thread = Thread(target=_consume_output, args=(proc.stderr, err_file, err_event), daemon=True)
+        msg_thread.start()
+        err_thread.start()
+
         # Loop here processing the output until the proc finishes
         print('Waiting for process to finish')
         while proc.returncode is None:
-            if proc.stderr is not None or proc.stdout is not None:
-                print("ABOUT TO CONSUME")
-                _consume_proc_output(proc.stdout, proc.stderr, msg_file, err_file)
-                print("DONE CONSUMING")
-                proc.poll()
-                print("DONE POLLING")
+            proc.poll()
 
             # Sleep and try again for process to complete
             time.sleep(1)
@@ -371,34 +344,136 @@ def _run_command(command: str, input_folder: str, output_folder: str, json_file_
         print("Return code:", str(proc.returncode))
         return_value = proc.returncode
 
+        print("Checking on readers")
+        while msg_event.wait(1) is False or err_event.wait(1) is False:
+            print("Sleeping on readers")
+            time.sleep(0.1)
+
     return return_value
 
-def _get_results_json(working_folder: str, error_file: str=None) -> Optional[object]:
+
+def _get_results_json(working_folder: str, error_file: str=None, recursive: bool=False) -> Optional[object]:
     """ Loads and returns the json resulting from running the workflow
     Arguments:
         working_folder: the folder the results are stored in
         error_file: the file to write errors to
+        recursive: will recurse into subfolders when True. Otherwise only working_folder is checked
     Returns:
-        The contents of the results file
+        The contents of the results file when not recursive. When recursive a list of all the results is returned
     """
+    # pylint: disable=too-many-nested-blocks,too-many-branches
+    res = {}
     results_path = os.path.join(working_folder, 'result.json')
-    if not os.path.exists(results_path):
-        return None
+    if os.path.exists(results_path):
+        res = _load_json_file(results_path, error_file)
 
-    res = _load_json_file(results_path, error_file)
+        if 'file' in res:
+            mapped_files = []
+            for one_file in res['file']:
+                if 'path' in one_file:
+                    one_file['path'] = _replace_folder_path(one_file['path'], '/output', working_folder)
+                mapped_files.append(one_file)
+            res['file'] = mapped_files
 
-    if 'file' in res:
-        mapped_files = []
-        for one_file in res['file']:
-            if 'path' in one_file:
-                one_file['path'] = _replace_folder_path(one_file['path'], '/output', working_folder)
-            mapped_files.append(one_file)
-        res['file'] = mapped_files
+        if 'container' in res:
+            mapped_container = []
+            for one_entry in res['container']:
+                if 'file' in one_entry:
+                    mapped_files = []
+                    for one_file in one_entry['file']:
+                        if 'path' in one_file:
+                            one_file['path'] = _replace_folder_path(one_file['path'], '/output', working_folder)
+                        mapped_files.append(one_file)
+                    one_entry['file'] = mapped_files
+                mapped_container.append(one_entry)
+            res['container'] = mapped_container
+
+    if recursive is True:
+        res = [res] if res else []
+        for one_file in os.listdir(working_folder):
+            cur_path = os.path.join(working_folder, one_file)
+            if os.path.isdir(cur_path):
+                new_results = _get_results_json(cur_path, error_file, recursive)
+                for one_result in new_results:
+                    if one_result:
+                        res.append(one_result)
 
     return res
 
 
-def handle_soilmask(parameters: tuple, input_folder: str, working_folder: str, msg_file: str, err_file: str) -> dict:
+def _repoint_files_json_dir(filename: str, source_folder: str, target_folder: str, working_folder: str) -> Optional[str]:
+    """ Repoints the DIR entry in the JSON file to the target folder
+    Arguments:
+        filename: the file to load and process
+        source_folder: the source folder to replace with target folder; if empty or None, a best guess is applied
+        target_folder: the target folder for the DIR entries
+        working_folder: the working folder to place the updated file in
+    Return:
+        The name of the adjusted JSON file when successful. Otherwise the None is returned
+    Notes:
+        The new file will be have the same name as the original, but will be in the working folder. If a file by that name
+        already exists in the working folder, it will be overwritten.
+    """
+    # Check parameters
+    if not os.path.isfile(filename):
+        msg = 'Invalid file specified to repoint files JSON "%s"' % filename
+        print(msg)
+        return None
+    if not os.path.isdir(working_folder):
+        msg = 'Invalid working folder specified to repoint files JSON "%s"' % working_folder
+        print(msg)
+        return None
+
+    # Load the JSON
+    file_json = _load_json_file(filename)
+    if file_json is None:
+        msg = 'Unable to load JSON file when repointing files JSON "%s"' % filename
+        print(msg)
+        return None
+    if not isinstance(file_json, dict):
+        msg = 'Unknown JSON format when repointing files JSON "%s"' % filename
+        print(msg)
+        return None
+    if 'FILE_LIST' not in file_json:
+        msg = 'JSON missing FILE_LIST key when repointing files JSON "%s"' % filename
+        print(msg)
+        return None
+
+    new_file = os.path.join(working_folder, os.path.basename(filename))
+    all_files = file_json['FILE_LIST']
+    if not isinstance(all_files, list) and not isinstance(all_files, tuple) and not isinstance(all_files, set):
+        msg = 'FILE_LIST value is not a list of files for repointing files JSON "%s"' % filename
+        print(msg)
+        return None
+
+    try:
+        # Make sure we have a source folder to work with
+        if not source_folder:
+            cur_path = all_files[0]['DIR']
+            if cur_path[-1:] =='/' or cur_path[-1:] =='\\':
+                cur_path = cur_path[:len(cur_path) - 1]
+            source_folder = os.path.dirname(cur_path)
+
+        # Run through the files that we have
+        new_files = []
+        for one_file in all_files:
+            cur_file = {**one_file}
+            if cur_file['DIR'].startswith(source_folder):
+                cur_file['DIR'] = _replace_folder_path(cur_file['DIR'], source_folder, target_folder)
+            new_files.append(cur_file)
+
+        with open(new_file, 'w') as out_file:
+            json.dump({"FILE_LIST": new_files}, out_file, indent=2)
+
+    except Exception as ex:
+        msg = 'Exception caught while repointing files JSON'
+        print(msg, filename, ex)
+        new_file = None
+
+    return new_file
+
+
+def handle_soilmask(parameters: tuple, input_folder: str, working_folder: str, msg_file: str, err_file: str) -> Optional[dict]:
     """Handle running the soilmask algorithm
     Arguments:
         parameters: the specified parameters for the algorithm
@@ -407,7 +482,7 @@ def handle_soilmask(parameters: tuple, input_folder: str, working_folder: str, m
         msg_file: path to write messages to
         err_file: path to write errors to
     Return:
-        A dictionary of addittional parameters to pass to the next command
+        A dictionary of addittional parameters to pass to the next command or None
     """
     # Find our arguments
     image_path, options = _find_parameter_values(parameters, ('image', 'options'))
@@ -434,7 +509,7 @@ def handle_soilmask(parameters: tuple, input_folder: str, working_folder: str, m
         'SOILMASK_SOURCE_FILE': _replace_folder_path(image_path, input_folder, '/input'),
         'SOILMASK_MASK_FILE': mask_filename,
         'SOILMASK_WORKING_FOLDER': '/output',
-        'SOILMASK_OPTIONS': options,
+        'SOILMASK_OPTIONS': options if options is not None else '',
     }
     json_file_path = os.path.join(working_folder, 'args.json')
     _write_command_json(json_file_path, json_args)
@@ -450,7 +525,7 @@ def handle_soilmask(parameters: tuple, input_folder: str, working_folder: str, m
     return command_results
 
 
-def handle_soilmask_ratio(parameters: tuple, input_folder: str, working_folder: str, msg_file: str, err_file: str):
+def handle_soilmask_ratio(parameters: tuple, input_folder: str, working_folder: str, msg_file: str, err_file: str) -> Optional[dict]:
     """Handle running the soilmask by ratio algorithm
     Arguments:
         parameters: the specified parameters for the algorithm
@@ -458,6 +533,8 @@ def handle_soilmask_ratio(parameters: tuple, input_folder: str, working_folder: 
         working_folder: the working folder for the algorithm
         msg_file: path to write messages to
         err_file: path to write errors to
+    Return:
+        A dictionary of addittional parameters to pass to the next command or None
     """
     # Find our arguments
     image_path, ratio, options = _find_parameter_values(parameters, ('image', '', 'options'))
@@ -489,7 +566,7 @@ def handle_soilmask_ratio(parameters: tuple, input_folder: str, working_folder: 
         'SOILMASK_RATIO_SOURCE_FILE': _replace_folder_path(image_path, input_folder, '/input'),
         'SOILMASK_RATIO_MASK_FILE': mask_filename,
         'SOILMASK_RATIO_WORKING_FOLDER': '/output',
-        'SOILMASK_RATIO_OPTIONS': options,
+        'SOILMASK_RATIO_OPTIONS': options if options is not None else '',
     }
     json_file_path = os.path.join(working_folder, 'args.json')
     _write_command_json(json_file_path, json_args)
@@ -505,7 +582,7 @@ def handle_soilmask_ratio(parameters: tuple, input_folder: str, working_folder: 
     return command_results
 
 
-def handle_plotclip(parameters: tuple, input_folder: str, working_folder: str, msg_file: str, err_file: str):
+def handle_plotclip(parameters: tuple, input_folder: str, working_folder: str, msg_file: str, err_file: str) -> Optional[dict]:
     """Handle running the plotclip algorithm
     Arguments:
         parameters: the specified parameters for the algorithm
@@ -513,6 +590,8 @@ def handle_plotclip(parameters: tuple, input_folder: str, working_folder: str, m
         working_folder: the working folder for the algorithm
         msg_file: path to write messages to
         err_file: path to write errors to
+    Return:
+        A dictionary of addittional parameters to pass to the next command or None
     """
     image_path, plot_geometries, options = _find_parameter_values(parameters, ('image','geometries','options'))
 
@@ -541,13 +620,15 @@ def handle_plotclip(parameters: tuple, input_folder: str, working_folder: str, m
               ('","'.join(invalid_values)) + '"'
         print(msg, input_folder, parameters)
         raise RuntimeError(msg)
+    del invalid_parameters
+    del invalid_values
 
     # Write the arguments
     json_args = {
         'PLOTCLIP_SOURCE_FILE': _replace_folder_path(image_path, input_folder, '/input'),
         'PLOTCLIP_PLOTGEOMETRY_FILE': _replace_folder_path(plot_geometries, input_folder, '/input'),
         'PLOTCLIP_WORKING_FOLDER': '/output',
-        'PLOTCLIP_OPTIONS': options,
+        'PLOTCLIP_OPTIONS': options if options is not None else '',
     }
     json_file_path = os.path.join(working_folder, 'args.json')
     _write_command_json(json_file_path, json_args)
@@ -559,11 +640,13 @@ def handle_plotclip(parameters: tuple, input_folder: str, working_folder: str, m
     command_results = None
     if ret_value == 0:
         command_results = _get_results_json(working_folder, err_file)
+        command_results['file_name'] = os.path.basename(image_path)
+        command_results['top_path'] = working_folder
 
     return command_results
 
 
-def handle_find_files2json(parameters: tuple, input_folder: str, working_folder: str, msg_file: str, err_file: str):
+def handle_find_files2json(parameters: tuple, input_folder: str, working_folder: str, msg_file: str, err_file: str) -> Optional[dict]:
     """Handle running the file finding algorithm
     Arguments:
         parameters: the specified parameters for the algorithm
@@ -571,10 +654,59 @@ def handle_find_files2json(parameters: tuple, input_folder: str, working_folder:
         working_folder: the working folder for the algorithm
         msg_file: path to write messages to
         err_file: path to write errors to
+    Return:
+        A dictionary of addittional parameters to pass to the next command or None
     """
+    search_name, search_folder = _find_parameter_values(parameters, ('file_name', 'top_path'))
+
+    # Ensure we have our mandatory parameters
+    missing_parameters = []
+    if search_name is None:
+        missing_parameters.append('file_name')
+    if search_folder is None:
+        missing_parameters.append('top_path')
+    if missing_parameters:
+        msg = 'Missing required parameter(s) "' + '","'.join(missing_parameters) + '"" for find_files2json'
+        print(msg, input_folder, parameters)
+        raise RuntimeError(msg)
+    del missing_parameters
+
+    invalid_parameters =  []
+    invalid_values = []
+    if not os.path.exists(search_folder) or not os.path.isdir(search_folder):
+        invalid_parameters.append('top_path')
+        invalid_values.append(search_folder)
+    if invalid_parameters:
+        msg = 'Required parameters "' + ('","'.join(invalid_parameters)) + '" for find_files2json are missing, or, not are not valid: "' + \
+              ('","'.join(invalid_values)) + '"'
+        print(msg, input_folder, parameters)
+        raise RuntimeError(msg)
+    del invalid_parameters
+    del invalid_values
+
+    # Write the arguments
+    json_args = {
+        'FILES2JSON_SEARCH_NAME': search_name,
+        'FILES2JSON_SEARCH_FOLDER': _replace_folder_path(search_folder, input_folder, '/input'),
+        'FILES2JSON_JSON_FILE': '/output/found_files.json',
+    }
+    json_file_path = os.path.join(working_folder, 'args.json')
+    _write_command_json(json_file_path, json_args)
+    print("Command JSON", json_args)
+
+    # Run the command
+    ret_value = _run_command('find_files2json', input_folder, working_folder, json_file_path, msg_file, err_file)
+
+    command_results = None
+    if ret_value == 0:
+        command_results = _get_results_json(working_folder, err_file)
+        command_results['found_json_file'] = _replace_folder_path(json_args['FILES2JSON_JSON_FILE'], '/output', working_folder)
+        command_results['results_search_folder'] = json_args['FILES2JSON_SEARCH_FOLDER']
+
+    return command_results
 
 
-def handle_canopycover(parameters: tuple, input_folder: str, working_folder: str, msg_file: str, err_file: str):
+def handle_canopycover(parameters: tuple, input_folder: str, working_folder: str, msg_file: str, err_file: str) -> Optional[dict]:
     """Handle running the canopy cover algorithm
     Arguments:
         parameters: the specified parameters for the algorithm
@@ -582,10 +714,71 @@ def handle_canopycover(parameters: tuple, input_folder: str, working_folder: str
         working_folder: the working folder for the algorithm
         msg_file: path to write messages to
         err_file: path to write errors to
+    Return:
+        A dictionary of addittional parameters to pass to the next command or None
     """
+    json_filename, experiment_file, search_folder, options = _find_parameter_values(parameters,
+                                                        ('found_json_file', 'experiment_data', 'results_search_folder',  'options'))
+
+    # Ensure we have our mandatory parameters
+    missing_parameters = []
+    if json_filename is None:
+        missing_parameters.append('found_json_file')
+    if missing_parameters:
+        msg = 'Missing required parameter(s) "' + '","'.join(missing_parameters) + '"" for canopy cover'
+        print(msg, input_folder, parameters)
+        raise RuntimeError(msg)
+    del missing_parameters
+
+    invalid_parameters =  []
+    invalid_values = []
+    if not os.path.exists(json_filename) or not os.path.isfile(json_filename):
+        invalid_parameters.append('found_json_file')
+        invalid_values.append(json_filename)
+    if invalid_parameters:
+        msg = 'Required parameters "' + ('","'.join(invalid_parameters)) + '" for canopy cover are missing, or, not are not valid: "' + \
+              ('","'.join(invalid_values)) + '"'
+        print(msg, input_folder, parameters)
+        raise RuntimeError(msg)
+    del invalid_parameters
+    del invalid_values
+
+    # Adjust the found files JSON to point to our output folder
+    new_json_filename = _repoint_files_json_dir(json_filename, search_folder, '/output', working_folder)
+    if new_json_filename is None:
+        new_json_filename = json_filename
+
+    # Add in additional options
+    if experiment_file is not None:
+        if os.path.isfile(experiment_file):
+            options += ' --metadata ' + _replace_folder_path(experiment_file, input_folder, '/input')
+        else:
+            msg = "Warning: invalid experiment file specified for canopy cover"
+            print(msg)
+            _write_log_file(msg_file, (msg,), True)
+
+    # Write the arguments
+    json_args = {
+        'CANOPYCOVER_OPTIONS': options if options is not None else '',
+    }
+    json_file_path = os.path.join(working_folder, 'args.json')
+    _write_command_json(json_file_path, json_args)
+    print("Command JSON", json_args)
+
+    # Run the command
+    ret_value = _run_command('canopycover', input_folder, working_folder, json_file_path, msg_file, err_file,
+                             [[new_json_filename,'/scif/apps/src/canopy_cover_files.json']])
+
+    command_results = None
+    if ret_value == 0:
+        command_results = {'results': _get_results_json(working_folder, err_file, True)}
+        command_results['top_path'] = working_folder
+        # TODO: change top_path to prev_working_folder everywhere and make that a default addition for substitution (magic value)
+
+    return command_results
 
 
-def handle_greenness_indices(parameters: tuple, input_folder: str, working_folder: str, msg_file: str, err_file: str):
+def handle_greenness_indices(parameters: tuple, input_folder: str, working_folder: str, msg_file: str, err_file: str) -> Optional[dict]:
     """Handle running the greenenss algorithm
     Arguments:
         parameters: the specified parameters for the algorithm
@@ -593,10 +786,71 @@ def handle_greenness_indices(parameters: tuple, input_folder: str, working_folde
         working_folder: the working folder for the algorithm
         msg_file: path to write messages to
         err_file: path to write errors to
+    Return:
+        A dictionary of addittional parameters to pass to the next command or None
     """
+    json_filename, experiment_file, search_folder, options = _find_parameter_values(parameters,
+                                                        ('found_json_file', 'experiment_data', 'results_search_folder',  'options'))
+
+    # Ensure we have our mandatory parameters
+    missing_parameters = []
+    if json_filename is None:
+        missing_parameters.append('found_json_file')
+    if missing_parameters:
+        msg = 'Missing required parameter(s) "' + '","'.join(missing_parameters) + '"" for greenness indices'
+        print(msg, input_folder, parameters)
+        raise RuntimeError(msg)
+    del missing_parameters
+
+    invalid_parameters =  []
+    invalid_values = []
+    if not os.path.exists(json_filename) or not os.path.isfile(json_filename):
+        invalid_parameters.append('found_json_file')
+        invalid_values.append(json_filename)
+    if invalid_parameters:
+        msg = 'Required parameters "' + ('","'.join(invalid_parameters)) + \
+              '" for greenness indices are missing, or, not are not valid: "' + \
+              ('","'.join(invalid_values)) + '"'
+        print(msg, input_folder, parameters)
+        raise RuntimeError(msg)
+    del invalid_parameters
+    del invalid_values
+
+    # Adjust the found files JSON to point to our output folder
+    new_json_filename = _repoint_files_json_dir(json_filename, search_folder, '/output', working_folder)
+    if new_json_filename is None:
+        new_json_filename = json_filename
+
+    # Add in additional options
+    if experiment_file is not None:
+        if os.path.isfile(experiment_file):
+            options += ' --metadata ' + _replace_folder_path(experiment_file, input_folder, '/input')
+        else:
+            msg = "Warning: invalid experiment file specified for greenness indices"
+            print(msg)
+            _write_log_file(msg_file, (msg,), True)
+
+    # Write the arguments
+    json_args = {
+        'GREENNESS_INDICES_OPTIONS': options if options is not None else '',
+    }
+    json_file_path = os.path.join(working_folder, 'args.json')
+    _write_command_json(json_file_path, json_args)
+    print("Command JSON", json_args)
+
+    # Run the command
+    ret_value = _run_command('canopycover', input_folder, working_folder, json_file_path, msg_file, err_file,
+                             [[new_json_filename,'/scif/apps/src/greenness_indices_files.json']])
+
+    command_results = None
+    if ret_value == 0:
+        command_results = {'results': _get_results_json(working_folder, err_file, True)}
+        command_results['top_path'] = working_folder
+
+    return command_results
 
 
-def handle_merge_csv(parameters: tuple, input_folder: str, working_folder: str, msg_file: str, err_file: str):
+def handle_merge_csv(parameters: tuple, input_folder: str, working_folder: str, msg_file: str, err_file: str) -> Optional[dict]:
     """Handle running the merging csv files algorithm
     Arguments:
         parameters: the specified parameters for the algorithm
@@ -604,7 +858,52 @@ def handle_merge_csv(parameters: tuple, input_folder: str, working_folder: str, 
         working_folder: the working folder for the algorithm
         msg_file: path to write messages to
         err_file: path to write errors to
+    Return:
+        A dictionary of addittional parameters to pass to the next command or None
     """
+    search_folder, options = _find_parameter_values(parameters, ('top_path', 'options'))
+
+    # Ensure we have our mandatory parameters
+    missing_parameters = []
+    if search_folder is None:
+        missing_parameters.append('top_path')
+    if missing_parameters:
+        msg = 'Missing required parameter(s) "' + '","'.join(missing_parameters) + '"" for merge_csv'
+        print(msg, input_folder, parameters)
+        raise RuntimeError(msg)
+    del missing_parameters
+
+    invalid_parameters =  []
+    invalid_values = []
+    if not os.path.exists(search_folder) or not os.path.isdir(search_folder):
+        invalid_parameters.append('top_path')
+        invalid_values.append(search_folder)
+    if invalid_parameters:
+        msg = 'Required parameters "' + ('","'.join(invalid_parameters)) + '" for merge_csv are missing, or, not are not valid: "' + \
+              ('","'.join(invalid_values)) + '"'
+        print(msg, input_folder, parameters)
+        raise RuntimeError(msg)
+    del invalid_parameters
+    del invalid_values
+
+    # Write the arguments
+    json_args = {
+        'MERGECSV_SOURCE': _replace_folder_path(search_folder, input_folder, '/input'),
+        'MERGECSV_TARGET': '/output',
+        'MERGECSV_OPTIONS': options if options is not None else '',
+    }
+    json_file_path = os.path.join(working_folder, 'args.json')
+    _write_command_json(json_file_path, json_args)
+    print("Command JSON", json_args)
+
+    # Run the command
+    ret_value = _run_command('merge_csv', input_folder, working_folder, json_file_path, msg_file, err_file)
+
+    command_results = None
+    if ret_value == 0:
+        command_results = _get_results_json(working_folder, err_file)
+
+    return command_results
 
 
 def parse_args() -> tuple:
@@ -651,12 +950,12 @@ def write_status(filename: str, status: str, message: object):
     _ = _write_log_file(filename, lines, append=False)
 
 
-def prepare_prev_results(parameters: list, res: dict, input_folder: str) -> list:
+def prepare_prev_results(parameters: list, res: dict) -> list:
     """Incorporates the previous results into the current parameters, when applicable
     Arguments:
         parameters: the list of parameters
         res: the results to incorporate
-        input_folder: the folder to copy referenced files to
+y referenced files to
     Returns:
         The list of adjusted parameters
     """
@@ -693,18 +992,11 @@ def prepare_prev_results(parameters: list, res: dict, input_folder: str) -> list
             # value is important or not
             if missing_part:
                 print('Unable to find previous result value', one_parameter['prev_command_path'], res)
-            #else:
-                # If the result is a file, copy it to the input folder
-                #if os.path.exists(working_res):
-                #    dest_file = os.path.join(input_folder, os.path.basename(working_res))
-                #    copyfile(working_res, dest_file)
-                #    working_res = dest_file
 
             cur_param['value'] = working_res if missing_part is False else None
 
         adjusted.append(cur_param)
 
-    print("HACK: Returning adjusted", adjusted)
     return adjusted
 
 
@@ -747,7 +1039,7 @@ def run_workflow():
         command_name = one_command['command']
         command_working_folder = _setup_working_folder(working_folder, command_name)
         print("Incorporate", res)
-        parameters = prepare_prev_results(one_command['parameters'], res, working_folder)
+        parameters = prepare_prev_results(one_command['parameters'], res)
         print('Running command ', command_name)
         write_status(status_filename, STATUS_RUNNING, {'message': 'Running ' + command_name})
         if command_name == 'soilmask':
@@ -770,8 +1062,6 @@ def run_workflow():
             write_status(status_filename, STATUS_COMPLETED, {'error': msg})
             wrote_final_status = True
             break
-
-        prev_working_folder = command_working_folder
 
     #  If we haven't written out final status yet, do so now
     if wrote_final_status is False:

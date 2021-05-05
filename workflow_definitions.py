@@ -41,18 +41,47 @@ WORKFLOW_DEFINTIONS = [
   }, {
     'name': 'Find files',
     'command': 'find_files2json',
+    'fields': [{
+      'name': 'file_name',
+      'visibility': 'server',
+      'description': 'File name to find',
+      'type': 'string',
+      'mandatory': True,
+      'prev_command_path': 'file_name',
+      }, {
+      'name': 'top_path',
+      'visibility': 'server',
+      'description': 'Top level folder to search on',
+      'type': 'folder',
+      'mandatory': True,
+      'prev_command_path': 'top_path',
+    }]  # End  of fields
   }, {
     'name': 'Canopy Cover',
     'description': 'Calculate canopy cover on images',
     'algorithm': 'RGBA Plot',
     'command': 'canopycover',
     'fields': [{
-      'name': 'Experiment data',
+      'name': 'experiment_data',
       'visibility': 'ui',
       'prompt': 'Experiment file',
       'description': 'YAML file containing experiment data',
       'type': 'file',
       'mandatory': False,
+      }, {
+      'name': 'found_json_file',
+      'visibility': 'server',
+      'description': 'JSON file containing information on files to process',
+      'type': 'file',
+      'mandatory': True,
+      'prev_command_path': 'found_json_file',
+      }, {
+      'name': 'results_search_folder',
+      'visibility': 'server',
+      'description': 'Search path as it appears in the results',
+      'type': 'string',
+      'mandatory': True,
+      'prev_command_path': 'results_search_folder',
     }]  # End  of fields
   }, {
     'name': 'Merge CSV',
@@ -85,9 +114,6 @@ WORKFLOW_DEFINTIONS = [
       'default': 1.0,
     }]  # End  of fields
   }, {
-    'name': 'Find files',
-    'command': 'find_files2json',
-  }, {
     'name': 'Plot Clip',
     'description': 'Clips image to plot',
     'algorithm': 'RGBA File',
@@ -99,6 +125,31 @@ WORKFLOW_DEFINTIONS = [
       'description': 'GeoJSON file containing plot geometries',
       'type': 'file',
       'mandatory': True,
+      }, {
+      'name': 'image',
+      'visibility': 'server',
+      'description': 'Source image to process',
+      'type': 'file',
+      'mandatory': True,
+      'prev_command_path': 'file:path',
+    }]  # End  of fields
+  }, {
+    'name': 'Find files',
+    'command': 'find_files2json',
+    'fields': [{
+      'name': 'file_name',
+      'visibility': 'server',
+      'description': 'File name to find',
+      'type': 'string',
+      'mandatory': True,
+      'prev_command_path': 'file_name',
+      }, {
+      'name': 'top_path',
+      'visibility': 'server',
+      'description': 'Top level folder to search on',
+      'type': 'folder',
+      'mandatory': True,
+      'prev_command_path': 'top_path',
     }]  # End  of fields
   }, {
     'name': 'Canopy Cover',
@@ -112,6 +163,20 @@ WORKFLOW_DEFINTIONS = [
       'description': 'YAML file containing experiment data',
       'type': 'file',
       'mandatory': False,
+      }, {
+      'name': 'found_json_file',
+      'visibility': 'server',
+      'description': 'JSON file containing information on files to process',
+      'type': 'file',
+      'mandatory': True,
+      'prev_command_path': 'found_json_file',
+      }, {
+      'name': 'results_search_folder',
+      'visibility': 'server',
+      'description': 'Search path as it appears in the results',
+      'type': 'string',
+      'mandatory': True,
+      'prev_command_path': 'results_search_folder',
     }]  # End  of fields
   }, {
     'name': 'Merge CSV',
