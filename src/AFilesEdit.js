@@ -166,7 +166,7 @@ class AFilesEdit extends Component {
 
     // Remove pending status  and update state
     this.pending_fetch = null;
-    this.setState({fetching: false, cur_path: path.replaceAll('\\', '/'), is_file: false, path_contents: this.normalizeResults(results)});
+    this.setState({fetching: false, cur_path: path.replaceAll('\\', '/'), is_file: false, path_contents: results});
   }
 
   fetchRequestStart(path) {
@@ -477,26 +477,6 @@ class AFilesEdit extends Component {
     return el_id.substr('file_edit_interface_table_value_'.length);
   }
 
-  normalizeResults(results) {
-    if (results) {
-      for (let ii = 0; ii < results.length; ii++) {
-        results[ii]['lower_name'] = results[ii]['name'].toLowerCase();
-        results[ii]['size'] = results[ii]['size'] ? parseInt(results[ii]['size']) : 0;
-
-        if (results[ii].hasOwnProperty('date')) {
-          let cleaned_date = results[ii]['date'];
-          while (cleaned_date.indexOf('  ') !== -1)  {
-            cleaned_date.replaceAll('  ',' ');
-          }
-          results[ii]['date'] = cleaned_date;
-        } else {
-          results[ii]['date'] = '';
-        }
-      }
-    }
-    return results;
-  }
-
   onCancel() {
     this.props.cancel(this.props.source);
   }
@@ -551,6 +531,7 @@ class AFilesEdit extends Component {
       return;
     }
 
+    el =  document.getElementById('file_edit_name_edit');
     if (this.props.hasOwnProperty('name_check')) {
       if (!this.props.name_check(name)) {
         this.displayError("Duplicate or invalid name found. Please rename and try again.");

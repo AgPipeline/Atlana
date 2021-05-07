@@ -181,7 +181,7 @@ class AWorkflows extends Component {
         return(
           <tr id={item.name + '_' + idx} key={item.name + '_' + idx}>
             <TemplateUIElement template={item} id={item_save_name} id_prefix={id_prefix} new_id={this.newIdAdded}
-                               change={(ev) => {this.onItemCheck(ev, item_save_name);}} {...props}/>
+                               change={(ev, mapped_value) => {this.onItemCheck(ev, item_save_name, mapped_value);}} {...props}/>
           </tr>
         );
       })
@@ -293,11 +293,19 @@ class AWorkflows extends Component {
     this.setState({mode: workflow_modes.main, cur_item_index: null, cur_item_name: null, cur_item_title: null});
   }
 
-  onItemCheck(ev, item_save_name) {
+  onItemCheck(ev, item_save_name,  mapped_value) {
     const cur_template = this.state.workflow_defs[this.state.cur_item_index];
     let cur_config = this.workflow_configs[cur_template.id];
 
-    cur_config[item_save_name] =  ev.target.value;
+    if (typeof cur_config[item_save_name] === 'object') {
+      if (cur_config[item_save_name].hasOwnProperty('location')) {
+        cur_config[item_save_name].location = ev.target.value;
+      } else {
+        alert("Unknown object has been updated. Contact the developer to resolve");
+      }
+    } else {
+      cur_config[item_save_name] =  ev.target.value;
+    }
   }
 
   onNameChange(ev) {

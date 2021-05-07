@@ -281,7 +281,7 @@ class BrowseFolders extends Component {
             {this.state.selected_id !== null && this.generateBrowseUI()}
           </div>
           <div name="browse_folder_footer" className="browse-folder-footer">
-            <div name="browse_folder_ok" className={ok_button_classes} onClick={missing_data ? null : this.onOk}>OK</div>
+            <div name="browse_folder_ok" className={ok_button_classes} onClick={ok_button_disabled ? null : this.onOk}>OK</div>
             <div name="browse_folder_spacer" className="browse-folder-footer-spacer"></div>
             <div name="browse_folder_cancel" className="browse-folder-button browse-folder-cancel" onClick={this.onCancel}>Cancel</div>
           </div>

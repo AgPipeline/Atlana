@@ -22,7 +22,9 @@ class TemplateUIElement extends Component {
   }
 
   generateBrowseUI(item, choices, browse_cb) {
+    var default_string = null;
     var props = {};
+    var name_value_map = {};
     const is_mandatory = item.hasOwnProperty('mandatory') ? item.mandatory : true;
     const have_browse_callback = (typeof browse_cb === 'function') ? true : false;
     const element_id = this.item_id !== null ? this.item_id : this.default_id_prefix + item.name;
@@ -30,7 +32,8 @@ class TemplateUIElement extends Component {
 
     if (item.hasOwnProperty('default')) {
       props['defaultValue'] = item.default;
-      if (choices.find((val) => val === item.default) === undefined) {
+      default_string = item.default['location'];
+      if (choices && choices.find((val) => val === item.default) === undefined) {
         choices = [...choices, item.default];
       }
     }
@@ -42,16 +45,29 @@ class TemplateUIElement extends Component {
     if (is_mandatory) {
       props['required'] = 'required';
     }
+
     if (typeof this.props.change === 'function') {
-      props['onChange'] = this.props.change;
+      if (choices && choices.length > 0) {
+        choices.forEach((item, idx) => {name_value_map[item.name + '_' + idx] = item.location;});
+      }
+
+      props['onChange'] = (ev) => {
+        const location = name_value_map.hasOwnProperty(ev.target.value) ? name_value_map[ev.target.value] : null;
+        this.props.change(ev, location);
+      };
     }
 
     return (
       <div id={element_id + '_wrapper'} className="template-ui-table-value-wrapper">
         <select name={element_id} id={element_id} className="template-ui-table-select" {...props}>
-          {choices && choices.map((item, idx) => {return (
-              <option value={item.name + '_' + idx} key={item.name + '_' + idx}
-                      className="template-ui-table-value-option template-ui-table-value-option-item">{item.name}</option>
+          {choices && choices.map((item, idx) => {
+            let option_props = {}
+            if (default_string && (default_string === item.location)) {
+              option_props['selected'] = 'true';
+            }
+            return (
+              <option value={item.name + '_' + idx} key={item.name + '_' + idx} {...option_props}
+                      className="template-ui-table-value-option template-ui-table-value-option-item">{item.location}</option>
             );}
           )}
         </select>
@@ -153,8 +169,10 @@ class TemplateUIElement extends Component {
     if (this.props.new_id) this.props.new_id(item, element_id);
 
     var props = {};
+    var default_string = null;
     if (item.hasOwnProperty('default')) {
       props['defaultValue'] = item.default;
+      default_string = item.default;
     }
     if (is_mandatory) {
       props['required'] = 'required';
@@ -178,7 +196,13 @@ class TemplateUIElement extends Component {
       return (
         <div id="workflow_edit_interface_table_value_wrapper" className="template-ui-table-value-wrapper">
           <select id={element_id} {...props}>
-            {item.choices.map((value) => {return(<option key={item.name + '.' + value} value={value}>{value}</option>);})}
+            {item.choices.map((value) => {
+              let option_props = {}
+              if (default_string && (default_string === value)) {
+                option_props['selected'] = 'true';
+              }
+              return(<option key={item.name + '.' + value} value={value} {...option_props}>{value}</option>);})
+            }
           </select>
           {this.generateMandatoryUI(is_mandatory)}
         </div>

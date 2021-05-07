@@ -169,6 +169,7 @@
 
 .browse-folder-ok-disabled {
     background-color: #f0f0f0;
+    cursor: default;
 }
 
 .browse-folder-cancel {

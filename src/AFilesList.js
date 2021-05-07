@@ -24,7 +24,7 @@ class AFilesList extends Component {
     this.titleClicked = this.titleClicked.bind(this);
     this.titleSortInd = this.titleSortInd.bind(this);
     
-    let cur_contents = this.sortResults(this.props.contents, sort_column_id.name, true);
+    let cur_contents = this.sortResults(this.normalizeResults(this.props.contents), sort_column_id.name, true);
     const found_item = cur_contents.find((item) => item.path === this.props.path);
     let cur_is_file = false;
     if (found_item) {
@@ -72,6 +72,26 @@ class AFilesList extends Component {
         </td>
       </tr>
     );
+  }
+
+  normalizeResults(results) {
+    if (results) {
+      for (let ii = 0; ii < results.length; ii++) {
+        results[ii]['lower_name'] = results[ii]['name'].toLowerCase();
+        results[ii]['size'] = results[ii]['size'] ? parseInt(results[ii]['size']) : 0;
+
+        if (results[ii].hasOwnProperty('date')) {
+          let cleaned_date = results[ii]['date'];
+          while (cleaned_date.indexOf('  ') !== -1)  {
+            cleaned_date.replaceAll('  ',' ');
+          }
+          results[ii]['date'] = cleaned_date;
+        } else {
+          results[ii]['date'] = '';
+        }
+      }
+    }
+    return results;
   }
 
   sortByDate(first, second, sort_asc) {
@@ -199,7 +219,7 @@ class AFilesList extends Component {
     display_style['height'] = client_rect.height;
 
     let folder_navigation = null;
-    if (this.state.cur_path !== '/' && (this.state.is_file === false)) {
+    if (this.state.cur_path !== this.props.path && (this.state.is_file === false)) {
       folder_navigation = [{
         name: '..', path: '..', type: 'folder'
       }]
