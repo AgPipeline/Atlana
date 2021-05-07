@@ -636,7 +636,7 @@ def handle_canopycover(parameters: tuple, input_folder: str, working_folder: str
         A dictionary of addittional parameters to pass to the next command or None
     """
     json_filename, experiment_file, search_folder, options = _find_parameter_values(parameters,
-                                                        ('found_json_file', 'experiment_data', 'results_search_folder',  'options'))
+                                                        ('found_json_file', 'experimentdata', 'results_search_folder',  'options'))
 
     # Ensure we have our mandatory parameters
     _handle_missing_parameters('canopycover', (json_filename,), ('found_json_file',))
@@ -694,7 +694,7 @@ def handle_greenness_indices(parameters: tuple, input_folder: str, working_folde
         A dictionary of addittional parameters to pass to the next command or None
     """
     json_filename, experiment_file, search_folder, options = _find_parameter_values(parameters,
-                                                        ('found_json_file', 'experiment_data', 'results_search_folder',  'options'))
+                                                        ('found_json_file', 'experimentdata', 'results_search_folder',  'options'))
 
     # Ensure we have our mandatory parameters
     _handle_missing_parameters('greenness indices', (json_filename,), ('found_json_file',))

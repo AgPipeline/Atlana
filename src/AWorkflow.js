@@ -158,6 +158,10 @@ class AWorkflows extends Component {
     const field_lookup_prefix = idx + '_' + parent.command + '_';
 
     return (parent.fields.map((item) => {
+        if (item['visibility'] !== 'ui') {
+          return null;
+        }
+
         let item_save_name = field_lookup_prefix + item.name;
         item.item_save_name = item_save_name;
 

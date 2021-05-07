@@ -36,7 +36,7 @@ WORKFLOW_DEFINTIONS = [
       'description': 'Source image to process',
       'type': 'file',
       'mandatory': True,
-      'prev_command_path': 'file:path',
+      'prev_command_path': 'file:0:path',
     }]  # End  of fields
   }, {
     'name': 'Find files',
@@ -62,7 +62,7 @@ WORKFLOW_DEFINTIONS = [
     'algorithm': 'RGBA Plot',
     'command': 'canopycover',
     'fields': [{
-      'name': 'experiment_data',
+      'name': 'experimentdata',
       'visibility': 'ui',
       'prompt': 'Experiment file',
       'description': 'YAML file containing experiment data',
@@ -139,20 +139,20 @@ WORKFLOW_DEFINTIONS = [
       'description': 'Source image to process',
       'type': 'file',
       'mandatory': True,
-      'prev_command_path': 'file:path',
+      'prev_command_path': 'file:0:path',
     }]  # End  of fields
   }, {
     'name': 'Find files',
     'command': 'find_files2json',
     'fields': [{
-      'name': 'file_name',
+      'name': 'filename',
       'visibility': 'server',
       'description': 'File name to find',
       'type': 'string',
       'mandatory': True,
       'prev_command_path': 'file_name',
       }, {
-      'name': 'top_path',
+      'name': 'toppath',
       'visibility': 'server',
       'description': 'Top level folder to search on',
       'type': 'folder',
@@ -165,21 +165,21 @@ WORKFLOW_DEFINTIONS = [
     'algorithm': 'RGBA Plot',
     'command': 'canopycover',
     'fields': [{
-      'name': 'Experiment data',
+      'name': 'experimentdata',
       'visibility': 'ui',
       'prompt': 'Experiment file',
       'description': 'YAML file containing experiment data',
       'type': 'file',
       'mandatory': False,
       }, {
-      'name': 'found_json_file',
+      'name': 'foundjsonfile',
       'visibility': 'server',
       'description': 'JSON file containing information on files to process',
       'type': 'file',
       'mandatory': True,
       'prev_command_path': 'found_json_file',
       }, {
-      'name': 'results_search_folder',
+      'name': 'resultssearchfolder',
       'visibility': 'server',
       'description': 'Search path as it appears in the results',
       'type': 'string',
@@ -190,7 +190,7 @@ WORKFLOW_DEFINTIONS = [
     'name': 'Merge CSV',
     'command': 'merge_csv',
     'fields': [{
-      'name': 'top_path',
+      'name': 'toppath',
       'visibility': 'server',
       'description': 'Top level folder to search on',
       'type': 'folder',
@@ -198,8 +198,7 @@ WORKFLOW_DEFINTIONS = [
       'prev_command_path': 'top_path',
     }]  # End  of fields
   }]  # End of steps
-}
-{
+},{
   'name': 'Canopy Cover',
   'description': 'Plot level canopy cover calculation',
   'id': 3,
@@ -240,14 +239,14 @@ WORKFLOW_DEFINTIONS = [
     'name': 'Find files',
     'command': 'find_files2json',
     'fields': [{
-      'name': 'file_name',
+      'name': 'filename',
       'visibility': 'server',
       'description': 'File name to find',
       'type': 'string',
       'mandatory': True,
       'prev_command_path': 'file_name',
       }, {
-      'name': 'top_path',
+      'name': 'toppath',
       'visibility': 'server',
       'description': 'Top level folder to search on',
       'type': 'folder',
@@ -260,21 +259,21 @@ WORKFLOW_DEFINTIONS = [
     'algorithm': 'RGBA Plot',
     'command': 'greenness_indices',
     'fields': [{
-      'name': 'experiment_data',
+      'name': 'experimentdata',
       'visibility': 'ui',
       'prompt': 'Experiment file',
       'description': 'YAML file containing experiment data',
       'type': 'file',
       'mandatory': False,
       }, {
-      'name': 'found_json_file',
+      'name': 'foundjsonfile',
       'visibility': 'server',
       'description': 'JSON file containing information on files to process',
       'type': 'file',
       'mandatory': True,
       'prev_command_path': 'found_json_file',
       }, {
-      'name': 'results_search_folder',
+      'name': 'resultssearchfolder',
       'visibility': 'server',
       'description': 'Search path as it appears in the results',
       'type': 'string',
@@ -285,7 +284,7 @@ WORKFLOW_DEFINTIONS = [
     'name': 'Merge CSV',
     'command': 'merge_csv',
     'fields': [{
-      'name': 'top_path',
+      'name': 'toppath',
       'visibility': 'server',
       'description': 'Top level folder to search on',
       'type': 'folder',
@@ -343,14 +342,14 @@ WORKFLOW_DEFINTIONS = [
     'name': 'Find files',
     'command': 'find_files2json',
     'fields': [{
-      'name': 'file_name',
+      'name': 'filename',
       'visibility': 'server',
       'description': 'File name to find',
       'type': 'string',
       'mandatory': True,
       'prev_command_path': 'file_name',
       }, {
-      'name': 'top_path',
+      'name': 'toppath',
       'visibility': 'server',
       'description': 'Top level folder to search on',
       'type': 'folder',
@@ -363,14 +362,14 @@ WORKFLOW_DEFINTIONS = [
     'algorithm': 'RGBA Plot',
     'command': 'greenness_indices',
     'fields': [{
-      'name': 'Experiment data',
+      'name': 'experimentdata',
       'visibility': 'ui',
       'prompt': 'Experiment file',
       'description': 'YAML file containing experiment data',
       'type': 'file',
       'mandatory': False,
       }, {
-      'name': 'found_json_file',
+      'name': 'foundjsonfile',
       'visibility': 'server',
       'description': 'JSON file containing information on files to process',
       'type': 'file',
@@ -388,7 +387,7 @@ WORKFLOW_DEFINTIONS = [
     'name': 'Merge CSV',
     'command': 'merge_csv',
     'fields': [{
-      'name': 'top_path',
+      'name': 'toppath',
       'visibility': 'server',
       'description': 'Top level folder to search on',
       'type': 'folder',

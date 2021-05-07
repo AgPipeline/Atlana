@@ -28,6 +28,31 @@ var workflowDefinitions = [{
       description: 'GeoJSON file containing plot geometries',
       type: 'file',
       mandatory: true,
+      }, {
+      name: 'image',
+      visibility: 'server',
+      description: 'Source image to process',
+      type: 'file',
+      mandatory: true,
+      prev_command_path: 'file:path',
+    }]  // End  of fields
+  }, {
+    name: 'Find files',
+    command: 'find_files2json',
+    fields: [{
+      name: 'filename',
+      visibility: 'server',
+      description: 'File name to find',
+      type: 'string',
+      mandatory: true,
+      prev_command_path: 'file_name',
+      }, {
+      name: 'toppath',
+      visibility: 'server',
+      description: 'Top level folder to search on',
+      type: 'folder',
+      mandatory: true,
+      prev_command_path: 'top_path',
     }]  // End  of fields
   }, {
     name: 'Canopy Cover',
@@ -35,12 +60,37 @@ var workflowDefinitions = [{
     algorithm: 'RGBA Plot',
     command: 'canopycover',
     fields: [{
-      name: 'Experiment data',
+      name: 'experimentdata',
       visibility: 'ui',
       prompt: 'Experiment file',
       description: 'YAML file containing experiment data',
       type: 'file',
       mandatory: false,
+      }, {
+      name: 'foundjsonfile',
+      visibility: 'server',
+      description: 'JSON file containing information on files to process',
+      type: 'file',
+      mandatory: true,
+      prev_command_path: 'found_json_file',
+      }, {
+      name: 'resultssearchfolder',
+      visibility: 'server',
+      description: 'Search path as it appears in the results',
+      type: 'string',
+      mandatory: true,
+      prev_command_path: 'results_search_folder',
+    }]  // End  of fields
+  }, {
+    name: 'Merge CSV',
+    command: 'merge_csv',
+    fields: [{
+      name: 'toppath',
+      visibility: 'server',
+      description: 'Top level folder to search on',
+      type: 'folder',
+      mandatory: true,
+      prev_command_path: 'top_path',
     }]  // End  of fields
   }]  // End of steps
 }, {
@@ -81,6 +131,31 @@ var workflowDefinitions = [{
       description: 'GeoJSON file containing plot geometries',
       type: 'file',
       mandatory: true,
+      }, {
+      name: 'image',
+      visibility: 'server',
+      description: 'Source image to process',
+      type: 'file',
+      mandatory: true,
+      prev_command_path: 'file:path',
+    }]  // End  of fields
+  }, {
+    name: 'Find files',
+    command: 'find_files2json',
+    fields: [{
+      name: 'filename',
+      visibility: 'server',
+      description: 'File name to find',
+      type: 'string',
+      mandatory: true,
+      prev_command_path: 'file_name',
+      }, {
+      name: 'toppath',
+      visibility: 'server',
+      description: 'Top level folder to search on',
+      type: 'folder',
+      mandatory: true,
+      prev_command_path: 'top_path',
     }]  // End  of fields
   }, {
     name: 'Canopy Cover',
@@ -88,12 +163,37 @@ var workflowDefinitions = [{
     algorithm: 'RGBA Plot',
     command: 'canopycover',
     fields: [{
-      name: 'Experiment data',
+      name: 'experimentdata',
       visibility: 'ui',
       prompt: 'Experiment file',
       description: 'YAML file containing experiment data',
       type: 'file',
       mandatory: false,
+      }, {
+      name: 'foundjsonfile',
+      visibility: 'server',
+      description: 'JSON file containing information on files to process',
+      type: 'file',
+      mandatory: true,
+      prev_command_path: 'found_json_file',
+      }, {
+      name: 'resultssearchfolder',
+      visibility: 'server',
+      description: 'Search path as it appears in the results',
+      type: 'string',
+      mandatory: true,
+      prev_command_path: 'results_search_folder',
+    }]  // End  of fields
+  }, {
+    name: 'Merge CSV',
+    command: 'merge_csv',
+    fields: [{
+      name: 'toppath',
+      visibility: 'server',
+      description: 'Top level folder to search on',
+      type: 'folder',
+      mandatory: true,
+      prev_command_path: 'top_path',
     }]  // End  of fields
   }]  // End of steps
 }];

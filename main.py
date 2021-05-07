@@ -256,6 +256,11 @@ def queue_one_process(workflow_id: str, cur_command: dict, working_folder: str, 
     print("    Checking for files")
     for one_parameter in cur_command['parameters']:
         print("    ", one_parameter)
+        # Skip over special cases
+        if 'visibility' in one_parameter and one_parameter['visibility'] == 'server':
+            continue
+
+        # Handle downloading files
         if one_parameter['type'] == 'file':
             dest_path = os.path.join(cur_command['working_folder'], os.path.basename(one_parameter['value']))
             print("Downloading file '", one_parameter['value'], "' to '", dest_path, "'")
@@ -412,19 +417,25 @@ def workflow_start(workflow_id: str, workflow_template: dict, data: list, file_h
             for one_field in one_step['fields']:
                 # Find the data associated with this field
                 cur_parameter = {}
-                for one_data in data:
-                    if 'command' in one_data and one_data['command'] == cur_command and one_data['field_name'] == one_field['name']:
-                        print("WORKING ON", one_data, one_field)
-                        if 'data_type' in one_data:
-                            if one_data['data_type'] in file_handlers:
-                                cur_parameter = {**one_data, **(file_handlers[one_data['data_type']])}
-                                cur_parameter['type'] = one_field['type']
+                if 'visibility' in one_field and one_field['visibility'] == 'server':
+                    print("SERVER SIDE", one_field)
+                    cur_parameter = {'command': cur_command, 'field_name': one_field['name'], 'type': one_field['type'],
+                                     'prev_command_path': one_field['prev_command_path'], 'visibility': one_field['visibility']}
+                else:
+                    for one_data in data:
+                        if 'command' in one_data and one_data['command'] == cur_command and one_data['field_name'] == one_field['name']:
+                            print("WORKING ON", one_data, one_field)
+                            if 'data_type' in one_data:
+                                if one_data['data_type'] in file_handlers:
+                                    cur_parameter = {**one_data, **(file_handlers[one_data['data_type']])}
+                                    cur_parameter['type'] = one_field['type']
+                                    break
+                            else:
+                                cur_parameter = {'field_name': one_data['field_name'], 'value': one_data[one_data['field_name']],
+                                                 'type': one_field['type']}
+                                print("   ", cur_parameter)
                                 break
-                        else:
-                            cur_parameter = {'field_name': one_data['field_name'], 'value': one_data[one_data['field_name']],
-                                             'type': one_field['type']}
-                            print("   ", cur_parameter)
-                            break
+
 
                 if cur_parameter:
                     parameters.append(cur_parameter)
@@ -437,6 +448,7 @@ def workflow_start(workflow_id: str, workflow_template: dict, data: list, file_h
                          'working_folder': working_folder})
 
     process_info = queue_start(workflow_id, working_folder, recover)
+    print("FINAL WORKFLOW: ",workflow)
     for one_process in workflow:
         queue_one_process(workflow_id, one_process, working_folder, process_info)
     queue_finish(workflow_id, working_folder, process_info)
