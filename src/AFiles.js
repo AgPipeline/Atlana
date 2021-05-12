@@ -89,7 +89,7 @@ class AFiles extends Component {
     }
 
     if (this.props.hasOwnProperty('deleteFile')) {
-      this.props.deleteFile(found_item.id);
+      this.props.onDelete(found_item.id);
       this.setState({'files_list': this.props.files()});
     }
   }
@@ -116,7 +116,7 @@ class AFiles extends Component {
     let new_state = {mode: null, mode_name: '', mode_title: ''};
 
     const new_entry = {name, location: path, path_is_file: is_file, auth, data_type: edit_type, id: Utils.getUuid()};
-    this.props.addFile(new_entry);
+    this.props.onAdd(new_entry);
     new_state['files_list'] = this.props.files();
 
     this.setState(new_state);
@@ -127,7 +127,7 @@ class AFiles extends Component {
 
     const new_entry = {name, location: path, path_is_file: is_file, auth, data_type: edit_type, id: item_id};
     const old_entry = this.state.files_list.find((item) => item.id === item_id);
-    this.props.updateFile(old_entry.id, new_entry);
+    this.props.OnUpdate(old_entry.id, new_entry);
     new_state['files_list'] = this.props.files();
 
     this.setState(new_state);
@@ -183,7 +183,7 @@ class AFiles extends Component {
   }
 
   onGoBack() {
-    this.props.done();
+    this.props.onDone();
   }
 
   updateNewType(ev) {
@@ -197,7 +197,7 @@ class AFiles extends Component {
       <>
         {have_errors && <Message msg={this.state.errors} type={Message.type.warning} ok={this.dismissMessage} cancel={this.dismissMessage} />}
         <div id="files_wrapper" className="files-wrapper">
-          <WorkspaceTitlebar title="Connect to files stored in a heirarchy" back={this.props.done} extra={this.generateNewFileUI}/>
+          <WorkspaceTitlebar title="Connect to files stored in a heirarchy" back={this.props.onDone} extra={this.generateNewFileUI}/>
           <table id="files_table" className="files-table">
             <thead className="files-table-titles">
               <tr>

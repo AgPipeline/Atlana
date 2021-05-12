@@ -30,9 +30,15 @@ class App extends Component {
     super(props);
 
     this.addFile = this.addFile.bind(this);
+    this.addWorkflow = this.addWorkflow.bind(this);
+    this.deleteFile = this.deleteFile.bind(this);
+    this.deleteWorkflow = this.deleteWorkflow.bind(this);
     this.getFiles = this.getFiles.bind(this);
+    this.getWorkflows = this.getWorkflows.bind(this);
     this.mainMenuSelected = this.mainMenuSelected.bind(this);
     this.setMainMenu = this.setMainMenu.bind(this);
+    this.updateFile = this.updateFile.bind(this);
+    this.updateWorkflow = this.updateWorkflow.bind(this);
 
     this.state = {
       mode: states.main_menu,
@@ -43,12 +49,24 @@ class App extends Component {
     ConfigStore.addFile(new_file_def);
   }
 
+  addWorkflow(new_workflow_def) {
+    ConfigStore.addWorkflow(new_workflow_def);
+  }
+
   deleteFile(item_id) {
-    ConfigStore.deleteItemById(item_id);
+    ConfigStore.deleteFileById(item_id);
+  }
+
+  deleteWorkflow(item_id) {
+    ConfigStore.deleteWorkflowById(item_id);
   }
 
   getFiles() {
     return ConfigStore.getFiles();
+  }
+
+  getWorkflows() {
+    return ConfigStore.getWorkflows();
   }
 
   mainMenuSelected(menu_id) {
@@ -61,6 +79,10 @@ class App extends Component {
 
   updateFile(old_item_id, updated_file_def) {
     ConfigStore.updateFile(old_item_id, updated_file_def);
+  }
+
+  updateWorkflow(old_item_id, updated_workflow_def) {
+    ConfigStore.updateWorkflow(old_item_id, updated_workflow_def);
   }
 
   render() {
@@ -87,9 +109,10 @@ class App extends Component {
           <span id="main_area" className="main-area">
             {this.state.mode === states.main_menu && <MainMenu menu={main_menu} selected={this.mainMenuSelected} />}
             <div id="atlana_workspace">
-              {this.state.mode === states.data_files && <AFiles files={this.getFiles} addFile={this.addFile} updateFile={this.updateFile}
-                                                           deleteFile={this.deleteFile} done={this.setMainMenu} />}
-              {this.state.mode === states.workflow_image && <AWorkflow done={this.setMainMenu} files={this.getFiles} addFile={this.addFile} />}
+              {this.state.mode === states.data_files && <AFiles files={this.getFiles} onAdd={this.addFile} onUpdate={this.updateFile}
+                                                           onDelete={this.deleteFile} onDone={this.setMainMenu} />}
+              {this.state.mode === states.workflow_image && <AWorkflow workflows={this.getWorkflows} files={this.getFiles} onAdd={this.addWorkflow}
+                                                          onDelete={this.deleteWorkflow} onUpdate={this.updateWorkflow} onDone={this.setMainMenu}/>}
             </div>
           </span>
         </span>

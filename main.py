@@ -354,7 +354,7 @@ def queue_messages(workflow_id: str, working_folder: str) -> tuple:
     messages, errors = None, None
     print("Checking queue messages", workflow_id, working_folder)
 
-    cur_path = os.path.join(working_folder, 'output.txt')
+    cur_path = os.path.join(working_folder, 'messages.txt')
     if os.path.exists(cur_path):
         for one_attempt in range(0, FILE_PROCESS_QUEUE_STATUS_RETRIES):
             try:
@@ -374,7 +374,7 @@ def queue_messages(workflow_id: str, working_folder: str) -> tuple:
             else:
                 break
 
-    cur_path = os.path.join(working_folder, 'error.txt')
+    cur_path = os.path.join(working_folder, 'errors.txt')
     if os.path.exists(cur_path):
         for one_attempt in range(0, FILE_PROCESS_QUEUE_STATUS_RETRIES):
             try:
@@ -467,7 +467,8 @@ def workflow_status(workflow_id: str, working_folder: str) -> dict:
     if cur_status is None:
         return {'result': STATUS_NOT_STARTED}
 
-    if isinstance(cur_status, dict):
+    print("STATUS:", cur_status['message'], cur_status['message'] == 'Completed')
+    if isinstance(cur_status, dict) and not cur_status['message'] == 'Completed':
         return {'result': STATUS_RUNNNG, 'status': cur_status}
 
     return {'result': STATUS_FINISHED, 'status': str(cur_status)}
@@ -677,10 +678,16 @@ def handle_workflow_start() -> tuple:
     workflow_start(workflow_id, cur_workflow, workflow_data['params'], FILE_HANDLERS, working_dir)
 
     # Keep workflow IDs in longer term storage
+    print("START", session['workflows']);
     if 'workflows' not in session or session['workflows'] is None:
-        session['workflows'] = [workflow_id]
+        session['workflows'] = [workflow_id,]
     else:
-        session['workflows'] = session['workflows'].append(workflow_id)
+        cur_workflows = session['workflows']
+        print("START 2", cur_workflows)
+        cur_workflows.append(workflow_id)
+        print("START 3", cur_workflows)
+        session['workflows'] = cur_workflows
+    print("START 4", session['workflows'], type(session['workflows']));
 
     return json.dumps({'id': workflow_id})
 
@@ -709,7 +716,7 @@ def handle_workflow_status(workflow_id: str) -> tuple:
     return json.dumps(workflow_status(workflow_id, working_dir))
 
 
-@app.route('/workflow/outputs/<string:workflow_id>', methods=['GET'])
+@app.route('/workflow/messages/<string:workflow_id>', methods=['GET'])
 #@cross_origin()
 @cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
 def get_workflow_messages(workflow_id: str) -> tuple:
@@ -717,7 +724,7 @@ def get_workflow_messages(workflow_id: str) -> tuple:
     Arguments:
         workflow_id: the id of the workflow to query
     """
-    print("Workflow status", workflow_id)
+    print("Workflow messges", workflow_id)
     cur_workflows = session['workflows']
     if not cur_workflows or workflow_id not in cur_workflows:
         msg = "ERROR: attempt made to access invalid workflow %s" % workflow_id

@@ -32,7 +32,7 @@
     align-self: end;
 }
 
-.workflow-new_wrapper {
+.workflow-new-wrapper {
     width: 100%;
     background-color: #e5e5e5;
     min-height: 20%;
@@ -48,6 +48,132 @@
 
 .workflow-new-items-table {
     width: 100%;
+}
+
+.workflow-details-wrapper {
+    width: 100%;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-content: center;
+    align-items: stretch;
+}
+
+.workflow-details-bar-wrapper {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-content: center;
+    align-items: stretch;
+}
+
+.workflow-details-show-item {
+    color: blue;
+    padding-left: 5px;
+    padding-right: 5px;
+    font-size: small;
+    cursor: pointer;
+}
+
+.workflow-details-showing {
+    font-weight: bold;
+}
+
+.workflow-details-show-text-wrapper {
+}
+
+.workflow-details-show-text-wrapper:hover {
+    background-color: #e0e0e0;
+}
+
+.workflow-details-show-messages {
+}
+
+.workflow-details-show-errors {
+}
+
+.details-count-item {
+    font-size: x-small;
+}
+
+.details-count-message {    
+    color: deepskyblue;
+}
+
+.details-count-error {
+    color: salmon;
+}
+
+.workflow-details-show-spacer {
+    flex: 20;
+}
+
+.workflow-details-status-wrapper {
+    white-space: nowrap;
+    font-size: small;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-content: center;
+    align-items: stretch;
+}
+
+.workflow-details-status-prompt {
+    margin-right: 5px;
+}
+
+.workflow-details-status {
+    margin-left: 5px;
+}
+
+.workflow-details-refresh {
+    font-size: small;
+    margin-bottom: 5px;
+    padding: 5px;
+    border: 1px solid black;
+    border-radius: 5px;
+    background-color: lightgreen;
+    cursor: pointer;
+}
+
+.workflow-details-details-wrapper {
+    margin: 0px 10px 10px 10px;
+    border: 1px solid black;
+    min-height: 200px;
+}
+
+.workflow-details-details {
+    max-height: 70vh;
+    color: white;
+    background-color: black;
+    overflow-x: scroll;
+    overflow-y: scroll;
+    font-size: small;
+    text-align: left;
+    white-space: pre;
+}
+
+.workflow-details-pending-wrapper {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    right: 100vw;
+    bottom: 100vh;
+    display: flex;
+    flex-direction: row;
+    align-content: space-around;
+    align-items: center;
+    background-color: rgb(230, 230, 230, .7);
+}
+
+.workflow-details-pending-spacer {
+    flex: 20;
+}
+
+.workflow-details-pending-prompt {
+    color: black;
 }
 
 .workflow-add-new-button-wrapper {
@@ -98,4 +224,23 @@
     background-color: #f0f0f0;
     cursor: default;
 }
+
+.workflow-detail-messages {
+    margin: 5px;
+    padding: 5px;
+    border: 1px solid black;
+    border-radius: 5px;
+    background-color: lightgreen;
+    cursor: pointer;
+}
+
+.workflow-detail-delete {
+    margin: 5px;
+    padding: 5px;
+    border: 1px solid black;
+    border-radius: 5px;
+    background-color: mistyrose;
+    cursor: pointer;
+}
+
 

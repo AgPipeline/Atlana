@@ -31,7 +31,6 @@ class TemplateUIElement extends Component {
     if (this.props.new_id) this.props.new_id(item, element_id);
 
     if (item.hasOwnProperty('default')) {
-      props['defaultValue'] = item.default;
       default_string = item.default['location'];
       if (choices && choices.find((val) => val === item.default) === undefined) {
         choices = [...choices, item.default];
@@ -172,7 +171,7 @@ class TemplateUIElement extends Component {
     var default_string = null;
     if (item.hasOwnProperty('default')) {
       props['defaultValue'] = item.default;
-      default_string = item.default;
+      default_string = props['defaultValue'];
     }
     if (is_mandatory) {
       props['required'] = 'required';

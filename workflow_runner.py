@@ -329,7 +329,7 @@ def run_workflow():
 
     #  If we haven't written out final status yet, do so now
     if wrote_final_status is False:
-        write_status(status_filename, STATUS_COMPLETED, {'message': 'Commpleted'})
+        write_status(status_filename, STATUS_COMPLETED, {'message': 'Completed'})
         logging.debug('Completed running workflow "%s"', workflow_file)
 
 
