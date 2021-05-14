@@ -13,7 +13,7 @@ from typing import Union
 from irods.session import iRODSSession
 from irods.data_object import chunks
 import irods.exception
-from flask import Flask, request, session
+from flask import Flask, request, send_file, session
 from flask_cors import CORS, cross_origin
 
 from workflow_definitions import WORKFLOW_DEFINTIONS
@@ -467,8 +467,7 @@ def workflow_status(workflow_id: str, working_folder: str) -> dict:
     if cur_status is None:
         return {'result': STATUS_NOT_STARTED}
 
-    print("STATUS:", cur_status['message'], cur_status['message'] == 'Completed')
-    if isinstance(cur_status, dict) and not cur_status['message'] == 'Completed':
+    if isinstance(cur_status, dict) and 'running' in cur_status:
         return {'result': STATUS_RUNNNG, 'status': cur_status}
 
     return {'result': STATUS_FINISHED, 'status': str(cur_status)}
@@ -506,8 +505,62 @@ def add_cors_headers(response):
     response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE')
     return response
 
+
+@app.route('/')
+@cross_origin()
+def index():
+    """Default page"""
+    print("RENDERING TEMPLATE")
+    return render_template('index.html')
+
+
+@app.route('/<string:filename>')
+@cross_origin()
+def sendfile(filename: str):
+    """Return root files"""
+    print("RETURN FILENAME:",filename)
+
+    fullpath = os.path.realpath(os.path.join(os.path.dirname(__file__), filename))
+    print("   FILE PATH:", fullpath)
+
+    # Make sure we're only serving something that's in the same location that we are in and that it exists
+    if not fullpath or not os.path.exists(fullpath):
+        return 'Resource not found', 400s
+
+    return send_file(fullpath)
+
+
+@app.route('/static/css/<string:filename>')
+@cross_origin()
+def sendcss(filename: str):
+    """Return CSS"""
+    print("RETURN CSS:",filename)
+
+    fullpath = os.path.realpath(os.path.join(os.path.dirname(__file__), 'css', filename))
+    print("   FILE PATH:",fullpath)
+
+    if not filename or not os.path.exists(fullpath):
+        return 'Resource not found', 400
+
+    return send_file(fullpath)
+
+
+@app.route('/static/js/<string:filename>')
+@cross_origin()
+def sendjs(filename: str):
+    """Return js"""
+    print("RETURN JS:",filename)
+
+    fullpath = os.path.realpath(os.path.join(os.path.dirname(__file__), 'js', filename))
+    print("   FILE PATH:",fullpath)
+
+    if not filename or not os.path.exists(fullpath):
+        return 'Resource not found', 400
+
+    return send_file(fullpath)
+
+
 @app.route('/server/files', methods=['GET'])
-#@cross_origin()
 @cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
 def handle_files() -> tuple:
     """Handles listing folder contents
@@ -554,7 +607,6 @@ def handle_files() -> tuple:
 
 
 @app.route('/irods/connect', methods=['POST'])
-#@cross_origin()
 @cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
 def handle_irods_connect() -> tuple:
     """Handles connecting to the iRODS server
@@ -595,7 +647,6 @@ def handle_irods_connect() -> tuple:
 
 
 @app.route('/irods/files', methods=['GET'])
-#@cross_origin()
 @cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
 def handle_irods_files() -> tuple:
     """Handles listing folder contents
@@ -647,7 +698,6 @@ def handle_irods_files() -> tuple:
 
 
 @app.route('/workflow/start', methods=['POST'])
-#@cross_origin()
 @cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
 def handle_workflow_start() -> tuple:
     """Handles starting a workflow
@@ -693,51 +743,57 @@ def handle_workflow_start() -> tuple:
 
 
 @app.route('/workflow/status/<string:workflow_id>', methods=['GET'])
-#@cross_origin()
 @cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
 def handle_workflow_status(workflow_id: str) -> tuple:
     """Rreturns the status of a workflow
     Arguments:
         workflow_id: the id of the workflow to query
     """
-    print("Workflow status", workflow_id)
-    cur_workflows = session['workflows']
-    if not cur_workflows or workflow_id not in cur_workflows:
-        msg = "ERROR: attempt made to access invalid workflow %s" % workflow_id
-        print(msg)
-        return msg, 400     # Bad request
+    try:
+        print("Workflow status", workflow_id)
+        cur_workflows = session['workflows']
+        if not cur_workflows or workflow_id not in cur_workflows:
+            msg = "ERROR: attempt made to access invalid workflow %s" % workflow_id
+            print(msg)
+            return msg, 400     # Bad request
 
-    working_dir = os.path.join(tempfile.gettempdir(), 'atlana', workflow_id)
-    if not os.path.isdir(working_dir):
-        msg = "ERROR: requested workflow no longer exists"
-        print(msg)
-        return msg, 404     # Not found
+        working_dir = os.path.join(tempfile.gettempdir(), 'atlana', workflow_id)
+        if not os.path.isdir(working_dir):
+            msg = "ERROR: requested workflow no longer exists"
+            print(msg)
+            return msg, 404     # Not found
 
-    return json.dumps(workflow_status(workflow_id, working_dir))
+        return json.dumps(workflow_status(workflow_id, working_dir))
+    except Exception as ex:
+        print("Exception caught handling workflow status", str(ex));
+        return str(ex), 500     # Server error
 
 
 @app.route('/workflow/messages/<string:workflow_id>', methods=['GET'])
-#@cross_origin()
 @cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
 def get_workflow_messages(workflow_id: str) -> tuple:
     """Rreturns the messages from the workflow
     Arguments:
         workflow_id: the id of the workflow to query
     """
-    print("Workflow messges", workflow_id)
-    cur_workflows = session['workflows']
-    if not cur_workflows or workflow_id not in cur_workflows:
-        msg = "ERROR: attempt made to access invalid workflow %s" % workflow_id
-        print(msg)
-        return msg, 400     # Bad request
+    try:
+        print("Workflow messges", workflow_id)
+        cur_workflows = session['workflows']
+        if not cur_workflows or workflow_id not in cur_workflows:
+            msg = "ERROR: attempt made to access invalid workflow %s" % workflow_id
+            print(msg)
+            return msg, 400     # Bad request
 
-    working_dir = os.path.join(tempfile.gettempdir(), 'atlana', workflow_id)
-    if not os.path.isdir(working_dir):
-        msg = "ERROR: requested workflow no longer exists"
-        print(msg)
-        return msg, 404     # Not found
+        working_dir = os.path.join(tempfile.gettempdir(), 'atlana', workflow_id)
+        if not os.path.isdir(working_dir):
+            msg = "ERROR: requested workflow no longer exists"
+            print(msg)
+            return msg, 404     # Not found
 
-    return json.dumps(workflow_messages(workflow_id, working_dir))
+        return json.dumps(workflow_messages(workflow_id, working_dir))
+    except Exception as ex:
+        print("Exception caught handling workflow messages", str(ex));
+        return str(ex), 500     # Server error
 
 
 if __name__ == '__main__':

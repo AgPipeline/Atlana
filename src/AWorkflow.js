@@ -17,6 +17,7 @@ var workflow_titles = [
   ' ',
 ];
 
+// Different workflow modes (states)
 var workflow_modes = {
   main: 0,      // List of workflows
   run: 1,       // Run a workflow
@@ -24,6 +25,7 @@ var workflow_modes = {
   details_finished: 3,   // Details for running workflows when the workflow has completed
 };
 
+// UI entry for a workflow's name
 var name_ui_def =  {
   name: 'workflow_name',
   prompt: 'Name',
@@ -34,9 +36,17 @@ var name_ui_def =  {
   maxlength: '100',
 };
 
+// Used to keep track of what user want's to see
 var message_types = {
   messages: 0,
   errors: 1
+};
+
+// Different job status values
+var job_status = {
+  started: 0,
+  running: 1,
+  completed: 2,
 };
 
 // Prefix to use for the ID of generated items
@@ -78,7 +88,9 @@ class AWorkflows extends Component {
     this.runWorkflow = this.runWorkflow.bind(this);
     this.updateNewType = this.updateNewType.bind(this);
     this.workflowDetailsStatus = this.workflowDetailsStatus.bind(this);
+    this.workflowStatus = this.workflowStatus.bind(this);
 
+    // Make a copy of the workflow definitions so we can manupulate them without affecting the originals
     const workflow_defs = [...workflowDefinitions];
 
     // Setup for files and folders
@@ -122,8 +134,8 @@ class AWorkflows extends Component {
 
   generated_ids = [];           // IDs of all elements we generated
   mandatory_ids = [];           // IDs of mandatory elements we generated
-  new_workflow_idx = null;      // The index of a new workflow to specify
-  workflow_configs = {};        // The configurations for workflows
+  new_workflow_idx = null;      // The index of a new workflow to specify (index into our state.workflow_defs)
+  workflow_configs = {};        // The configurations for workflows (values associated with different workflow defs)
   workflow_status_timer = null; // The timer id for workflow status fetches
   workflow_details_timer = null;// The timer id when fetching workflow details
   workflow_details_status_timer = null; // The timer id when fetching workflow status while viewing details
@@ -136,6 +148,16 @@ class AWorkflows extends Component {
     if (this.state.met_requirements !== have_met_requirements) {
       this.setState({met_requirements: have_met_requirements});
     }
+  }
+
+  componentWillUnmount() {
+    [this.workflow_status_timer, this.workflow_details_timer, this.workflow_details_status_timer, this.prepare_lines_timer]
+          .forEach((timer_id) => {
+                                  if ((timer_id !== null) && (timer_id !== undefined)) {
+                                    window.clearTimeout(timer_id);
+                                  }
+                                 }
+                  );
   }
 
   addItem() {
@@ -174,7 +196,11 @@ class AWorkflows extends Component {
   }
 
   displayWorkflowDetailsStatus(job_id, status) {
-    this.handleWorkflowStatus(job_id, status, 'workflow_details_status');
+    const cur_status = this.handleWorkflowStatus(job_id, status, 'workflow_details_status');
+
+    if (cur_status === job_status.completed) {
+      this.setState({mode: workflow_modes.details_finished});
+    }
   }
 
   fetchWorkflowDetails(job_id) {
@@ -188,7 +214,7 @@ class AWorkflows extends Component {
         credentials: 'include',
         }
       )
-      .then(response => response.json())
+      .then(response => {if (response.ok) return response.json(); else throw response.statusText})
       .then(success => {this.setState({pending_request: false});this.handleWorkflowMessages(job_id, success)})
       .catch(error => {this.setState({pending_request: false});console.log("ERROR",error);});
     } catch (err) {
@@ -209,7 +235,7 @@ class AWorkflows extends Component {
         credentials: 'include',
         }
       )
-      .then(response => response.json())
+      .then(response => {if (response.ok) return response.json(); else throw response.statusText})
       .then(success => {this.setState({pending_request: false});console.log("STATUS",success);success_cb(job_id, success);})
       .catch(error => {this.setState({pending_request: false});console.log("ERROR",error);});
     } catch (err) {
@@ -532,30 +558,28 @@ class AWorkflows extends Component {
 
     let cur_status = '';
     switch (status['result']){
-      case 0: cur_status = 'Starting'; break;
-      case 1: 
+      case job_status.started: cur_status = 'Starting'; break;
+      case job_status.running: 
         if (status.hasOwnProperty('status') && status['status'].hasOwnProperty('running') && status['status']['running'].hasOwnProperty('message')) {
           cur_status = status['status']['running']['message'];
         } else {
           cur_status = 'Running'; 
         }
         break;
-      case 2: cur_status = 'Finished'; break;
+      case job_status.completed: cur_status = 'Finished'; break;
       default: cur_status = 'unknown'; break;
     }
 
     cur_workflow['status'] = cur_status;
 
     // Update the UI
-    let el = document.getElementById(update_el_id ? update_el_id : 'workflow_detail_status_'  + cur_workflow.id);
+    let el = document.getElementById(update_el_id);
     if (!el) {
       return;
     }
     el.innerHTML = cur_status;
 
-    if (status['result'] === 2) {
-      this.setState({mode: workflow_modes.details_finished});
-    }
+    return status['result'];
   }
 
   haveRequiredWorkflowParameters() {
@@ -681,7 +705,7 @@ class AWorkflows extends Component {
     }
 
     // Make the request to get the status
-    this.fetchWorkflowStatus(found_workflow.job_id, this.handleWorkflowStatus);
+    this.workflowStatus(found_workflow.job_id, 'workflow_detail_status_'  + workflow_id);
   }
 
   refreshMessages(ev) {
@@ -774,7 +798,7 @@ class AWorkflows extends Component {
         body: JSON.stringify(workflow_data)
         }
       )
-      .then(response => response.json())
+      .then(response => {if (response.ok) return response.json(); else throw response.statusText})
       .then(success => {this.handleSuccessJobStart(success, workflow_info);})
       .catch(error => console.log("ERROR",error));
     } catch (err) {
@@ -804,6 +828,20 @@ class AWorkflows extends Component {
                                                             this.workflow_details_status_timer = null;
                                                             this.workflowDetailsStatus(job_id);
                                                           }, 5000);
+                }
+              });
+  }
+
+  workflowStatus(job_id, el_id) {
+    this.fetchWorkflowStatus(job_id,
+              (job_id, status) => {
+                const cur_status = this.handleWorkflowStatus(job_id, status, el_id);
+                if (cur_status !== job_status.completed) {
+                  // Set timer for a status update
+                  this.workflow_status_timer = window.setTimeout(() => {
+                    this.workflow_status_timer = null;
+                    this.workflowStatus(job_id, el_id);
+                  }, 5000);
                 }
               });
   }

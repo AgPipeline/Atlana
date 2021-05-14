@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Simple workflow runner"""
+"""Docker workflow runner"""
 
 import os
 import io
@@ -113,7 +113,7 @@ def _replace_folder_path(path: str, from_folder: str, to_folder: str) -> Optiona
     return os.path.join(to_folder, rem)
 
 
-def  _consume_output(reader: io.BufferedReader, output_func: Callable, done_event: Event):
+def _consume_output(reader: io.BufferedReader, output_func: Callable, done_event: Event):
     """Consumes the output from reader and writes it to the file
     Arguments:
         reader: object to read from

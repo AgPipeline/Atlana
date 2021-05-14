@@ -32,7 +32,7 @@ class Server extends IData {
         method: 'GET',
         }
       )
-      .then(response => response.json())
+      .then(response => {if (response.ok) return response.json(); else throw response.statusText;})
       .then(success => success_cb(success))
       .catch(error => failure_cb(error));
 

@@ -11,7 +11,8 @@ from typing import Optional
 from collections.abc import Callable
 import logging
 
-import workflow_docker as wd
+#import workflow_docker as wd
+import workflow_local as wd
 
 # File names to store out output into
 QUEUE_FILE_NAME = 'queue'
@@ -234,9 +235,9 @@ y referenced files to
     adjusted = []
     for one_parameter in parameters:
         cur_param = {**one_parameter}
-        if 'prev_command_path' in one_parameter:
+        if 'prev_command_path' in cur_param:
             # Try to find what they're looking for
-            result_parts = one_parameter['prev_command_path'].split(':')
+            result_parts = cur_param['prev_command_path'].split(':')
             missing_part = False
             working_res = res
             for one_part in result_parts:
@@ -249,12 +250,12 @@ y referenced files to
                             working_res = working_res[index]
                         else:
                             logging.warning('Invalid index specified for previous result value %s %s',
-                                            str(one_parameter['prev_command_path']), str(working_res))
+                                            str(cur_param['prev_command_path']), str(working_res))
                             missing_part = True
                             break
                     except ValueError:
                         logging.exception('Invalid index value "%s" specified for previous result value "%s"',
-                                                one_part, one_parameter['prev_command_path'])
+                                                one_part, cur_param['prev_command_path'])
                         missing_part = True
                         break
                 else:
