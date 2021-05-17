@@ -1,0 +1,4 @@
+gunicorn
+python-irodsclient
+Flask
+Flask-Cors

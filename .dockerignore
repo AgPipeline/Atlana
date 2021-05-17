@@ -1,0 +1,5 @@
+__pycache__
+algorithms
+node_modules
+public/*.xcf
+venv

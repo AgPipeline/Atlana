@@ -17,7 +17,9 @@ RUN echo ${BASE_IMAGE}
 
 # Run the build
 RUN npm ci
-COPY ./ ./
+COPY ./public ./public
+COPY ./src ./src
+
 RUN npm run build
 
 FROM ${BASE_IMAGE}
@@ -27,18 +29,17 @@ ARG PORT_NUMBER=3000
 
 WORKDIR /web_site
 
-RUN python3 -m pip install --upgrade --no-cache-dir pip
-
-RUN python3 -m pip install --upgrade --no-cache-dir \
-        gunicorn
-
 # Copy the build
 COPY --from=build /app/react_frontend/build/* ./
+RUN mkdir templates && mv index.html templates/
 
-COPY ./*.py ./
-COPY ./*.sh ./
+COPY ./*.py ./*.sh ./requirements.txt ./
 
-COPY ./test_data ./
+COPY ./test_data ./test_data
+
+RUN python3 -m pip install --upgrade --no-cache-dir pip
+
+RUN python3 -m pip install --upgrade --no-cache-dir -r requirements.txt
 
 EXPOSE ${PORT_NUMBER}
 

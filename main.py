@@ -13,7 +13,7 @@ from typing import Union
 from irods.session import iRODSSession
 from irods.data_object import chunks
 import irods.exception
-from flask import Flask, request, send_file, session
+from flask import Flask, render_template, request, send_file, session
 from flask_cors import CORS, cross_origin
 
 from workflow_definitions import WORKFLOW_DEFINTIONS
@@ -22,6 +22,9 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'this_is_not_such_100_secret'    # Replace with random string
 
 cors = CORS(app, resources={r"/files": {"origins": "http://127.0.0.1:3000"}})
+
+# The default page to serve up
+DEFAULT_TEMPLATE_PAGE='index.html'
 
 # Starting point for seaching for files on server
 FILE_START_PATH = os.path.abspath(os.path.dirname(__file__))
@@ -511,7 +514,7 @@ def add_cors_headers(response):
 def index():
     """Default page"""
     print("RENDERING TEMPLATE")
-    return render_template('index.html')
+    return render_template(DEFAULT_TEMPLATE_PAGE)
 
 
 @app.route('/<string:filename>')
@@ -520,12 +523,12 @@ def sendfile(filename: str):
     """Return root files"""
     print("RETURN FILENAME:",filename)
 
-    fullpath = os.path.realpath(os.path.join(os.path.dirname(__file__), filename))
+    fullpath = os.path.realpath(os.path.join(FILE_START_PATH, filename.lstrip('/')))
     print("   FILE PATH:", fullpath)
 
     # Make sure we're only serving something that's in the same location that we are in and that it exists
-    if not fullpath or not os.path.exists(fullpath):
-        return 'Resource not found', 400s
+    if not fullpath or not os.path.exists(fullpath) or not fullpath.startswith(FILE_START_PATH):
+        return 'Resource not found', 400
 
     return send_file(fullpath)
 
@@ -536,10 +539,9 @@ def sendcss(filename: str):
     """Return CSS"""
     print("RETURN CSS:",filename)
 
-    fullpath = os.path.realpath(os.path.join(os.path.dirname(__file__), 'css', filename))
-    print("   FILE PATH:",fullpath)
+    fullpath = os.path.realpath(os.path.join(FILE_START_PATH, 'css', filename))
 
-    if not filename or not os.path.exists(fullpath):
+    if not filename or not os.path.exists(fullpath) or not fullpath.startswith(FILE_START_PATH):
         return 'Resource not found', 400
 
     return send_file(fullpath)
@@ -551,10 +553,9 @@ def sendjs(filename: str):
     """Return js"""
     print("RETURN JS:",filename)
 
-    fullpath = os.path.realpath(os.path.join(os.path.dirname(__file__), 'js', filename))
-    print("   FILE PATH:",fullpath)
+    fullpath = os.path.realpath(os.path.join(FILE_START_PATH, 'js', filename))
 
-    if not filename or not os.path.exists(fullpath):
+    if not filename or not os.path.exists(fullpath) or not fullpath.startswith(FILE_START_PATH):
         return 'Resource not found', 400
 
     return send_file(fullpath)
@@ -723,21 +724,16 @@ def handle_workflow_start() -> tuple:
     workflow_id = uuid.uuid4().hex
     working_dir = os.path.join(tempfile.gettempdir(), 'atlana', workflow_id)
     os.makedirs(working_dir, exist_ok=True)
-    print('Workflow ID and folder', workflow_id, working_dir)
 
     workflow_start(workflow_id, cur_workflow, workflow_data['params'], FILE_HANDLERS, working_dir)
 
     # Keep workflow IDs in longer term storage
-    print("START", session['workflows']);
     if 'workflows' not in session or session['workflows'] is None:
         session['workflows'] = [workflow_id,]
     else:
         cur_workflows = session['workflows']
-        print("START 2", cur_workflows)
         cur_workflows.append(workflow_id)
-        print("START 3", cur_workflows)
         session['workflows'] = cur_workflows
-    print("START 4", session['workflows'], type(session['workflows']));
 
     return json.dumps({'id': workflow_id})
 
@@ -765,7 +761,7 @@ def handle_workflow_status(workflow_id: str) -> tuple:
 
         return json.dumps(workflow_status(workflow_id, working_dir))
     except Exception as ex:
-        print("Exception caught handling workflow status", str(ex));
+        print("Exception caught handling workflow status", str(ex))
         return str(ex), 500     # Server error
 
 
@@ -792,7 +788,7 @@ def get_workflow_messages(workflow_id: str) -> tuple:
 
         return json.dumps(workflow_messages(workflow_id, working_dir))
     except Exception as ex:
-        print("Exception caught handling workflow messages", str(ex));
+        print("Exception caught handling workflow messages", str(ex))
         return str(ex), 500     # Server error
 
 
