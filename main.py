@@ -9,6 +9,7 @@ import hashlib
 import base64
 import uuid
 import tempfile
+import subprocess
 from typing import Union
 from irods.session import iRODSSession
 from irods.data_object import chunks
@@ -296,7 +297,12 @@ def queue_finish(workflow_id: str, working_folder: str, process_info: dict):
         process_info: dictionary returned by starting process call
     """
     # pylint: disable=unused-argument
-    print("Finished queueing", workflow_id)
+    workflow_script = os.path.join(FILE_START_PATH, 'workflow_runner.py')
+    print("Finished queueing", workflow_id, working_folder, workflow_script)
+    cmd = ['python3', workflow_script, working_folder]
+    print("    command:", cmd)
+    p = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    print("    process:", p.pid)
 
 
 def queue_status(workflow_id: str, working_folder: str) -> Union[dict, str, None]:

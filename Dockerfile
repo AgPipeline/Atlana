@@ -31,15 +31,16 @@ WORKDIR /web_site
 
 # Copy the build
 COPY --from=build /app/react_frontend/build/* ./
-RUN mkdir templates && mv index.html templates/
 
-COPY ./*.py ./*.sh ./requirements.txt ./
-
-COPY ./test_data ./test_data
-
+# Install requirements
+COPY ./requirements.txt ./
 RUN python3 -m pip install --upgrade --no-cache-dir pip
-
 RUN python3 -m pip install --upgrade --no-cache-dir -r requirements.txt
+
+# Copy files to where we want them
+RUN mkdir templates && mv index.html templates/
+COPY ./*.py ./*.sh ./
+COPY ./test_data ./test_data
 
 EXPOSE ${PORT_NUMBER}
 

@@ -79,7 +79,7 @@ def _setup_working_folder(top_folder: str, subfolder: str)-> str:
     return working_folder
 
 
-def _load_json_file(filename: str, error_func: Callable[[str, list, bool], None]=None) -> Optional[object]:
+def _load_json_file(filename: str, error_func: Callable=None) -> Optional[object]:
     """Handles loading a JSON file
     Arguments:
         filename: the path to the JSON file
