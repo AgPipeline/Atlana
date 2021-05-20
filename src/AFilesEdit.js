@@ -201,6 +201,9 @@ class AFilesEdit extends Component {
         if (parts.length > 1) {
           parts.pop();
         }
+        if (this.state.is_file && parts.length > 1) {
+          parts.pop();
+        }
         cur_path = ('/'  + parts.join('/')).replaceAll('//', '/');
       } else {
         cur_path = this.props.path;
@@ -630,8 +633,8 @@ class AFilesEdit extends Component {
           <div id="file_edit_path_display_wrapper" className="file-edit-path-display-wrapper">
             <div id="file_edit_path_display" className="file-edit-path-display">
               {this.state.path_contents && 
-                <AFilesList parent_id={'file_edit_path_display'} path={this.state.cur_path} contents={this.state.path_contents} 
-                            folder_sel={this.folderSelected} file_sel={this.fileSelected} />
+                <AFilesList parent_id={'file_edit_path_display'} start_path={this.props.path} path={this.state.cur_path} is_file={this.state.is_file} 
+                            contents={this.state.path_contents} folder_sel={this.folderSelected} file_sel={this.fileSelected} />
               }
             </div>
           </div>

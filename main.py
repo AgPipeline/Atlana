@@ -27,8 +27,16 @@ cors = CORS(app, resources={r"/files": {"origins": "http://127.0.0.1:3000"}})
 # The default page to serve up
 DEFAULT_TEMPLATE_PAGE='index.html'
 
-# Starting point for seaching for files on server
-FILE_START_PATH = os.path.abspath(os.path.dirname(__file__))
+# Starting point for uploading files from server
+RESOURCE_START_PATH = os.path.abspath(os.path.dirname(__file__))
+
+# Starting point for seaching for user files on server
+if os.getenv('WORKING_FOLDER') is not None:
+    FILE_START_PATH = os.getenv('WORKING_FOLDER')
+else:
+    FILE_START_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'upload')
+if not os.path.exists(FILE_START_PATH):
+    os.makedirs(FILE_START_PATH)
 
 # Status codes for checking on processes
 STATUS_NOT_STARTED = 0
@@ -529,11 +537,11 @@ def sendfile(filename: str):
     """Return root files"""
     print("RETURN FILENAME:",filename)
 
-    fullpath = os.path.realpath(os.path.join(FILE_START_PATH, filename.lstrip('/')))
+    fullpath = os.path.realpath(os.path.join(RESOURCE_START_PATH, filename.lstrip('/')))
     print("   FILE PATH:", fullpath)
 
     # Make sure we're only serving something that's in the same location that we are in and that it exists
-    if not fullpath or not os.path.exists(fullpath) or not fullpath.startswith(FILE_START_PATH):
+    if not fullpath or not os.path.exists(fullpath) or not fullpath.startswith(RESOURCE_START_PATH):
         return 'Resource not found', 400
 
     return send_file(fullpath)
@@ -545,9 +553,9 @@ def sendcss(filename: str):
     """Return CSS"""
     print("RETURN CSS:",filename)
 
-    fullpath = os.path.realpath(os.path.join(FILE_START_PATH, 'css', filename))
+    fullpath = os.path.realpath(os.path.join(RESOURCE_START_PATH, 'css', filename))
 
-    if not filename or not os.path.exists(fullpath) or not fullpath.startswith(FILE_START_PATH):
+    if not filename or not os.path.exists(fullpath) or not fullpath.startswith(RESOURCE_START_PATH):
         return 'Resource not found', 400
 
     return send_file(fullpath)
@@ -559,9 +567,9 @@ def sendjs(filename: str):
     """Return js"""
     print("RETURN JS:",filename)
 
-    fullpath = os.path.realpath(os.path.join(FILE_START_PATH, 'js', filename))
+    fullpath = os.path.realpath(os.path.join(RESOURCE_START_PATH, 'js', filename))
 
-    if not filename or not os.path.exists(fullpath) or not fullpath.startswith(FILE_START_PATH):
+    if not filename or not os.path.exists(fullpath) or not fullpath.startswith(RESOURCE_START_PATH):
         return 'Resource not found', 400
 
     return send_file(fullpath)

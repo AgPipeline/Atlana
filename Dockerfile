@@ -24,10 +24,14 @@ RUN npm run build
 
 FROM ${BASE_IMAGE}
 
+WORKDIR /web_site
+
 # Allow port number overrides
 ARG PORT_NUMBER=3000
 
-WORKDIR /web_site
+# Set upload/working data folder
+ARG WORKING_FOLDER=/web_site/uploads
+RUN mkdir ${WORKING_FOLDER} && chmod 777 ${WORKING_FOLDER}
 
 # Copy the build
 COPY --from=build /app/react_frontend/build/* ./
@@ -46,6 +50,7 @@ EXPOSE ${PORT_NUMBER}
 
 ENV PYTHONPATH="${PYTHONPATH}:/app/react_frontend"  \
     SERVER_DIR="/app/flask_backend" \
-    WEB_SITE_URL="0.0.0.0:"${PORT_NUMBER}
+    WEB_SITE_URL="0.0.0.0:"${PORT_NUMBER} \
+    WORKING_FOLDER=$WORKING_FOLDER
 
 ENTRYPOINT gunicorn -w 4 -b ${WEB_SITE_URL} --access-logfile '-' main:app

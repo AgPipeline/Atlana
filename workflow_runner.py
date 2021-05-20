@@ -11,8 +11,8 @@ from typing import Optional
 from collections.abc import Callable
 import logging
 
-#import workflow_docker as wd
-import workflow_local as wd
+import workflow_docker as wd
+#import workflow_local as wd
 
 # File names to store out output into
 QUEUE_FILE_NAME = 'queue'

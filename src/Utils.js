@@ -4,8 +4,8 @@ import { v4 as uuidv4 } from 'uuid';
 class Utils {
 
   static getHostOrigin(){
-    return (window.location.origin)
-    //return 'http://localhost:5000';
+    //return (window.location.origin)
+    return 'http://localhost:5000';
   }
 
   static getUuid() {

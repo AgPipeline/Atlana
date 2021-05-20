@@ -31,8 +31,11 @@ class AFilesList extends Component {
       cur_is_file = found_item.type === 'file';
     }
 
+    const cur_file_name = cur_is_file ? this.getFilename(this.props.path) : undefined;
+
     this.state = {
       cur_path: this.props.path,          // The working path
+      cur_file_name,                      // The current name of the file (used for selection indicator)
       is_file: cur_is_file,               // Flag for selection being a file or not
       sort_column: sort_column_id.name,   // Current column being sorted on
       sort_ascending: true,               // Flag for sort direction
@@ -43,21 +46,30 @@ class AFilesList extends Component {
   componentDidUpdate(prev_props) {
     if ((prev_props.path !== this.props.path) || ((prev_props.contents === null) && (this.props.contents !== null))) {
       const cur_item = this.props.contents.find((item) => item.path === this.props.path);
-      const is_path = (this.props.contents.length > 0) && (this.props.contents[0].path.startsWith(this.props.path) && (this.props.contents[0].path[this.props.path.length] === '/'));
+      const is_path = !this.props.is_file;
       const cur_is_file = (!is_path) || (cur_item && cur_item.hasOwnProperty('type') && cur_item['type'] === 'file' ? true : false);
-      this.setState({cur_path: this.props.path, is_file: cur_is_file,
-                     path_contents: this.sortResults(this.props.contents, this.state.sort_column, this.state.sort_ascending)});
+      const cur_file_name = cur_is_file ? this.getFilename(this.props.path) : undefined;
+      const sorted_contents = this.sortResults(this.normalizeResults(this.props.contents), this.state.sort_column, this.state.sort_ascending);
+
+      this.setState({cur_path: this.props.path, cur_file_name, is_file: cur_is_file,
+                     path_contents: sorted_contents});
     }
   }
 
   displayPathItem(item, idx) {
     const item_class_name = item.type ==='file' ? 'files-list-display-file' : 'files-list-display-folder';
+    let row_class_name = 'files-list-display-item-row';
     const image_source = item.type ==='file' ? 'file_image.png' : 'folder_image.png';
     const click_cb = item.type ==='file' ?  () => this.props.file_sel(item.path) : () => this.props.folder_sel(item.path);
     const item_size = item.type ==='file' ? item.size : '';
+    const item_selected = item.name === this.state.cur_file_name;
+
+    if (item_selected) {
+      row_class_name += ' files-list-display-file_selected';
+    }
 
     return (
-      <tr className="files-list-display-item-row" key={'row_' + item.name} >
+      <tr className={row_class_name} key={'row_' + item.name} >
         <td id={'files_list_' + idx + '_display-item-wrapper'} className="files-list-path-item" onClick={click_cb}>
           <div className="files-list-display-file-wrapper">
             <img src={image_source} alt=""/>
@@ -72,6 +84,18 @@ class AFilesList extends Component {
         </td>
       </tr>
     );
+  }
+
+  getFilename(path) {
+    const last_part = path.replaceAll('\\', '/').split('/').pop()
+
+    console.log("FILENAME",last_part);
+    if (last_part && (last_part.length > 0)) {
+      console.log("   returning name");
+      return last_part;
+    }
+
+    return undefined;
   }
 
   normalizeResults(results) {
@@ -204,6 +228,20 @@ class AFilesList extends Component {
     return " ";
   }
 
+  fileNotInStartDir() {
+    if (this.state.is_file === true && this.state.cur_path.startsWith(this.props.start_path)) {
+      var cur_start_path = this.props.start_path;
+      if (cur_start_path[cur_start_path.length - 1] !== '/') {
+        cur_start_path += '/';
+      }
+      if (this.state.cur_path.substring(cur_start_path.length).indexOf('/') !== -1) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   render() {
     let parent_el = document.getElementById(this.props.parent_id);
     if (!parent_el) {
@@ -219,7 +257,8 @@ class AFilesList extends Component {
     display_style['height'] = client_rect.height;
 
     let folder_navigation = null;
-    if (this.state.cur_path !== this.props.path && (this.state.is_file === false)) {
+    if ((this.state.is_file === false && this.state.cur_path !== this.props.start_path) || this.fileNotInStartDir()) {
+//        (this.state.is_file === true && this.state.cur_path.startsWith(this.props.start_path))) {
       folder_navigation = [{
         name: '..', path: '..', type: 'folder'
       }]

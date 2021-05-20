@@ -88,7 +88,7 @@ class AFiles extends Component {
       return;
     }
 
-    if (this.props.hasOwnProperty('deleteFile')) {
+    if (this.props.hasOwnProperty('onDelete')) {
       this.props.onDelete(found_item.id);
       this.setState({'files_list': this.props.files()});
     }
@@ -148,6 +148,16 @@ class AFiles extends Component {
   generateNewFileUI() {
     return (
       <>
+        <div id="file_stypes_upload_wrapper" className="files-types-upload-wrapper">
+          <div id="files_types_upload_border" className="files-types-upload-border">
+            <svg version="1.1"
+                 baseProfile="full"
+                 width="30" height="21"
+                 xmlns="http://www.w3.org/2000/svg">
+              <polygon points="15 3 25 15 20 15 20 20 10 20 10 15 5 15 15 3" stroke="lightgrey" fill="white" strokeWidth="1" />
+            </svg>
+          </div>
+        </div>
         <div id="files_types_list_wrapper" className="files-types-list-wrapper">
           <select name="files_types" id="files_types" onChange={this.updateNewType}>
             <option value="" className="files-types-option files-type-option-item">--Please select--</option>

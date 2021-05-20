@@ -49,14 +49,14 @@ class ConfigStore {
     if (remaining_workflows.length < ConfigStore.workflows.length) {
       updated_entry['id'] = entry_id;
       remaining_workflows.push(updated_entry);
-      ConfigStore.setFiles(remaining_workflows);
+      ConfigStore.setWorkflows(remaining_workflows);
     }
   }
 
   static deleteWorkflowById(entry_id) {
     let remaining_workflows= ConfigStore.workflows.filter((item) => item.id !== entry_id);
     if (remaining_workflows.length < ConfigStore.workflows.length) {
-      ConfigStore.setFiles(remaining_workflows);
+      ConfigStore.setWorkflows(remaining_workflows);
     }
   }
 

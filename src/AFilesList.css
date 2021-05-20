@@ -48,6 +48,10 @@
     background-color: #e0e0e0;
 }
 
+.files-list-display-file_selected {
+    background-color: #efefff;
+}
+
 .files-list-display-folder {
     font-weight: bold;
 }

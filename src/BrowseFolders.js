@@ -196,8 +196,8 @@ class BrowseFolders extends Component {
         <div className="browse-folder-browse-display-wrapper">
           <div id="browse_folder_browse_display" className="browse-folder-browse-display">
             {this.state.path_contents != null &&
-              <AFilesList parent_id={'browse_folder_browse_display'} path={this.state.cur_path} contents={this.state.path_contents} 
-                        folder_sel={this.folderSelected} file_sel={this.fileSelected} />
+              <AFilesList parent_id={'browse_folder_browse_display'} start_path={this.cur_path} path={this.state.cur_path}
+                        contents={this.state.path_contents} folder_sel={this.folderSelected} file_sel={this.fileSelected} />
             }
           </div>
         </div>

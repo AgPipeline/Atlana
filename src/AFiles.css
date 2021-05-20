@@ -52,6 +52,18 @@
     align-items:stretch;
 }
 
+.files-types-upload-wrapper {
+    margin-right: 10px;
+}
+
+.files-types-upload-border {
+    min-width: 30px;
+    min-height: 25px;
+    border: 1px dashed lightgrey;
+    border-radius: 5px;
+    top: 0px;
+}
+
 .files-types-list-wrapper {
     align-self: end;
 }

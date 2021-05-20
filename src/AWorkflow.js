@@ -548,12 +548,12 @@ class AWorkflows extends Component {
     let cur_workflow = this.state.workflow_list.find(item => item.job_id === job_id);
 
     if (!cur_workflow) {
-      return;
+      return undefined;
     }
 
     if (!status.hasOwnProperty('result')) {
       console.log('Workflow Status: unknown workflow status found', status);
-      return;
+      return undefined;
     }
 
     let cur_status = '';
@@ -574,10 +574,9 @@ class AWorkflows extends Component {
 
     // Update the UI
     let el = document.getElementById(update_el_id);
-    if (!el) {
-      return;
+    if (el) {
+      el.innerHTML = cur_status;
     }
-    el.innerHTML = cur_status;
 
     return status['result'];
   }
@@ -622,7 +621,15 @@ class AWorkflows extends Component {
     this.setState({mode: workflow_modes.main, cur_item_index: null, cur_item_name: null, cur_item_title: null});
   }
 
-  onDeleteItem(ev) {
+  onDeleteItem(ev, id) {
+    const found_item = this.state.workflow_list.find((item) => item.id === id);
+
+    if (found_item === undefined || found_item === null) {
+      return;
+    }
+
+    this.props.onDelete(id);
+    this.setState({'workflow_list': this.props.workflows()});
   }
 
   onItemCheck(ev, item_save_name,  mapped_value) {
