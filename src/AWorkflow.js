@@ -56,17 +56,29 @@ var id_prefix = 'workflow_new_item_';
 // The number of times we try to find a workflow in our list
 var max_find_workflow_retry_count = 5;
 
+// Maximum size of a workflow file to upload
+var MAX_FILE_SIZE = 100*1024
+
+// Our target uploaded workflow version
+var WORKFLOW_CURRENT_VERSION = '1.0'
+
 class AWorkflows extends Component {
   constructor(props) {
     super(props);
 
-    this.addItem = this.addItem.bind(this);
+    this.addItem = this.addItem.bind(this); // Handles the sstart of creating a new workflow to run
     this.browseFiles = this.browseFiles.bind(this);
-    this.displayErrors = this.displayErrors.bind(this);
-    this.displayMessages = this.displayMessages.bind(this);
+    this.browseUploadFiles = this.browseUploadFiles.bind(this);
+    this.displayErrors = this.displayErrors.bind(this); // Displays the errors for a running workflow
+    this.displayMessages = this.displayMessages.bind(this); // Displays the messages for a running workflow
     this.displayWorkflowDetailsStatus = this.displayWorkflowDetailsStatus.bind(this);
+    this.dragDrop = this.dragDrop.bind(this);
+    this.dragEnd = this.dragEnd.bind(this);
+    this.dragOver = this.dragOver.bind(this);
+    this.dragStart = this.dragStart.bind(this);
     this.fetchWorkflowDetails = this.fetchWorkflowDetails.bind(this);
     this.fetchWorkflowStatus = this.fetchWorkflowStatus.bind(this);
+    this.fileBrowsed = this.fileBrowsed.bind(this);
     this.generateDetailsPendingUI = this.generateDetailsPendingUI.bind(this);
     this.generateDownloadUI = this.generateDownloadUI.bind();
     this.generateMessages = this.generateMessages.bind(this);
@@ -77,7 +89,7 @@ class AWorkflows extends Component {
     this.handleSuccessJobStart = this.handleSuccessJobStart.bind(this);
     this.handleWorkflowStatus = this.handleWorkflowStatus.bind(this);
     this.haveRequiredWorkflowParameters = this.haveRequiredWorkflowParameters.bind(this);
-    this.newIdAdded = this.newIdAdded.bind(this);
+    this.newIdAdded = this.newIdAdded.bind(this); //Called when UI elements are generated
     this.onBack = this.onBack.bind(this);
     this.onCancelBrowse = this.onCancelBrowse.bind(this);
     this.onCancelEdit = this.onCancelEdit.bind(this);
@@ -146,6 +158,9 @@ class AWorkflows extends Component {
   prepared_errors = null;       // Prepared errors for display
   prepare_lines_timer = null;   // Timer id for preparing message/error lines for display
 
+  /**
+   * React component mounted event handler
+   */
   componentDidMount() {
     const have_met_requirements = this.haveRequiredWorkflowParameters();
     if (this.state.met_requirements !== have_met_requirements) {
@@ -153,6 +168,17 @@ class AWorkflows extends Component {
     }
   }
 
+  componentDidUpdate(prev_props) {
+    console.log("DID UPDATE");
+    const have_met_requirements = this.haveRequiredWorkflowParameters();
+    if (this.state.met_requirements !== have_met_requirements) {
+      this.setState({met_requirements: have_met_requirements});
+    }
+  }
+
+  /**
+   * React component pre-unmount event handler
+   */
   componentWillUnmount() {
     [this.workflow_status_timer, this.workflow_details_timer, this.workflow_details_status_timer, this.prepare_lines_timer]
           .forEach((timer_id) => {
@@ -163,12 +189,18 @@ class AWorkflows extends Component {
                   );
   }
 
+  /**
+   * Starts adding a new workflow to be run
+   */
   addItem() {
+    // If there isn't a workflow type selected, set the focus to that control
     if (this.new_workflow_idx == null) {
       let el = document.getElementById('workflow_types');
       el.focus();
       return;
     }
+
+    //  Gather the data for configuring the workflow
     const cur_index = this.new_workflow_idx;
     const cur_template = this.state.workflow_defs[cur_index];
     let cur_name = cur_template.name;
@@ -177,33 +209,134 @@ class AWorkflows extends Component {
       cur_name = this.workflow_configs[cur_template.id]['cur_item_name'];
     }
 
+    // Set the state to show the workflow configuration UI
     this.setState({mode: workflow_modes.run, cur_item_index: cur_index, cur_item_name: cur_name, 
                    cur_item_title: 'New ' +  title_name, edit_add: true, edit_item: null,
                    met_requirements: this.haveRequiredWorkflowParameters()});
   }
 
+  /**
+   * Display the configured data sources window when configuring workflows
+   * @param {Object} ev - the triggeering event
+   * @param {String} element_id - the ID of the element to browse for
+   * @param {Object} item - the field information 
+   */
   browseFiles(ev, element_id, item) {
     this.setState({browse_files: true, browse_cb: (path, folder_type) => {this.finishBrowse(path, element_id, item, folder_type)}});
   }
 
+  /**
+   * Called to display the local file system browser window
+   */
+  browseUploadFiles() {
+    let browse = document.getElementById('workflow_types_file_find');
+    browse.value = null;
+    browse.style.display = "default";
+    browse.click();
+  }
+
+  /**
+   * Displays the errors for a running workflow
+   * @param {Object} ev - the triggering event
+   */
   displayErrors(ev) {
     if (this.state.cur_messages !== message_types.errors) {
       this.setState({cur_messages: message_types.errors});
     }
   }
 
+  /**
+   * Displays the meessages for a running workflow
+   * @param {Object} ev - the triggering event
+   */
   displayMessages(ev) {
     if (this.state.cur_messages !== message_types.messages) {
       this.setState({cur_messages: message_types.messages});
     }
   }
 
+  /**
+   * Displays the current workflow status when viewing a running workflow
+   * @param {String} job_id - the identifier of the job being updated
+   * @param {Object} status - the status of the job as returned from the server
+   */
   displayWorkflowDetailsStatus(job_id, status) {
     const cur_status = this.handleWorkflowStatus(job_id, status, 'workflow_details_status');
 
     if (cur_status === job_status.completed) {
       this.setState({mode: workflow_modes.details_finished});
     }
+  }
+
+  /**
+   * Handles dropped files by sending them to the server for further processsing
+   * @param {Object} ev - the triggering event
+   */
+  dragDrop(ev) {
+    let el = document.getElementById('workflow_types_upload_border');
+
+    if (el) {
+      el.classList.remove('workflow-types-upload-border-active');
+    }
+
+    ev.preventDefault();
+    ev.stopPropagation();
+
+    if (ev.dataTransfer.items) {
+      // Use DataTransferItemList interface to access the file(s)
+      let all_files = [];
+      for (let i = 0; i < ev.dataTransfer.items.length; i++) {
+        // If dropped items aren't files, reject them
+        if (ev.dataTransfer.items[i].kind === 'file') {
+          all_files.push(ev.dataTransfer.items[i].getAsFile());
+        }
+      }
+      if (all_files.length > 0) {
+        this.uploadHandle(all_files);
+      }
+    } else {
+      // Use DataTransfer interface to access the file(s)
+      this.uploadHandle(ev.dataTransfer.files);
+    }
+  }
+
+  /**
+   * Removes UI indicators when a drag operation is completed
+   * @param {Object} ev - the triggering event
+   */
+  dragEnd(ev) {
+    let el = document.getElementById('workflow_types_upload_border');
+
+    if (el) {
+      el.classList.remove('workflow-types-upload-border-active');
+    }
+
+    ev.preventDefault();
+    ev.stopPropagation();
+  }
+
+  /**
+   * Enables UI indicators when a drag operation is over the element
+   * @param {Object} ev - the triggering event
+   */
+  dragOver(ev) {
+    let el = document.getElementById('workflow_types_upload_border');
+
+    if (el) {
+      el.classList.add('workflow-types-upload-border-active');
+    }
+
+    ev.preventDefault();
+    ev.stopPropagation();
+  }
+
+  /**
+   * Called when a drag operation starts
+   * @param {Object} ev - the triggering event
+   */
+  dragStart(ev) {
+    ev.preventDefault();
+    ev.stopPropagation();
   }
 
   fetchWorkflowDetails(job_id) {
@@ -245,6 +378,15 @@ class AWorkflows extends Component {
       this.setState({pending_request: false});
       console.log("Fetch workflow status exception", err);
       throw err;
+    }
+  }
+
+  fileBrowsed() {
+    let browse = document.getElementById('workflow_types_file_find');
+    const selected_file = browse.files;
+    browse.style.display = "none";
+    if (selected_file.length > 0) {
+      this.uploadHandle(selected_file);
     }
   }
 
@@ -406,6 +548,19 @@ class AWorkflows extends Component {
   generateTitleRightUI() {
     return (
       <>
+        <div id="workflow_types_upload_wrapper" className="workflow-types-upload-wrapper" onClick={this.browseUploadFiles}
+             draggable="true" onDragEnter={this.dragStart} onDrop={this.dragDrop} onDragOver={this.dragOver} onDragLeave={this.dragEnd}>
+          <div id="workflow_types_upload_border" className="workflow-types-upload-border-base workflow-types-upload-border" >
+            <svg version="1.1"
+                 baseProfile="full"
+                 width="30" height="21"
+                 xmlns="http://www.w3.org/2000/svg">
+              <polygon points="15 3 25 15 20 15 20 20 10 20 10 15 5 15 15 3" stroke="lightgrey" fill="white" strokeWidth="1" />
+            </svg>
+          </div>
+          <input type="file" id="workflow_types_file_find" accept="application/json"
+                 className="workflow-types-upload-file-pick" onChange={this.fileBrowsed}></input>
+        </div>
         <div id="workflow_types_list_wrapper" className="workflow-types-list-wrapper">
           <select name="workflow_types" id="workflow_types" onChange={this.updateNewType}>
             <option value="" className="workflow-types-option workflow-type-option-item">--Please select--</option>
@@ -614,7 +769,8 @@ class AWorkflows extends Component {
     }
 
     return (this.mandatory_ids.length > 0) && this.mandatory_ids.every((el_id) => {
-      return !invalid_values.includes(document.getElementById(el_id).value)
+      const el = document.getElementById(el_id);
+      return el && !invalid_values.includes(el.value)
     });
   }
 
@@ -957,6 +1113,102 @@ class AWorkflows extends Component {
     let found_idx = this.state.workflow_defs.findIndex((item, idx) => item.name + '_' + idx === target_val);
     this.new_workflow_idx = found_idx >= 0 ? found_idx : null;
   }
+
+  uploadCompleted(results) {
+    console.log('Workflow upload completed', results);
+
+    if (results.messages) {
+      // TODO: show messages
+    }
+
+    // If we have a workflow, present it for running
+    if (results.workflows && results.workflows.length > 0) {
+      const cur_workflow = results.workflows.shift();
+      console.log("CUR WORKFLOW",cur_workflow);
+
+      // Setup our data fields
+      const cur_config = [];
+      for (let idx in cur_workflow.steps) {
+        const parent = cur_workflow.steps[idx];
+        const field_lookup_prefix = idx + '_' + parent.command + '_';
+
+        let found_fields = cur_workflow.parameters.map((item) => {
+                  if (item.command === parent.command) {
+                    return item;
+                  }
+                  return null;
+                }
+              );
+
+        found_fields.forEach((one_field) => {
+          if (one_field && (!one_field['visibility'] || one_field['visibility'] === 'ui')) {
+            const lookup_name = field_lookup_prefix + one_field.field_name
+            const parent_field = parent.fields.find((item) => item.name === one_field.field_name);
+            one_field['id'] = lookup_name;
+            if (parent_field.type === 'file' || parent_field.type === 'folder') {
+              one_field['path_is_file'] = parent_field.type === 'file';
+              one_field['location'] = one_field.value;
+            }
+            cur_config[lookup_name] = one_field;
+          }
+        });
+      }
+      this.workflow_configs[cur_workflow.id] = cur_config;
+
+      // Update other data variables
+      let updated_workflow_defs = this.state.workflow_defs;
+      updated_workflow_defs.push(cur_workflow);
+      const cur_index = updated_workflow_defs.findIndex((item) => item.id === cur_workflow.id);
+
+      console.log('RUN WORKFLOW',this.workflow_configs[cur_workflow.id], updated_workflow_defs)
+
+      // Set the state to show the workflow configuration UI
+      this.setState({mode: workflow_modes.run,
+                     workflow_defs: updated_workflow_defs,
+                     cur_item_index: cur_index,
+                     cur_item_name: cur_workflow.name, 
+                     cur_item_title: 'Run ' +  cur_workflow.name,
+                     edit_add: true,
+                     edit_item: null,
+                     met_requirements: this.haveRequiredWorkflowParameters()});
+    }
+  }
+
+  uploadHandle(files) {
+    let upload_count = 0;
+    let form_data = new FormData();
+    for (let i = 0; i < files.length; i++) {
+      let one_file = files[i];
+      if (one_file.size > MAX_FILE_SIZE) {
+        //this.displayError('One or more files exceed the maximum allowed size of ' + (MAX_FILE_SIZE / 1024) + 'Kb');
+        console.log("File too large: '" + one_file.name + "'' " + one_file.size);
+        return;
+    }
+      form_data.append('file' + i, one_file, one_file.name);
+      upload_count++;
+    }
+
+    if (upload_count <= 0) {
+      return;
+    }
+
+    form_data.append('version', WORKFLOW_CURRENT_VERSION);
+
+    fetch(Utils.getHostOrigin() + '/workflow/upload', {
+      method: 'POST',
+      credentials: 'include',
+      body: form_data,
+      }
+    )
+    .then(response => {if (response.ok) return response.json(); else throw response.statusText})
+    .then(success => {this.uploadCompleted(success);})
+    .catch(error => {
+                     console.log('ERROR', error);
+                     //this.displayError('Unable to complete upload request: ' + error);
+                    }
+    );
+  }
+
 
   workflowDetailsStatus(job_id) {
     this.fetchWorkflowStatus(job_id, 

@@ -32,12 +32,18 @@ DEFAULT_TEMPLATE_PAGE='index.html'
 RESOURCE_START_PATH = os.path.abspath(os.path.dirname(__file__))
 
 # Starting point for seaching for user files on server
-if os.getenv('WORKING_FOLDER') is not None:
-    FILE_START_PATH = os.getenv('WORKING_FOLDER')
-else:
+FILE_START_PATH = os.getenv('WORKING_FOLDER')
+if FILE_START_PATH is None:
     FILE_START_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'upload')
 if not os.path.exists(FILE_START_PATH):
     os.makedirs(FILE_START_PATH)
+
+# Starting point for uploaded workflow files
+WORKFLOW_FILE_START_PATH = os.getenv('WORKFLOW_FOLDER')
+if WORKFLOW_FILE_START_PATH is None:
+    WORKFLOW_FILE_START_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'workflow')
+if not os.path.exists(WORKFLOW_FILE_START_PATH):
+    os.makedirs(WORKFLOW_FILE_START_PATH)
 
 # Status codes for checking on processes
 STATUS_NOT_STARTED = 0
@@ -60,7 +66,11 @@ FILE_PROCESS_QUEUE_STATUS_TIMEOUTS = [0.1, 0.2, 0.4, 0.7]
 FILE_PROCESS_QUEUE_MESSAGE_TIMEOUTS = [0.1, 0.2, 0.1, 0.2, 0.4]
 
 # The current version of the workflow save file
-CURRENT_WORKFLOW_SAVE_VERSION = 1.0
+CURRENT_WORKFLOW_SAVE_VERSION = '1.0'
+
+# List of workflow save file versions we understand and can handle
+WORKFLOW_SAVE_VERSIONS_SUPPORTED = [CURRENT_WORKFLOW_SAVE_VERSION]
+
 
 def _clean_for_json(dirty: object) -> dict:
     """Cleans the dictionary of non-JSON compatible elements
@@ -311,9 +321,9 @@ def queue_finish(workflow_id: str, working_folder: str, process_info: dict):
     workflow_script = os.path.join(FILE_START_PATH, 'workflow_runner.py')
     print("Finished queueing", workflow_id, working_folder, workflow_script)
     cmd = ['python3', workflow_script, working_folder]
-    print("    command:", cmd)
-    p = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    print("    process:", p.pid)
+    # Deliberately let the command run
+    # pylint: disable=consider-using-with
+    _ = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 def queue_status(workflow_id: str, working_folder: str) -> Union[dict, str, None]:
@@ -427,7 +437,8 @@ def workflow_start(workflow_id: str, workflow_template: dict, data: list, file_h
         working_folder: the working folder for the workflow
         recover: flag to indicate we're trying to recover a workflow that had a problem
     """
-    # pylint: disable=too-many-nested-blocks
+    # Disable these warnings to keep avoid breaking the preparation into too many small pieces
+    # pylint: disable=too-many-nested-blocks, too-many-branches
     workflow = []
 
     for one_step in workflow_template['steps']:
@@ -752,6 +763,27 @@ def handle_workflow_start() -> tuple:
         if one_workflow['id'] == workflow_data['id']:
             cur_workflow = one_workflow
             break
+
+    # If we can't find the workflow, check for uploaded workflows
+    print("RUN:", str(cur_workflow), session)
+    if cur_workflow is None and 'workflow_files' in session and session['workflow_files'] is not None:
+        print("   looking for", workflow_data['id'], session['workflow_files'])
+        if workflow_data['id'] in session['workflow_files']:
+            workflow_file_path = os.path.join(WORKFLOW_FILE_START_PATH, session['workflow_files'][workflow_data['id']])
+            print("   workflow file", workflow_file_path)
+            if os.path.exists(workflow_file_path):
+                try:
+                    print("   OPENING")
+                    with open(workflow_file_path, 'r') as in_file:
+                        cur_workflow = json.load(in_file)
+                except json.JSONDecodeError as ex:
+                    msg = 'ERROR: A JSON decode error was caught trying to run file "%s"' % os.path.basename(workflow_file_path)
+                    print(msg, ex)
+                except Exception as ex:
+                    msg = 'ERROR: An unknown exception was caught trying to run file "%s"' % os.path.basename(workflow_file_path)
+                    print(msg, ex)
+
+    # Make sure we can find the workflow
     if cur_workflow is None:
         msg = "Unable to find workflow associated with workflow ID %s" % (str(workflow_data['id']))
         print(msg)
@@ -832,6 +864,7 @@ def get_workflow_messages(workflow_id: str) -> tuple:
 @app.route('/workflow/download', methods=['POST'])
 @cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
 def return_workflow_download() -> tuple:
+    """Handles returning a workflow for downloading"""
     # Get the form contents
     workflow = json.loads(request.form['workflow'])
     workflow_data = json.loads(request.form['data'])
@@ -860,6 +893,82 @@ def return_workflow_download() -> tuple:
     response.headers.set('Content-Disposition', 'attachment', filename=save_filename)
 
     return response
+
+
+@app.route('/workflow/upload', methods=['POST'])
+@cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
+def workflow_upload_file():
+    """Upload workflow files"""
+    print("WORKFLOW UPLOADED",  len(request.files))
+    if not os.path.exists(WORKFLOW_FILE_START_PATH):
+        os.makedirs(WORKFLOW_FILE_START_PATH)
+
+    # Get our additional parameters
+    desired_version = request.form['version']
+    if not desired_version in WORKFLOW_SAVE_VERSIONS_SUPPORTED:
+        msg = 'ERROR: unsupported workflow save file version requested "%s": supported %s' % \
+                            (desired_version, str(WORKFLOW_SAVE_VERSIONS_SUPPORTED))
+        print(msg)
+        return msg, 400     # Bad request
+
+    # Copy the files to our save location
+    loaded_filenames = []
+    for file_id in request.files:
+        one_file = request.files[file_id]
+        save_path = os.path.join(WORKFLOW_FILE_START_PATH, secure_filename(one_file.filename))
+        if os.path.exists(save_path):
+            os.unlink(save_path)
+        one_file.save(save_path)
+        loaded_filenames.append(save_path)
+
+    # Load the workflows while checking their contents
+    # TODO: Handle authorization
+    # TODO: handle zip files: see return_workflow_download()
+    return_workflows = []
+    return_messages = []
+    loaded_file_info = {}
+
+    for one_workflow in loaded_filenames:
+        loaded_workflow = None
+        try:
+            with open(one_workflow, 'r') as in_file:
+                loaded_workflow = json.load(in_file)
+        except json.JSONDecodeError as ex:
+            msg = 'ERROR: A JSON decode error was caught processing file "%s"' % os.path.basename(one_workflow)
+            print(msg, ex)
+            return_messages.append(msg)
+        except Exception as ex:
+            msg = 'ERROR: An unknown exception was caught processing file "%s"' % os.path.basename(one_workflow)
+            print(msg, ex)
+            return_messages.append(msg)
+
+        if loaded_workflow is None:
+            continue
+
+        if not 'version' in loaded_workflow:
+            msg = 'ERROR: Version not found in workflow file "%s"' % os.path.basename(one_workflow)
+            return_messages.append(msg)
+            continue
+        if str(loaded_workflow['version']) not in WORKFLOW_SAVE_VERSIONS_SUPPORTED:
+            msg = 'ERROR: Unsupported version "%s" in workflow file "%s"' % (loaded_workflow['version'], os.path.basename(one_workflow))
+            print(msg, WORKFLOW_SAVE_VERSIONS_SUPPORTED,type(loaded_workflow['version']),type(WORKFLOW_SAVE_VERSIONS_SUPPORTED[0]))
+            return_messages.append(msg)
+            continue
+
+        loaded_file_id = uuid.uuid4().hex
+        loaded_file_info[loaded_file_id] = one_workflow
+
+        loaded_workflow['id'] = loaded_file_id
+        return_workflows.append(loaded_workflow)
+
+    if 'workflow_files' not in session or session['workflow_files'] is None:
+        print("SESSION WORKFLOW FILES: ", str(loaded_file_info))
+        session['workflow_files'] = loaded_file_info
+    else:
+        print("ADDING SESSION WORKFLOW FILES: ", str(loaded_file_info))
+        session['workflow_files'] = {}.update(session['workflow_files']).update(loaded_file_info)
+
+    return json.dumps({'workflows': return_workflows, 'messages': return_messages})
 
 
 if __name__ == '__main__':

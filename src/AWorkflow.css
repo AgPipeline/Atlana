@@ -46,6 +46,40 @@
     font-weight: bold;
 }
 
+
+.workflow-types-upload-wrapper {
+    margin-right: 10px;
+}
+
+.workflow-types-upload-border-base {
+    min-width: 30px;
+    min-height: 25px;
+    border: 1px dashed lightgrey;
+    border-radius: 5px;
+}
+
+.workflow-types-upload-border {
+    cursor: pointer;
+}
+
+.workflow-types-upload-border:hover {
+    border: 1px solid black;
+}
+
+.workflow-types-upload-border-active {
+    background-color: lightgreen;
+}
+
+.workflow-types-upload-border-uploading {
+    border: 1px solid black;
+    background-color: black;
+}
+
+.workflow-types-upload-file-pick {
+    display: none;
+}
+
+
 .workflow-new-items-table {
     width: 100%;
 }

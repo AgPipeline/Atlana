@@ -18,7 +18,7 @@ var files_titles = [
   ' ',
 ];
 
-var MAX_FILE_SIZE=100*1024*1024
+var MAX_FILE_SIZE = 100*1024*1024
 
 class AFiles extends Component {
   constructor(props) {
@@ -96,6 +96,7 @@ class AFiles extends Component {
 
   browseFiles() {
     let browse = document.getElementById('files_types_file_find');
+    browse.value = null;
     browse.style.display = "default";
     browse.click();
   }
@@ -270,7 +271,7 @@ class AFiles extends Component {
           </div>
           {this.state.display_uploading && this.generateUploadingUI('files_types_upload_border')}
           <input type="file" id="files_types_file_find" accept="image/*,text/*,application/*"
-                 multiple className="file-types-file-pick" onChange={this.fileBrowsed}></input>
+                 multiple className="file-types-upload-file-pick" onChange={this.fileBrowsed}></input>
         </div>
         <div id="files_types_list_wrapper" className="files-types-list-wrapper">
           <select name="files_types" id="files_types" onChange={this.updateNewType}>
@@ -386,7 +387,7 @@ class AFiles extends Component {
 
   uploadHandle(files) {
     let upload_count = 0;
-    let formData = new FormData();
+    let form_data = new FormData();
     for (let i = 0; i < files.length; i++) {
       let one_file = files[i];
       if (one_file.size > MAX_FILE_SIZE) {
@@ -394,7 +395,7 @@ class AFiles extends Component {
         console.log("File too large: '" + one_file.name + "'' " + one_file.size);
         return;
     }
-      formData.append('file' + i, one_file, one_file.name);
+      form_data.append('file' + i, one_file, one_file.name);
       upload_count++;
     }
 
@@ -403,7 +404,8 @@ class AFiles extends Component {
 
     fetch(Utils.getHostOrigin() + '/upload', {
       method: 'PUT',
-      body: formData,
+      body: form_data,
+      credentials: 'include',
       }
     )
     .then(response => {if (response.ok) return response.json(); else throw response.statusText})
