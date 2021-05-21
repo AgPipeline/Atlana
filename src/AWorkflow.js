@@ -15,6 +15,7 @@ var workflow_titles = [
   'ID',
   ' ',
   ' ',
+  ' ',
 ];
 
 // Different workflow modes (states)
@@ -67,6 +68,7 @@ class AWorkflows extends Component {
     this.fetchWorkflowDetails = this.fetchWorkflowDetails.bind(this);
     this.fetchWorkflowStatus = this.fetchWorkflowStatus.bind(this);
     this.generateDetailsPendingUI = this.generateDetailsPendingUI.bind(this);
+    this.generateDownloadUI = this.generateDownloadUI.bind();
     this.generateMessages = this.generateMessages.bind(this);
     this.generateStepUI = this.generateStepUI.bind(this);
     this.generateTitleRightUI = this.generateTitleRightUI.bind(this);
@@ -80,6 +82,7 @@ class AWorkflows extends Component {
     this.onCancelBrowse = this.onCancelBrowse.bind(this);
     this.onCancelEdit = this.onCancelEdit.bind(this);
     this.onDeleteItem = this.onDeleteItem.bind(this);
+    this.onDownloadItem = this.onDownloadItem.bind(this);
     this.onItemCheck= this.onItemCheck.bind(this);
     this.onNameChange= this.onNameChange.bind(this);
     this.onViewDetails =  this.onViewDetails.bind(this);
@@ -293,6 +296,25 @@ class AWorkflows extends Component {
     );
   }
 
+  generateDownloadUI() {
+    return (
+      <>
+        <div id="workflow_details_download_wrapper" className="workflow-details-download-wrapper" >
+          <div className="workflow-details-download-spacer"></div>
+          <div id="workflow_details_graphic_wrapper" className="workflow-details-graphic-wrapper" >
+            <svg version="1.1"
+                 baseProfile="full"
+                 width="30" height="21"
+                 xmlns="http://www.w3.org/2000/svg">
+              <polygon points="15 21 25 12 20 12 20 3 10 3 10 12 5 12 15 21" stroke="lightgrey" fill="white" strokeWidth="1" />
+            </svg>
+          </div>
+          <div className="workflow-details-download-spacer"></div>
+      </div>
+      </>
+    );
+  }
+
   generateMessages() {
     const prepared_lines = this.state.cur_messages === message_types.messages ? this.prepared_messages : this.prepared_errors;
     if (prepared_lines) {
@@ -422,6 +444,9 @@ class AWorkflows extends Component {
                     <td id={'workflow_detail_id_' + item.id} className="workflow-detail-item workflow-detail-id">{item.id}</td>
                     <td id={'workflow_detail_messages_' + item.id} className="workflow-detail-item workflow-detail-messages" onClick={(ev) => this.onViewDetails(ev, item.id)}>View</td>
                     <td id={'workflow_detail_del_' + item.id} className="workflow-detail-item workflow-detail-delete" onClick={(ev) => this.onDeleteItem(ev, item.id)}>Delete</td>
+                    <td id={'workflow_detail_download_' + item.id} className="workflow-detail-item workflow-detail-download" onClick={(ev) => this.onDownloadItem(ev, item.id)}>
+                      {this.generateDownloadUI()}
+                    </td>
                   </tr>
                 ); 
               })}
@@ -515,9 +540,10 @@ class AWorkflows extends Component {
     return null;
   }
 
-  handleSuccessJobStart(results, workflow_info) {
-    console.log(results, workflow_info);
+  handleSuccessJobStart(results, workflow_info, workflow_data) {
+    console.log(results, workflow_info, workflow_data);
     workflow_info.job_id = results.id;
+    workflow_info.workflow_data = workflow_data;
 
     // Add the job
     this.props.onAdd(workflow_info);
@@ -632,6 +658,66 @@ class AWorkflows extends Component {
     this.setState({'workflow_list': this.props.workflows()});
   }
 
+  onDownloadItem(ev, id) {
+    const found_item = this.state.workflow_list.find((item) => item.id === id);
+    if (!found_item) {
+      // TODO: Report problem
+      return;
+    }
+    if (!found_item.workflow_data === null) {
+      console.log("MISSING WORKFLOW DATA");
+      // TODO: Display error
+      return;
+    }
+
+    const workflow_def = this.state.workflow_defs.find((item) => item.id === found_item.workflow_type);
+    console.log("FOUND:", found_item, workflow_def);
+    if (!workflow_def) {
+      // TODO: Report problem
+      return;
+    }
+
+    const save_filename = found_item.name.replaceAll(' ','_').concat('.json');
+    const form_data = new FormData();
+    form_data.append('workflow', JSON.stringify(this.prepareWorkflowForExport(workflow_def)));
+    form_data.append('data', JSON.stringify(found_item.workflow_data));
+    form_data.append('filename', save_filename);
+
+    const uri = Utils.getHostOrigin().concat('/workflow/download');
+    try {
+      fetch(uri, {
+        method: 'POST',
+        credentials: 'include',
+        body: form_data
+        }
+      )
+      .then(response => response.blob())
+      .then(blob => {
+        // Create a download object
+        const url = window.URL.createObjectURL(
+          new Blob([blob]),
+        );
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute(
+          'download',
+          save_filename,
+        );
+        // Append to html link element page
+        document.body.appendChild(link);
+        // Start download
+        link.click();
+        // Clean up and remove the link
+        link.parentNode.removeChild(link);
+      })
+      .catch(error => console.log("ERROR",error));
+    } catch (err) {
+      console.log("Run workflow exception", err);
+      throw err;
+    }
+
+  }
+
   onItemCheck(ev, item_save_name,  mapped_value) {
     const cur_template = this.state.workflow_defs[this.state.cur_item_index];
     let cur_config = this.workflow_configs[cur_template.id];
@@ -713,6 +799,52 @@ class AWorkflows extends Component {
 
     // Make the request to get the status
     this.workflowStatus(found_workflow.job_id, 'workflow_detail_status_'  + workflow_id);
+  }
+
+  prepareWorkflowForExport(workflow) {
+    let clean_workflow = {};
+
+    for (let one_item in workflow) {
+      if (one_item === 'id') {
+        // Skip certain fields
+      } else if (one_item !== 'steps') {
+        clean_workflow[one_item] = workflow[one_item];
+      } else {
+        clean_workflow['steps'] = []
+        for (let one_step of workflow['steps']) {
+          let cur_step = {};
+          for (let one_step_item in one_step) {
+            if (one_step_item !== 'fields') {
+              cur_step[one_step_item] = one_step[one_step_item];
+            } else {
+              cur_step['fields'] = []
+              for (let one_field of one_step['fields']) {
+                let cur_field = {};
+                for (let one_field_item in one_field) {
+                  switch (one_field_item) {
+                    case 'default':
+                    case 'item_save_name':
+                    case '_ui_id':
+                      break;
+
+                    default:
+                      cur_field[one_field_item] = one_field[one_field_item];
+                      break;
+                  }
+                }
+
+                cur_step['fields'].push(cur_field);
+              }
+            }
+          }
+
+          clean_workflow['steps'].push(cur_step);
+        }
+      }
+    }
+
+    console.log("RETURNING", clean_workflow);
+    return clean_workflow;
   }
 
   refreshMessages(ev) {
@@ -806,7 +938,7 @@ class AWorkflows extends Component {
         }
       )
       .then(response => {if (response.ok) return response.json(); else throw response.statusText})
-      .then(success => {this.handleSuccessJobStart(success, workflow_info);})
+      .then(success => {this.handleSuccessJobStart(success, workflow_info, workflow_data);})
       .catch(error => console.log("ERROR",error));
     } catch (err) {
       console.log("Run workflow exception", err);

@@ -18,26 +18,46 @@ var files_titles = [
   ' ',
 ];
 
+var MAX_FILE_SIZE=100*1024*1024
+
 class AFiles extends Component {
   constructor(props) {
     super(props);
 
     this.addItem = this.addItem.bind(this);
+    this.browseFiles = this.browseFiles.bind(this);
     this.cancelEdit = this.cancelEdit.bind(this);
     this.deleteitem = this.deleteItem.bind(this);
+    this.dismissMessage = this.dismissMessage.bind(this);
     this.displayError = this.displayError.bind(this);
+    this.dragDrop = this.dragDrop.bind(this);
+    this.dragEnd = this.dragEnd.bind(this);
+    this.dragOver = this.dragOver.bind(this);
+    this.dragStart = this.dragStart.bind(this);
     this.editItem = this.editItem.bind(this);
+    this.fileBrowsed = this.fileBrowsed.bind(this);
     this.finishAdd = this.finishAdd.bind(this);
     this.finishEdit = this.finishEdit.bind(this);
     this.generateIsFileUI = this.generateIsFileUI.bind(this);
     this.generateNewFileUI = this.generateNewFileUI.bind(this);
+    this.generateUploadingUI = this.generateUploadingUI.bind(this);
     this.getTitle = this.getTitle.bind(this);
+    this.uploadHandle = this.uploadHandle.bind(this);
     this.nameCheck = this.nameCheck.bind(this);
     this.onGoBack = this.onGoBack.bind(this);
     this.updateNewType = this.updateNewType.bind(this);
 
+    // Initialize variables that are used while uploading files
+    this.upload_start_ts = null;
+    this.uploaded_files = null;
+
+    // Get the interfaces that are available
     this.file_interfaces = FileInterfaces.getFileInterfaceTypes();
 
+    // The ID when a new definition is requested
+    this.new_type_id = null;
+
+    // The list of currently avaiable defined interfaces
     let files_list = this.props.files();
     if (!files_list) {
       files_list = [];
@@ -52,10 +72,10 @@ class AFiles extends Component {
       edit_item: null,          // The item we're editing, if we're editing an item
       files_list,               // The list of file information
       errors: null,             // Error information
+      upload_count: 0,          // The number of files being uploaded
+      display_uploading: false, // Used to display uploading elements
     }
   }
-
-  new_type_id = null;
 
   addItem(ev) {
     if (!this.new_type_id) {
@@ -72,6 +92,12 @@ class AFiles extends Component {
     }
     this.setState({mode: cur_mode, mode_name: cur_mode_name, mode_title: 'New ' +  cur_mode_name, mode_path: '/', edit_cb: this.finishAdd, 
                    edit_add: true, edit_item: null});
+  }
+
+  browseFiles() {
+    let browse = document.getElementById('files_types_file_find');
+    browse.style.display = "default";
+    browse.click();
   }
 
   cancelEdit(edit_id) {
@@ -94,8 +120,67 @@ class AFiles extends Component {
     }
   }
 
+  dismissMessage() {
+    this.setState({errors: null});
+  }
+
   displayError(msg) {
     this.setState({errors: msg});
+  }
+
+  dragDrop(ev) {
+    let el = document.getElementById('files_types_upload_border');
+
+    if (el) {
+      el.classList.remove('files-types-upload-border-active');
+    }
+
+    ev.preventDefault();
+    ev.stopPropagation();
+
+    if (ev.dataTransfer.items) {
+      // Use DataTransferItemList interface to access the file(s)
+      let all_files = [];
+      for (let i = 0; i < ev.dataTransfer.items.length; i++) {
+        // If dropped items aren't files, reject them
+        if (ev.dataTransfer.items[i].kind === 'file') {
+          all_files.push(ev.dataTransfer.items[i].getAsFile());
+        }
+      }
+      if (all_files.length > 0) {
+        this.uploadHandle(all_files);
+      }
+    } else {
+      // Use DataTransfer interface to access the file(s)
+      this.uploadHandle(ev.dataTransfer.files);
+    }
+  }
+
+  dragEnd(ev) {
+    let el = document.getElementById('files_types_upload_border');
+
+    if (el) {
+      el.classList.remove('files-types-upload-border-active');
+    }
+
+    ev.preventDefault();
+    ev.stopPropagation();
+  }
+
+  dragOver(ev) {
+    let el = document.getElementById('files_types_upload_border');
+
+    if (el) {
+      el.classList.add('files-types-upload-border-active');
+    }
+
+    ev.preventDefault();
+    ev.stopPropagation();
+  }
+
+  dragStart(ev) {
+    ev.preventDefault();
+    ev.stopPropagation();
   }
 
   editItem(ev, item_id) {
@@ -122,6 +207,15 @@ class AFiles extends Component {
     this.setState(new_state);
   }
 
+  fileBrowsed() {
+    let browse = document.getElementById('files_types_file_find');
+    const selected_file = browse.files;
+    browse.style.display = "none";
+    if (selected_file.length > 0) {
+      this.uploadHandle(selected_file);
+    }
+  }
+
   finishEdit(edit_type, name, path, is_file, auth, item_id) {
     let new_state = {mode: null, mode_name: '', mode_title: ''};
 
@@ -136,7 +230,7 @@ class AFiles extends Component {
   generateIsFileUI(item){
     const checkmark_on = (item.path_is_file !== null && item.path_is_file !== undefined) ? item.path_is_file : null;
 
-    var file_checkmark_classes = 'files-detail-checkmark ' + (checkmark_on ? 'files-detail-checkmark-on' : 'files-detail-checkmark-off');
+    let file_checkmark_classes = 'files-detail-checkmark ' + (checkmark_on ? 'files-detail-checkmark-on' : 'files-detail-checkmark-off');
 
     return (
       <td id={'files_detail_is_file_' + item.name} className="files-detail-item files-detail-is-file">
@@ -146,10 +240,27 @@ class AFiles extends Component {
   }
 
   generateNewFileUI() {
+    let drag_drop_props = {};
+    let upload_border_classes = 'files-types-upload-border-base';
+
+    if (this.state.upload_count <= 0) {
+      upload_border_classes += ' files-types-upload-border';
+    }
+
+    // Only be responsive if we are not uploading something already
+    if (!this.state.upload_count) {
+      drag_drop_props['onClick'] = this.browseFiles;
+      drag_drop_props['draggable'] = 'true';
+      drag_drop_props['onDragEnter'] = this.dragStart;
+      drag_drop_props['onDrop'] = this.dragDrop;
+      drag_drop_props['onDragOver'] = this.dragOver;
+      drag_drop_props['onDragLeave'] = this.dragEnd;
+    }
+
     return (
       <>
-        <div id="file_stypes_upload_wrapper" className="files-types-upload-wrapper">
-          <div id="files_types_upload_border" className="files-types-upload-border">
+        <div id="files_types_upload_wrapper" className="files-types-upload-wrapper" {...drag_drop_props}>
+          <div id="files_types_upload_border" className={upload_border_classes} >
             <svg version="1.1"
                  baseProfile="full"
                  width="30" height="21"
@@ -157,6 +268,9 @@ class AFiles extends Component {
               <polygon points="15 3 25 15 20 15 20 20 10 20 10 15 5 15 15 3" stroke="lightgrey" fill="white" strokeWidth="1" />
             </svg>
           </div>
+          {this.state.display_uploading && this.generateUploadingUI('files_types_upload_border')}
+          <input type="file" id="files_types_file_find" accept="image/*,text/*,application/*"
+                 multiple className="file-types-file-pick" onChange={this.fileBrowsed}></input>
         </div>
         <div id="files_types_list_wrapper" className="files-types-list-wrapper">
           <select name="files_types" id="files_types" onChange={this.updateNewType}>
@@ -170,6 +284,49 @@ class AFiles extends Component {
         </div>
       </>
     );
+  }
+
+  generateUploadingUI(parent_id) {
+    const el = document.getElementById(parent_id);
+    if (!el) {
+      window.setTimeout(() => {this.setState({display_uploading: this.state.display_uploading});}, 100);
+      return null;
+    }
+
+    const child_id = 'files_types_uploading_info_wrapper';
+    const our_el = document.getElementById(child_id);
+    let props = {}
+
+    // Position ourselves over the parent element
+    if (our_el) {
+      const alignment_pos = this.getRightAlignedPos(el, our_el);
+      props['x'] = alignment_pos[0];
+      props['y'] = alignment_pos[1];
+    } else {
+      // We aren't visible yet, ty again later
+      window.setTimeout(() => void this.rightAlignUploadingUI(parent_id, child_id, 0), 100);
+    }
+
+    // Don't display our message until some time has elapsed
+    window.setTimeout(() => void this.unhideElement(child_id), 1000);
+
+    return (
+      <div id={child_id} className="files-types-uploading-info-wrapper" {...props} >
+        <div id="files_types_uploading_info" className="files-types-uploading-info">
+          Uploading files...
+        </div>
+      </div>
+    );
+  }
+
+  getRightAlignedPos(parent_el, child_el) {
+    let parent_rect = parent_el.getBoundingClientRect();
+    let child_rect = child_el.getBoundingClientRect();
+
+    let x_adjust = (parent_rect.width - child_rect.width);
+    let y_adjust = (parent_rect.height - child_rect.height) / 2.0;
+
+    return [parent_rect.x + x_adjust, parent_rect.y + y_adjust];
   }
 
   getTitle(item, idx) {
@@ -196,8 +353,67 @@ class AFiles extends Component {
     this.props.onDone();
   }
 
+  rightAlignUploadingUI(parent_id, child_id, retry_count) {
+    const parent_el = document.getElementById(parent_id);
+    const child_el = document.getElementById(child_id);
+
+    if (parent_el && child_el) {
+      const alignment_pos = this.getRightAlignedPos(parent_el, child_el);
+      child_el.style.left = alignment_pos[0] + 'px';
+      child_el.style.top = alignment_pos[1] + 'px';
+    } else if (retry_count < 1000) {
+      window.setTimeout(() => void this.rightAlignUploadingUI(parent_id, child_id, retry_count+1), 100);
+    }
+  }
+
+  unhideElement(el_id) {
+    let el = document.getElementById(el_id);
+    if (!el) {
+      return;
+    }
+
+    el.style.display = "default";
+  }
+
   updateNewType(ev) {
     this.new_type_id = ev.target.value !== '' ? ev.target.value : null;
+  }
+
+  uploadCompleted(files) {
+    // TODO: report successful upload
+    this.setState({upload_count: 0, display_uploading: false});
+  }
+
+  uploadHandle(files) {
+    let upload_count = 0;
+    let formData = new FormData();
+    for (let i = 0; i < files.length; i++) {
+      let one_file = files[i];
+      if (one_file.size > MAX_FILE_SIZE) {
+        this.displayError('One or more files exceed the maximum allowed size of ' + (MAX_FILE_SIZE / 1024) + 'Kb');
+        console.log("File too large: '" + one_file.name + "'' " + one_file.size);
+        return;
+    }
+      formData.append('file' + i, one_file, one_file.name);
+      upload_count++;
+    }
+
+    this.upload_start_ts = Date.now();
+    this.setState({upload_count, display_uploading: true})
+
+    fetch(Utils.getHostOrigin() + '/upload', {
+      method: 'PUT',
+      body: formData,
+      }
+    )
+    .then(response => {if (response.ok) return response.json(); else throw response.statusText})
+    .then(success => {this.uploadCompleted(success);})
+    .catch(error => {
+                     console.log('ERROR', error);
+                     this.displayError('Unable to complete upload request: ' + error);
+                     this.setState({upload_count: 0, display_uploading: false});
+                    }
+    );
   }
 
   render()  {

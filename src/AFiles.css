@@ -56,12 +56,32 @@
     margin-right: 10px;
 }
 
-.files-types-upload-border {
+.files-types-upload-border-base {
     min-width: 30px;
     min-height: 25px;
     border: 1px dashed lightgrey;
     border-radius: 5px;
-    top: 0px;
+}
+
+.files-types-upload-border {
+    cursor: pointer;
+}
+
+.files-types-upload-border:hover {
+    border: 1px solid black;
+}
+
+.files-types-upload-border-active {
+    background-color: lightgreen;
+}
+
+.files-types-upload-border-uploading {
+    border: 1px solid black;
+    background-color: black;
+}
+
+.file-types-file-pick {
+    display: none;
 }
 
 .files-types-list-wrapper {
@@ -172,3 +192,17 @@
     cursor: pointer;
 }
 
+.files-types-uploading-info-wrapper {
+    display: none;
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    background-color: black;
+    color: white;
+    border-radius: 5px;
+}
+
+.files-types-uploading-info {
+    padding: 0px 5px 0px 5px;
+    font-size: x-small;
+}

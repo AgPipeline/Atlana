@@ -14,8 +14,9 @@ from typing import Union
 from irods.session import iRODSSession
 from irods.data_object import chunks
 import irods.exception
-from flask import Flask, render_template, request, send_file, session
+from flask import Flask, make_response, render_template, request, send_file, session
 from flask_cors import CORS, cross_origin
+from werkzeug.utils import secure_filename
 
 from workflow_definitions import WORKFLOW_DEFINTIONS
 
@@ -58,6 +59,8 @@ FILE_PROCESS_QUEUE_STATUS_TIMEOUTS = [0.1, 0.2, 0.4, 0.7]
 # Delay times to a access the queue messages before giving up
 FILE_PROCESS_QUEUE_MESSAGE_TIMEOUTS = [0.1, 0.2, 0.1, 0.2, 0.4]
 
+# The current version of the workflow save file
+CURRENT_WORKFLOW_SAVE_VERSION = 1.0
 
 def _clean_for_json(dirty: object) -> dict:
     """Cleans the dictionary of non-JSON compatible elements
@@ -575,6 +578,26 @@ def sendjs(filename: str):
     return send_file(fullpath)
 
 
+@app.route('/upload', methods=['PUT'])
+@cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
+def upload_file():
+    """Upload files"""
+    print("UPLOADED FILES",  len(request.files))
+    if not os.path.exists(FILE_START_PATH):
+        os.makedirs(FILE_START_PATH)
+
+    loaded_filenames = []
+    for file_id in request.files:
+        one_file = request.files[file_id]
+        save_path = os.path.join(FILE_START_PATH, secure_filename(one_file.filename))
+        if os.path.exists(save_path):
+            os.unlink(save_path)
+        one_file.save(save_path)
+        loaded_filenames.append(one_file.filename)
+
+    return json.dumps(loaded_filenames)
+
+
 @app.route('/server/files', methods=['GET'])
 @cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
 def handle_files() -> tuple:
@@ -804,6 +827,39 @@ def get_workflow_messages(workflow_id: str) -> tuple:
     except Exception as ex:
         print("Exception caught handling workflow messages", str(ex))
         return str(ex), 500     # Server error
+
+
+@app.route('/workflow/download', methods=['POST'])
+@cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
+def return_workflow_download() -> tuple:
+    # Get the form contents
+    workflow = json.loads(request.form['workflow'])
+    workflow_data = json.loads(request.form['data'])
+    save_filename = request.form['filename']
+    if not save_filename:
+        save_filename = 'workflow.json'
+
+    print("Download: ", workflow,  workflow_data, save_filename)
+    print("  ", type (workflow), type (workflow_data))
+    print("  ", workflow.keys(), workflow_data.keys())
+
+    # TODO: Handle authorization
+    # TODO: Do we download an archive (zip) if files are local?
+
+    # Build up the return information
+    return_workflow = {
+        'version': CURRENT_WORKFLOW_SAVE_VERSION,
+        'name': workflow['name'],
+        'description': workflow['description'],
+        'steps': workflow['steps'],
+        'parameters': workflow_data['params'],
+    }
+
+    response = make_response(json.dumps(return_workflow, indent=2))
+    response.headers.set('Content-Type', 'text')
+    response.headers.set('Content-Disposition', 'attachment', filename=save_filename)
+
+    return response
 
 
 if __name__ == '__main__':

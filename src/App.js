@@ -1,14 +1,26 @@
+/**
+ * @fileoverview Main app instance
+ * @author schnaufer@arizona.edu (Chris Schnaufer)
+ */
 import { Component } from 'react';
-import states from './States';
-import MainMenu from './MainMenu';
-import AFiles from './AFiles';
-import AWorkflow from './AWorkflow';
-import ConfigStore from './ConfigStore';
+import states from './States.js';
+import MainMenu from './MainMenu.js';
+import AFiles from './AFiles.js';
+import AWorkflow from './AWorkflow.js';
+import ConfigStore from './ConfigStore.js';
 import './App.css';
 
+/**
+ * Side menu items - not currently implemented
+ * @type {Object.<id: string, name: string}[]
+ */
 var sidemenu = [
 ];
 
+/**
+ * The main menu
+ * @type {Object.<name: string, items{Object.<name: string, id}[]}[]
+ */
 var menu = [
 { 
   name: 'Data sources',
@@ -25,7 +37,15 @@ var menu = [
 }
 ];
 
+/**
+ * Implements the main application UI
+ * @extends Component
+ */
 class App extends Component {
+  /**
+   * Initializes instance of class
+   * @param {Object} props - the properties associated with this object
+   */
   constructor(props) {
     super(props);
 
@@ -45,6 +65,10 @@ class App extends Component {
     }
   }
 
+  /**
+   * Called when a new file or folder is defined
+   * @param {Object.<id, ...>} new_file_def - the definition of the new file object
+   */
   addFile(new_file_def) {
     ConfigStore.addFile(new_file_def);
   }
