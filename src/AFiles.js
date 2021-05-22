@@ -18,7 +18,7 @@ var files_titles = [
   ' ',
 ];
 
-var MAX_FILE_SIZE = 100*1024*1024
+var MAX_FILE_SIZE = 1000*1024*1024
 
 class AFiles extends Component {
   constructor(props) {
@@ -270,7 +270,7 @@ class AFiles extends Component {
             </svg>
           </div>
           {this.state.display_uploading && this.generateUploadingUI('files_types_upload_border')}
-          <input type="file" id="files_types_file_find" accept="image/*,text/*,application/*"
+          <input type="file" id="files_types_file_find" accept="image/*,text/*,application/*,.yaml"
                  multiple className="file-types-upload-file-pick" onChange={this.fileBrowsed}></input>
         </div>
         <div id="files_types_list_wrapper" className="files-types-list-wrapper">
@@ -358,7 +358,15 @@ class AFiles extends Component {
     const parent_el = document.getElementById(parent_id);
     const child_el = document.getElementById(child_id);
 
-    if (parent_el && child_el) {
+    let child_has_size = false;
+    if (child_el) {
+      let child_rect = child_el.getBoundingClientRect();
+      if (child_rect.width > 0) {
+        child_has_size = true;
+      }
+    }
+
+    if (parent_el && child_el && child_has_size === true) {
       const alignment_pos = this.getRightAlignedPos(parent_el, child_el);
       child_el.style.left = alignment_pos[0] + 'px';
       child_el.style.top = alignment_pos[1] + 'px';
@@ -373,7 +381,7 @@ class AFiles extends Component {
       return;
     }
 
-    el.style.display = "default";
+    el.style.display = "initial";
   }
 
   updateNewType(ev) {

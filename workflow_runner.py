@@ -11,8 +11,10 @@ from typing import Optional
 from collections.abc import Callable
 import logging
 
-import workflow_docker as wd
-#import workflow_local as wd
+if 'ATLANA_USE_SCIF_WORKFLOW' in os.environ:
+    import workflow_scif as wd
+else:
+    import workflow_docker as wd
 
 # File names to store out output into
 QUEUE_FILE_NAME = 'queue'

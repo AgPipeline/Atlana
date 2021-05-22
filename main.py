@@ -21,7 +21,7 @@ from werkzeug.utils import secure_filename
 from workflow_definitions import WORKFLOW_DEFINTIONS
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'this_is_not_such_100_secret'    # Replace with random string
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', uuid.uuid4().hex)
 
 cors = CORS(app, resources={r"/files": {"origins": "http://127.0.0.1:3000"}})
 
