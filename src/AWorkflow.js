@@ -803,19 +803,32 @@ class AWorkflows extends Component {
     this.setState({mode: workflow_modes.main, cur_item_index: null, cur_item_name: null, cur_item_title: null});
   }
 
-  onDeleteItem(ev, id) {
-    const found_item = this.state.workflow_list.find((item) => item.id === id);
+  onDeleteItem(ev, workflow_id) {
+    const found_item = this.state.workflow_list.find((item) => item.id === workflow_id);
 
     if (found_item === undefined || found_item === null) {
       return;
     }
 
-    this.props.onDelete(id);
-    this.setState({'workflow_list': this.props.workflows()});
+    const uri = Utils.getHostOrigin().concat('/workflow/delete/' + found_item.job_id);
+
+    try {
+      fetch(uri, {
+        method: 'PUT',
+        credentials: 'include',
+        }
+      )
+      .then(response => {if (response.ok) return response.json(); else throw response.statusText})
+      .then(success => {this.props.onDelete(workflow_id); this.setState({'workflow_list': this.props.workflows()});})
+      .catch(error => {console.log("ERROR",error);});
+    } catch (err) {
+      console.log("Fetch workflow details exception", err);
+      throw err;
+    }
   }
 
-  onDownloadItem(ev, id) {
-    const found_item = this.state.workflow_list.find((item) => item.id === id);
+  onDownloadItem(ev, workflow_id) {
+    const found_item = this.state.workflow_list.find((item) => item.id === workflow_id);
     if (!found_item) {
       // TODO: Report problem
       return;

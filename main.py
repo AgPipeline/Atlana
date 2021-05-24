@@ -4,11 +4,12 @@ import json
 import os
 import fnmatch
 import time
-from shutil import copyfile
+import shutil
 import hashlib
 import base64
 import uuid
 import tempfile
+import traceback
 import subprocess
 from typing import Union
 from irods.session import iRODSSession
@@ -20,8 +21,16 @@ from werkzeug.utils import secure_filename
 
 from workflow_definitions import WORKFLOW_DEFINTIONS
 
+def _get_secret_key():
+    """Returns a value to be used as a secret key"""
+    cur_key = os.getenv('SECRET_KEY')
+    if cur_key is None or len(cur_key) == 0:
+        cur_key = 'this_is_not_a_secret_key_33343536'
+
+    return cur_key
+
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', uuid.uuid4().hex)
+app.config['SECRET_KEY'] = _get_secret_key()
 
 cors = CORS(app, resources={r"/files": {"origins": "http://127.0.0.1:3000"}})
 
@@ -30,6 +39,9 @@ DEFAULT_TEMPLATE_PAGE='index.html'
 
 # Starting point for uploading files from server
 RESOURCE_START_PATH = os.path.abspath(os.path.dirname(__file__))
+
+# Our local path
+OUR_LOCAL_PATH = os.path.abspath(os.path.dirname(__file__))
 
 # Starting point for seaching for user files on server
 FILE_START_PATH = os.getenv('WORKING_FOLDER')
@@ -138,7 +150,7 @@ def copy_server_file(auth: dict, source_path: str, dest_path: str) -> bool:
     if not cur_path.startswith(FILE_START_PATH):
         raise RuntimeError("Invalid source path for server side copy:", cur_path)
 
-    copyfile (cur_path, dest_path)
+    shutil.copyfile (cur_path, dest_path)
     return True
 
 
@@ -318,12 +330,14 @@ def queue_finish(workflow_id: str, working_folder: str, process_info: dict):
         process_info: dictionary returned by starting process call
     """
     # pylint: disable=unused-argument
-    workflow_script = os.path.join(FILE_START_PATH, 'workflow_runner.py')
+    workflow_script = os.path.join(OUR_LOCAL_PATH, 'workflow_runner.py')
     print("Finished queueing", workflow_id, working_folder, workflow_script)
     cmd = ['python3', workflow_script, working_folder]
     # Deliberately let the command run
     # pylint: disable=consider-using-with
-    _ = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    print("PROC: ", cmd, proc.pid)
 
 
 def queue_status(workflow_id: str, working_folder: str) -> Union[dict, str, None]:
@@ -767,13 +781,11 @@ def handle_workflow_start() -> tuple:
     # If we can't find the workflow, check for uploaded workflows
     print("RUN:", str(cur_workflow), session)
     if cur_workflow is None and 'workflow_files' in session and session['workflow_files'] is not None:
-        print("   looking for", workflow_data['id'], session['workflow_files'])
         if workflow_data['id'] in session['workflow_files']:
             workflow_file_path = os.path.join(WORKFLOW_FILE_START_PATH, session['workflow_files'][workflow_data['id']])
             print("   workflow file", workflow_file_path)
             if os.path.exists(workflow_file_path):
                 try:
-                    print("   OPENING")
                     with open(workflow_file_path, 'r') as in_file:
                         cur_workflow = json.load(in_file)
                 except json.JSONDecodeError as ex:
@@ -807,10 +819,47 @@ def handle_workflow_start() -> tuple:
     return json.dumps({'id': workflow_id})
 
 
+@app.route('/workflow/delete/<string:workflow_id>', methods=['PUT'])
+@cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
+def handle_workflow_delete(workflow_id: str) -> tuple:
+    """Deletes the workflow, if it's finished
+    Arguments:
+        workflow_id: the id of the workflow to delete
+    """
+    try:
+        print("Workflow delete", workflow_id)
+        cur_workflows = session['workflows']
+        if not cur_workflows or workflow_id not in cur_workflows:
+            msg = "ERROR: attempt made to access invalid workflow %s" % workflow_id
+            print(msg)
+            return msg, 400     # Bad request
+
+        start_dir = os.path.join(tempfile.gettempdir(), 'atlana')
+        working_dir = os.path.abspath(os.path.join(start_dir, workflow_id))
+        if not working_dir.startswith(start_dir):
+            print('Invalid workflow requested: "%s"' % workflow_id, flush=True)
+            return 'Resource not found', 400
+
+        if os.path.isdir(working_dir):
+            # If it's not completed running, return a message
+            cur_status = workflow_status(workflow_id, working_dir)
+            if not cur_status['result'] == STATUS_FINISHED:
+                return 'Workflow is still running', 409
+
+            shutil.rmtree(working_dir)
+
+        return json.dumps({'id': workflow_id})
+
+    except Exception as ex:
+        print("Exception caught handling workflow delete", str(ex))
+        traceback.print_exc()
+        return str(ex), 500     # Server error
+
+
 @app.route('/workflow/status/<string:workflow_id>', methods=['GET'])
 @cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
 def handle_workflow_status(workflow_id: str) -> tuple:
-    """Rreturns the status of a workflow
+    """Returns the status of a workflow
     Arguments:
         workflow_id: the id of the workflow to query
     """
@@ -822,7 +871,12 @@ def handle_workflow_status(workflow_id: str) -> tuple:
             print(msg)
             return msg, 400     # Bad request
 
-        working_dir = os.path.join(tempfile.gettempdir(), 'atlana', workflow_id)
+        start_dir = os.path.join(tempfile.gettempdir(), 'atlana')
+        working_dir = os.path.abspath(os.path.join(start_dir, workflow_id))
+        if not working_dir.startswith(start_dir):
+            print('Invalid workflow requested: "%s"' % workflow_id, flush=True)
+            return 'Resource not found', 400
+
         if not os.path.isdir(working_dir):
             msg = "ERROR: requested workflow no longer exists"
             print(msg)
@@ -831,13 +885,14 @@ def handle_workflow_status(workflow_id: str) -> tuple:
         return json.dumps(workflow_status(workflow_id, working_dir))
     except Exception as ex:
         print("Exception caught handling workflow status", str(ex))
+        traceback.print_exc()
         return str(ex), 500     # Server error
 
 
 @app.route('/workflow/messages/<string:workflow_id>', methods=['GET'])
 @cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
 def get_workflow_messages(workflow_id: str) -> tuple:
-    """Rreturns the messages from the workflow
+    """Returns the messages from the workflow
     Arguments:
         workflow_id: the id of the workflow to query
     """
@@ -849,7 +904,12 @@ def get_workflow_messages(workflow_id: str) -> tuple:
             print(msg)
             return msg, 400     # Bad request
 
-        working_dir = os.path.join(tempfile.gettempdir(), 'atlana', workflow_id)
+        start_dir = os.path.join(tempfile.gettempdir(), 'atlana')
+        working_dir = os.path.abspath(os.path.join(start_dir, workflow_id))
+        if not working_dir.startswith(start_dir):
+            print('Invalid workflow requested: "%s"' % workflow_id, flush=True)
+            return 'Resource not found', 400
+
         if not os.path.isdir(working_dir):
             msg = "ERROR: requested workflow no longer exists"
             print(msg)
@@ -858,6 +918,7 @@ def get_workflow_messages(workflow_id: str) -> tuple:
         return json.dumps(workflow_messages(workflow_id, working_dir))
     except Exception as ex:
         print("Exception caught handling workflow messages", str(ex))
+        traceback.print_exc()
         return str(ex), 500     # Server error
 
 
@@ -924,9 +985,7 @@ def workflow_upload_file():
     # Load the workflows while checking their contents
     # TODO: Handle authorization
     # TODO: handle zip files: see return_workflow_download()
-    return_workflows = []
-    return_messages = []
-    loaded_file_info = {}
+    return_workflows, return_messages, loaded_file_info = ([], [], {})
 
     for one_workflow in loaded_filenames:
         loaded_workflow = None

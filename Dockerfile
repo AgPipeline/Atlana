@@ -30,7 +30,7 @@ FROM ${BASE_IMAGE}
 WORKDIR /web_site
 
 # Allow Session secret key override
-ARG SECRET_KEY=
+ARG SECRET_KEY=this_is_not_a_secret_key_252627
 
 # Allow port number overrides
 ARG PORT_NUMBER=3000
