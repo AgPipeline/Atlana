@@ -4,6 +4,7 @@ import WorkspaceTitlebar from './WorkspaceTitlebar';
 import TemplateUIElement from './TemplateUIElement';
 import BrowseFolders  from './BrowseFolders';
 import workflowDefinitions from './WorkflowDefinitions';
+import Message from './Message';
 import Utils from './Utils';
 import './AWorkflow.css';
 
@@ -69,9 +70,10 @@ class AWorkflows extends Component {
     this.addItem = this.addItem.bind(this); // Handles the sstart of creating a new workflow to run
     this.browseFiles = this.browseFiles.bind(this);
     this.browseUploadFiles = this.browseUploadFiles.bind(this);
-    this.displayErrors = this.displayErrors.bind(this); // Displays the errors for a running workflow
-    this.displayMessages = this.displayMessages.bind(this); // Displays the messages for a running workflow
+    this.dismissMessage = this.dismissMessage.bind(this); // Handles dismissing popup messages
     this.displayWorkflowDetailsStatus = this.displayWorkflowDetailsStatus.bind(this);
+    this.displayWorkflowErrors = this.displayWorkflowErrors.bind(this); // Displays the errors for a running workflow
+    this.displayWorkflowMessages = this.displayWorkflowMessages.bind(this); // Displays the messages for a running workflow
     this.dragDrop = this.dragDrop.bind(this);
     this.dragEnd = this.dragEnd.bind(this);
     this.dragOver = this.dragOver.bind(this);
@@ -81,7 +83,7 @@ class AWorkflows extends Component {
     this.fileBrowsed = this.fileBrowsed.bind(this);
     this.generateDetailsPendingUI = this.generateDetailsPendingUI.bind(this);
     this.generateDownloadUI = this.generateDownloadUI.bind();
-    this.generateMessages = this.generateMessages.bind(this);
+    this.generateMessages = this.generateMessages.bind(this); // Returns the UI for displaying workflow messages
     this.generateStepUI = this.generateStepUI.bind(this);
     this.generateTitleRightUI = this.generateTitleRightUI.bind(this);
     this.generateWorkflowUI = this.generateWorkflowUI.bind(this);
@@ -92,14 +94,13 @@ class AWorkflows extends Component {
     this.newIdAdded = this.newIdAdded.bind(this); //Called when UI elements are generated
     this.onBack = this.onBack.bind(this);
     this.onCancelBrowse = this.onCancelBrowse.bind(this);
-    this.onCancelEdit = this.onCancelEdit.bind(this);
     this.onDeleteItem = this.onDeleteItem.bind(this);
     this.onDownloadItem = this.onDownloadItem.bind(this);
     this.onItemCheck= this.onItemCheck.bind(this);
     this.onNameChange= this.onNameChange.bind(this);
     this.onViewDetails =  this.onViewDetails.bind(this);
     this.prepareWorkflowStatus = this.prepareWorkflowStatus.bind(this);
-    this.refreshMessages = this.refreshMessages.bind(this);
+    this.refreshWorkflowMessages = this.refreshWorkflowMessages.bind(this);
     this.runWorkflow = this.runWorkflow.bind(this);
     this.updateNewType = this.updateNewType.bind(this);
     this.workflowDetailsStatus = this.workflowDetailsStatus.bind(this);
@@ -144,6 +145,7 @@ class AWorkflows extends Component {
       job_errors: null,             // The current list of errors
       cur_messages: null,           // The types of messages to display
       pending_request: false,       // Flag indicaating there's a pending request - can be used when generating a UI
+      errors: null,                 // Error information
     };
   }
 
@@ -169,7 +171,6 @@ class AWorkflows extends Component {
   }
 
   componentDidUpdate(prev_props) {
-    console.log("DID UPDATE");
     const have_met_requirements = this.haveRequiredWorkflowParameters();
     if (this.state.met_requirements !== have_met_requirements) {
       this.setState({met_requirements: have_met_requirements});
@@ -205,8 +206,9 @@ class AWorkflows extends Component {
     const cur_template = this.state.workflow_defs[cur_index];
     let cur_name = cur_template.name;
     const title_name = cur_name;
-    if (this.workflow_configs[cur_template.id].hasOwnProperty('cur_item_name')) {
-      cur_name = this.workflow_configs[cur_template.id]['cur_item_name'];
+    const cur_item_name = this.workflow_configs[cur_template.id]['cur_item_name'];
+    if (cur_item_name !== null && cur_item_name !== undefined) {
+      cur_name = cur_item_name;
     }
 
     // Set the state to show the workflow configuration UI
@@ -218,7 +220,7 @@ class AWorkflows extends Component {
   /**
    * Display the configured data sources window when configuring workflows
    * @param {Object} ev - the triggeering event
-   * @param {String} element_id - the ID of the element to browse for
+   * @param {string} element_id - the ID of the element to browse for
    * @param {Object} item - the field information 
    */
   browseFiles(ev, element_id, item) {
@@ -236,10 +238,31 @@ class AWorkflows extends Component {
   }
 
   /**
+   * Called when the user dismisses an popup message
+   * @param {Object} ev - the triggering event
+   */
+  dismissMessage(ev) {
+    this.setState({errors: null});
+  }
+
+  /**
+   * Displays the current workflow status when viewing a running workflow
+   * @param {string} job_id - the identifier of the job being updated
+   * @param {Object} status - the status of the job as returned from the server
+   */
+  displayWorkflowDetailsStatus(job_id, status) {
+    const cur_status = this.handleWorkflowStatus(job_id, status, 'workflow_details_status');
+
+    if (cur_status === job_status.completed) {
+      this.setState({mode: workflow_modes.details_finished});
+    }
+  }
+
+  /**
    * Displays the errors for a running workflow
    * @param {Object} ev - the triggering event
    */
-  displayErrors(ev) {
+  displayWorkflowErrors(ev) {
     if (this.state.cur_messages !== message_types.errors) {
       this.setState({cur_messages: message_types.errors});
     }
@@ -249,22 +272,9 @@ class AWorkflows extends Component {
    * Displays the meessages for a running workflow
    * @param {Object} ev - the triggering event
    */
-  displayMessages(ev) {
+  displayWorkflowMessages(ev) {
     if (this.state.cur_messages !== message_types.messages) {
       this.setState({cur_messages: message_types.messages});
-    }
-  }
-
-  /**
-   * Displays the current workflow status when viewing a running workflow
-   * @param {String} job_id - the identifier of the job being updated
-   * @param {Object} status - the status of the job as returned from the server
-   */
-  displayWorkflowDetailsStatus(job_id, status) {
-    const cur_status = this.handleWorkflowStatus(job_id, status, 'workflow_details_status');
-
-    if (cur_status === job_status.completed) {
-      this.setState({mode: workflow_modes.details_finished});
     }
   }
 
@@ -339,6 +349,10 @@ class AWorkflows extends Component {
     ev.stopPropagation();
   }
 
+  /**
+   * Retreives a workflow's messages and errors
+   * @param {string} job_id - the ID of the job to query
+   */
   fetchWorkflowDetails(job_id) {
     // Make the request to get the messages
     const uri = Utils.getHostOrigin().concat('/workflow/messages/' + job_id);
@@ -360,6 +374,17 @@ class AWorkflows extends Component {
     }
   }
 
+  /**
+   * @callback workflowStatus
+   * @param {string} job_id - the ID of the job the status is related to
+   * @param {Object} status - the status of the job
+   */
+
+  /**
+   * Retrieves the status of the workflow
+   * @param {string} job_id - the ID of the job to get the status of
+   * @param {workflowStatus} success_cb - the callback function for handling the job status query results
+   */
   fetchWorkflowStatus(job_id, success_cb) {
     // Make the request to get the status
     const uri = Utils.getHostOrigin().concat('/workflow/status/' + job_id);
@@ -381,6 +406,9 @@ class AWorkflows extends Component {
     }
   }
 
+  /**
+   * Called when the user has completed browsing for files to upload, and starts the upload process
+   */
   fileBrowsed() {
     let browse = document.getElementById('workflow_types_file_find');
     const selected_file = browse.files;
@@ -390,12 +418,19 @@ class AWorkflows extends Component {
     }
   }
 
+  /**
+   * Handles finishing browsing for files on a remote data sources by saving the information and starting a UI update
+   * @param {string} file_path - the path to the user selected file
+   * @param {string} el_id - the element ID associated with the browsing
+   * @param {Object} item - the data field associated with the browsing request
+   * @param {string} folder_id - the ID of the remote data source the user chose from
+   */
   finishBrowse(file_path, el_id, item, folder_id) {
     const cur_template = this.state.workflow_defs[this.state.cur_item_index];
     let cur_config = this.workflow_configs[cur_template.id];
     const cur_folder = this.folders.find((item) => item.id === folder_id);
 
-    if (cur_config.hasOwnProperty(item.item_save_name)) {
+    if (cur_config[item.item_save_name] !== undefined) {
       cur_config[item.item_save_name].location = file_path;
       cur_config[item.item_save_name].auth = cur_folder.auth;
       cur_config[item.item_save_name].data_type = cur_folder.data_type;
@@ -407,6 +442,10 @@ class AWorkflows extends Component {
     this.setState({browse_files: null, browse_cb: null, met_requirements: this.haveRequiredWorkflowParameters()});
   }
 
+  /**
+   * Returns the pending UI when refeshing the message details for a workflow
+   * @param {bool} force - when truthiness is true, will force the display of the UI regardless of whether there's messages, or not.
+   */
   generateDetailsPendingUI(force) {
     // Don't display if we don't need to
     if (!force && ((this.state.job_messages !== null) || (this.state.job_errors !== null))) {
@@ -438,6 +477,9 @@ class AWorkflows extends Component {
     );
   }
 
+  /**
+   * Returns the UI of the workflow download indicator
+   */
   generateDownloadUI() {
     return (
       <>
@@ -457,6 +499,9 @@ class AWorkflows extends Component {
     );
   }
 
+  /**
+   * Returns the UI for displaying workflow messages
+   */
   generateMessages() {
     const prepared_lines = this.state.cur_messages === message_types.messages ? this.prepared_messages : this.prepared_errors;
     if (prepared_lines) {
@@ -503,6 +548,12 @@ class AWorkflows extends Component {
     return this.generateDetailsPendingUI(true);
   }
 
+  /**
+   * Returns the UI for each step of a workflow
+   * @param {Object} parent - the step to generate the UI for
+   * @param {int|string} idx - the index associated with the current step
+   * @param {Object} default_value - the default values associated with the workflow (may have been set by the user)
+   */
   generateStepUI(parent, idx, default_values) {
     const field_lookup_prefix = idx + '_' + parent.command + '_';
 
@@ -514,7 +565,7 @@ class AWorkflows extends Component {
         let item_save_name = field_lookup_prefix + item.name;
         item.item_save_name = item_save_name;
 
-        const found_value = default_values.hasOwnProperty(item_save_name) ? default_values[item_save_name] : null;
+        const found_value = default_values[item_save_name] !== undefined ? default_values[item_save_name] : null;
         if (found_value !== null) {
           item['default'] = found_value;
         }
@@ -523,13 +574,13 @@ class AWorkflows extends Component {
         if (item.type === 'file') {
           props['files'] = this.files;
           props['browse'] = this.browseFiles;
-          if (!item.hasOwnProperty('default') && (this.files.length > 0)) {
+          if ((item['default'] === undefined) && (this.files.length > 0)) {
             item['default'] = {location: this.files[0].location, id: item_save_name, auth: this.files[0].auth,
                                          data_type: this.files[0].data_type, path_is_file: true, name: this.files[0].location}
           }
         } else if (item.type === 'folder') {
           props['folders'] = this.folders;
-          if (!item.hasOwnProperty('default') && (this.folders.length > 0)) {
+          if ((item['default'] === undefined) && (this.folders.length > 0)) {
             item['default'] = {location: this.folders[0].location, id: item_save_name, auth: this.folders[0].auth,
                                          data_type: this.folders[0].data_type, path_is_file: false, name: this.folders[0].location}
           }
@@ -545,6 +596,9 @@ class AWorkflows extends Component {
     );
   }
 
+  /**
+   * Returns the UI for the right side of the title bar
+   */
   generateTitleRightUI() {
     return (
       <>
@@ -577,6 +631,9 @@ class AWorkflows extends Component {
     );
   }
 
+  /**
+   * Returns the workspace UI - based upon the current mode of the UI
+   */
   generateWorkflowUI() {
     switch (this.state.mode) {
       default:
@@ -656,12 +713,12 @@ class AWorkflows extends Component {
         return (
           <div id="workflow_details_wrapper" className="workflow-details-wrapper">
             <div id="workflow_details_bar_wrapper" className="workflow-details-bar-wrapper">
-              <div id="workflow_details_show_messages" className={messages_class_names} onClick={this.displayMessages}>
+              <div id="workflow_details_show_messages" className={messages_class_names} onClick={this.displayWorkflowMessages}>
                 <div className="workflow-details-show-text-wrapper">
                   Messages <span className="details-count-item details-count-message">{message_count_string}</span>
                 </div>
               </div>
-              <div id="workflow_details_show_errors" className={error_class_names} onClick={this.displayErrors}>
+              <div id="workflow_details_show_errors" className={error_class_names} onClick={this.displayWorkflowErrors}>
                 <div className="workflow-details-show-text-wrapper">
                   Errors <span className="details-count-item details-count-error">{error_count_string}</span>
                 </div>
@@ -672,7 +729,7 @@ class AWorkflows extends Component {
                 <div id="workflow_details_status" className="workflow-details-status">---</div>
               </div>
               <div className="workflow-details-show-spacer"></div>
-              <div id="workflow_details_refresh" className="workflow-details-refresh" onClick={this.refreshMessages}>Refresh</div>
+              <div id="workflow_details_refresh" className="workflow-details-refresh" onClick={this.refreshWorkflowMessages}>Refresh</div>
             </div>
             <div id="workflow_details_details_wrapper" className="workflow-details-details-wrapper">
               <div id="workflow_details_details" className="workflow-details-details">{this.generateMessages()}</div>
@@ -684,17 +741,28 @@ class AWorkflows extends Component {
     }
   }
 
-  getTitle(item, idx) {
-    if (item && (item.length > 0) && (item[0] !== '_')) {
-      if (item !== ' ') {
-        return (<th id={"title_" + idx} key={item} className="workflow-title-text">{item}</th>);
+  /**
+   * Returns the title UI of the display columns for showing known workflows
+   * @param {Object} title - the title string to display
+   * @param {int|string} idx - the index associated with the title_string
+   */
+  getTitle(title, idx) {
+    if (title && (title.length > 0) && (title[0] !== '_')) {
+      if (title !== ' ') {
+        return (<th id={"title_" + idx} key={title} className="workflow-title-text">{title}</th>);
       } else {
-        return (<th id={"title_" + idx} key={item + '_' + idx}></th>);
+        return (<th id={"title_" + idx} key={title + '_' + idx}></th>);
       }
     }
     return null;
   }
 
+  /**
+   * Handles the successful request for starting of a job
+   * @param {Object} results - the results of the start request
+   * @param {Object} workflow_info - the information on the started workflow
+   * @param {Object} workflow_data - the data that was used to start the workflow
+   */ 
   handleSuccessJobStart(results, workflow_info, workflow_data) {
     console.log(results, workflow_info, workflow_data);
     workflow_info.job_id = results.id;
@@ -713,17 +781,26 @@ class AWorkflows extends Component {
                    edit_item: null, workflow_list: this.props.workflows()});
   }
 
+  /**
+   * Called when workflow messages have been retreived
+   * @param {string} job_id - the ID of the job the messages are associated with
+   * @param {Object} messages - the returned set of messages (regular and error)
+   */
   handleWorkflowMessages(job_id, messages) {
-    console.log("MESSAGES:", job_id, messages);
-
     // We have messages that can replace what's there
     this.prepared_messages = null;
     this.prepared_errors= null;
 
-    this.setState({job_messages: messages.hasOwnProperty('messages') ? messages['messages'] : [],
-                   job_errors: messages.hasOwnProperty('errors') ? messages['errors'] :  []});
+    this.setState({job_messages: messages['messages'] !== undefined ? messages['messages'] : [],
+                   job_errors: messages['errors'] !== undefined ? messages['errors'] :  []});
   }
 
+  /**
+   * Updates the current UI with the status of a workflow
+   * @param {string} job_id - the ID of the job whose status is being updated
+   * @param {Object} status - the retreived status of the job 
+   * @param {string} update_el_id - the UI ID of the element to show the updated status
+   */
   handleWorkflowStatus(job_id, status, update_el_id) {
     console.log("Handle workflow status:", job_id, status, update_el_id);
     let cur_workflow = this.state.workflow_list.find(item => item.job_id === job_id);
@@ -732,7 +809,7 @@ class AWorkflows extends Component {
       return undefined;
     }
 
-    if (!status.hasOwnProperty('result')) {
+    if (status['result'] === undefined) {
       console.log('Workflow Status: unknown workflow status found', status);
       return undefined;
     }
@@ -741,7 +818,7 @@ class AWorkflows extends Component {
     switch (status['result']){
       case job_status.started: cur_status = 'Starting'; break;
       case job_status.running: 
-        if (status.hasOwnProperty('status') && status['status'].hasOwnProperty('running') && status['status']['running'].hasOwnProperty('message')) {
+        if (status['status'] !== undefined && status['status']['running'] !== undefined && status['status']['running']['message'] !== undefined) {
           cur_status = status['status']['running']['message'];
         } else {
           cur_status = 'Running'; 
@@ -762,6 +839,10 @@ class AWorkflows extends Component {
     return status['result'];
   }
 
+  /**
+   * Queries the UI to determine if all the required parameters have been filled in for running a workflow
+   * @returns {bool} true is returned if all required parameters have values, and false if not
+   */
   haveRequiredWorkflowParameters() {
     const invalid_values = [null, undefined, ''];
     if (!this.mandatory_ids) {
@@ -774,6 +855,11 @@ class AWorkflows extends Component {
     });
   }
 
+  /**
+   * Called when a new UI ID for data entry is generated
+   * @param {Object} item - the workflow step field that the ID was generated for
+   * @param {string} new_id - the ID that was generated for the field
+   */
   newIdAdded(item, new_id) {
     const found = this.generated_ids.find((cur_id) => cur_id === new_id);
     if (found !== undefined) {
@@ -787,6 +873,10 @@ class AWorkflows extends Component {
     item._ui_id = new_id;
   }
 
+  /**
+   * Called when the user clicks the "back" button
+   * @param {Object} ev - the triggering event
+   */
   onBack(ev) {
     if (this.state.mode === workflow_modes.main){
       this.props.onDone(ev);
@@ -795,14 +885,18 @@ class AWorkflows extends Component {
     }
   }
 
+  /**
+   * Called when the user cancels the browsing of remote storage
+   */
   onCancelBrowse() {
     this.setState({browse_files: null, browse_cb: null});
   }
 
-  onCancelEdit() {
-    this.setState({mode: workflow_modes.main, cur_item_index: null, cur_item_name: null, cur_item_title: null});
-  }
-
+  /**
+   * Called when the user wants to delete a listed workflow. Also deletes the serveer-side information on the workflow
+   * @param {Object} ev - the triggering event
+   * @param {string} workflow_id -the workflow ID associated with the delete event
+   */
   onDeleteItem(ev, workflow_id) {
     const found_item = this.state.workflow_list.find((item) => item.id === workflow_id);
 
@@ -827,6 +921,11 @@ class AWorkflows extends Component {
     }
   }
 
+  /**
+   * Handles the request to download a workflow configuration
+   * @param {Object} ev - the triggering event
+   * @param {string} workflow_id -the workflow ID associated with the download event
+   */
   onDownloadItem(ev, workflow_id) {
     const found_item = this.state.workflow_list.find((item) => item.id === workflow_id);
     if (!found_item) {
@@ -887,12 +986,19 @@ class AWorkflows extends Component {
 
   }
 
-  onItemCheck(ev, item_save_name,  mapped_value) {
+  /**
+   * Handles changed UI items when configuring a workflow
+   * @param {Object} ev - the triggering event
+   * @param {string|Object} item_save_name - identifying value passed to the UI element generator (TemplateUIElement)
+   * @param {*} mapped_value - optional value(s) dependent upon the UI element type generated
+   */
+  onItemCheck(ev, item_save_name, mapped_value) {
     const cur_template = this.state.workflow_defs[this.state.cur_item_index];
     let cur_config = this.workflow_configs[cur_template.id];
 
     if (typeof cur_config[item_save_name] === 'object') {
-      if (cur_config[item_save_name].hasOwnProperty('location')) {
+      // Make sure we know what we're working with
+      if (cur_config[item_save_name]['location'] !== undefined) {
         cur_config[item_save_name].location = ev.target.value;
       } else {
         alert("Unknown object has been updated. Contact the developer to resolve");
@@ -902,6 +1008,10 @@ class AWorkflows extends Component {
     }
   }
 
+  /**
+   * Handles the user changing the workflow name element
+   * @param {Object} ev - the triggering event
+   */
   onNameChange(ev) {
     let cur_id = this.state.workflow_defs[this.new_workflow_idx].id;
     this.workflow_configs[cur_id]['cur_item_name'] = ev.target.value;
@@ -909,6 +1019,11 @@ class AWorkflows extends Component {
     this.setState({cur_item_name: ev.target.value});
   }
 
+  /**
+   * Handles the user's request to see the details of a workflow
+   * @param {Object} ev - the triggering event
+   * @param {string} workflow_id - the ID of the workflow to see the details for
+   */
   onViewDetails(ev, workflow_id) {
     const found_item = this.state.workflow_list.find(item => item.id === workflow_id);
     if (!found_item) {
@@ -942,6 +1057,12 @@ class AWorkflows extends Component {
     this.setState({mode: workflow_modes.details, details_job_id: found_item.job_id, cur_messages: message_types.messages});
   }
 
+  /**
+   * Handles waiting for the UI to be updated so the workflow status can be displayed. The attempt is abandoned if the retry
+   * count exceeds the maximum
+   * @param {string} workflow_id - the ID of the workflow to show the status of
+   * @param {int} retry_count - counter of the number of retry attempts made to get access to the UI
+   */
   prepareWorkflowStatus(workflow_id, retry_count) {
     if ((retry_count === undefined)|| (retry_count === null)) {
       retry_count = 0;
@@ -970,6 +1091,10 @@ class AWorkflows extends Component {
     this.workflowStatus(found_workflow.job_id, 'workflow_detail_status_'  + workflow_id);
   }
 
+  /**
+   * Prepares a copy of the the current workflow information for exporting (downloading)
+   * @param {object} workflow - the workflow object to use for preparation
+   */
   prepareWorkflowForExport(workflow) {
     let clean_workflow = {};
 
@@ -1012,11 +1137,14 @@ class AWorkflows extends Component {
       }
     }
 
-    console.log("RETURNING", clean_workflow);
     return clean_workflow;
   }
 
-  refreshMessages(ev) {
+  /**
+   * Handles the user requesting a refesh of the workflow messages
+   * @param {object} ev - the triggering event
+   */
+  refreshWorkflowMessages(ev) {
     // Only fetch messages if we aren't fetching them already (prevent mad clicking from causing problems)
     if (this.workflow_details_timer === null) {
       this.workflow_details_timer = window.setTimeout(() => {
@@ -1026,10 +1154,13 @@ class AWorkflows extends Component {
     }
   }
 
+  /**
+   * Prepares and makes the request to run a configured workflow on the server. The state is used to determine
+   * what workflow to run
+   */
   runWorkflow() {
     const cur_template = this.state.workflow_defs[this.state.cur_item_index];
     let cur_config = this.workflow_configs[cur_template.id];
-    console.log("RUN:",cur_template,cur_config,this.generated_ids);
 
     let values = this.generated_ids.map((el_id) => {
       let el = document.getElementById(el_id);
@@ -1055,12 +1186,12 @@ class AWorkflows extends Component {
           } else {
             let found_item = null
             for (let i = 0; i < cur_template.steps.length; i++) {
-              found_item = cur_template.steps[i].fields.find((item) => item.hasOwnProperty('_ui_id') && item['_ui_id'] === el_id);
+              found_item = cur_template.steps[i].fields.find((item) => item['_ui_id'] !== undefined && item['_ui_id'] === el_id);
               if (found_item) {
                 break;
               }
             }
-            if (found_item && found_item.hasOwnProperty('default') && 
+            if (found_item && found_item['default'] !== undefined && 
                             ((found_item['type'] === 'file') || (found_item['type'] === 'folder'))) {
               param_info['config'] = found_item['default'];
             }
@@ -1080,11 +1211,11 @@ class AWorkflows extends Component {
     for (const param of values) {
       console.log("  param", param);
       let param_info = {};
-      if (param.hasOwnProperty('step_idx')) {
+      if (param['step_idx'] !== undefined) {
         param_info['command'] = cur_template.steps[param.step_idx].command;
         param_info['field_name'] = param.name;
       }
-      if (param.hasOwnProperty('config')) {
+      if (param['config'] !== undefined) {
         param_info['auth'] = param.config.auth;
         param_info['data_type'] = param.config.data_type;
         param_info['value'] = param.config.location;
@@ -1094,7 +1225,7 @@ class AWorkflows extends Component {
       workflow_data.params.push(param_info);
     }
 
-    const name_item = workflow_data.params.find(item => item.hasOwnProperty('workflow_name'));
+    const name_item = workflow_data.params.find(item => item['workflow_name'] !== undefined);
     let workflow_info = {id: Utils.getUuid(), name: name_item ? name_item['workflow_name'] : '',
                          workflow_type: workflow_data.id, job_id: null}
 
@@ -1115,6 +1246,10 @@ class AWorkflows extends Component {
     }
   }
 
+  /**
+   * Updates the state when a new workflow type is selected
+   * @param {Object} ev - the triggering event
+   */
   updateNewType(ev) {
     const target_val = ev.target.value;
 
@@ -1127,9 +1262,11 @@ class AWorkflows extends Component {
     this.new_workflow_idx = found_idx >= 0 ? found_idx : null;
   }
 
+  /**
+   * Called when a workflow configuration has finished uploading
+   * @param {object} results - the results of the upload to the server (contains workflow and data fields)
+   */
   uploadCompleted(results) {
-    console.log('Workflow upload completed', results);
-
     if (results.messages) {
       // TODO: show messages
     }
@@ -1187,13 +1324,17 @@ class AWorkflows extends Component {
     }
   }
 
+  /**
+   * Handles the user's request to upload workflow files
+   * @param {Object[]} files - the File objects to upload to  the server
+   */
   uploadHandle(files) {
     let upload_count = 0;
     let form_data = new FormData();
     for (let i = 0; i < files.length; i++) {
       let one_file = files[i];
       if (one_file.size > MAX_FILE_SIZE) {
-        //this.displayError('One or more files exceed the maximum allowed size of ' + (MAX_FILE_SIZE / 1024) + 'Kb');
+        //TODO: this.displayError('One or more files exceed the maximum allowed size of ' + (MAX_FILE_SIZE / 1024) + 'Kb');
         console.log("File too large: '" + one_file.name + "'' " + one_file.size);
         return;
     }
@@ -1222,7 +1363,10 @@ class AWorkflows extends Component {
     );
   }
 
-
+ /**
+  * Used to retrieve the workflow status for the workflow details display
+  * @param {string} job_id - the ID of the job to fetch the status for
+  */
   workflowDetailsStatus(job_id) {
     this.fetchWorkflowStatus(job_id, 
               (job_id, success) => {
@@ -1236,6 +1380,11 @@ class AWorkflows extends Component {
               });
   }
 
+ /**
+  * Used to retrieve the workflow status for the workflow listing display
+  * @param {string} job_id - the ID of the job to fetch the status for
+  * @param {string} el_id - the UI ID of the element to update after the status is fetched
+  */
   workflowStatus(job_id, el_id) {
     this.fetchWorkflowStatus(job_id,
               (job_id, status) => {
@@ -1250,12 +1399,17 @@ class AWorkflows extends Component {
               });
   }
 
+  /**
+   * Render the UI
+   */
   render() {
     const viewing_details = (this.state.mode === workflow_modes.details) || (this.state.mode === workflow_modes.details_finished);
     const title_right_generator = !viewing_details ? this.generateTitleRightUI : null;
+    const have_errors = this.state.errors !== null;
 
     return (
       <>
+        {have_errors && <Message msg={this.state.errors} type={Message.type.warning} ok={this.dismissMessage} cancel={this.dismissMessage} />}
         <div id="workflow_wrapper" className="workflow-wrapper">
           <WorkspaceTitlebar title="Manage image-based workflows" back={this.onBack} extra={title_right_generator}/>
           {this.generateWorkflowUI()}
