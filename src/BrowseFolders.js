@@ -39,6 +39,12 @@ class BrowseFolders extends Component {
     this.onFolderChange = this.onFolderChange.bind(this);
     this.onOk = this.onOk.bind(this);
 
+    // Initialize class variables
+    this.folder_instance = null;       // The definition of remove folder
+    this.interface = null;             // The active interface to remote storage
+    this.fetch_pending = null;         // The current working fetch request
+    this.fetch_pending_id = 0;         // Value used to keep track of latest fetch
+
     // Initialize to a single source if there is only one choice
     const folder_selected_id = this.props.folders && this.props.folders.length === 1 ? this.props.folders[0].id : null;
     if (folder_selected_id !== null) {
@@ -46,12 +52,6 @@ class BrowseFolders extends Component {
       this.interface = FileInterfaces.getInterface(this.folder_instance.data_type);
       this.cur_path = this.folder_instance.location;
     }
-
-    // Initialize class variables
-    this.folder_instance = null;       // The definition of remove folder
-    this.interface = null;             // The active interface to remote storage
-    this.fetch_pending = null;         // The current working fetch request
-    this.fetch_pending_id = 0;         // Value used to keep track of latest fetch
 
     this.state =  {
       cur_path: null,                   // The working path

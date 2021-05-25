@@ -18,12 +18,12 @@ class MainMenu extends Component {
   constructor(props) {
     super(props);
 
-    const cur_menu = props.menu ? props.menu : [];
-    const cur_callback = props.selected ? props.selected : () => {};
-
     this.menuClick = this.menuClick.bind(this);
     this.renderSubmenu = this.renderSubmenu.bind(this);
     this.renderMenuItem = this.renderMenuItem.bind(this);
+
+    const cur_menu = props.menu ? props.menu : [];
+    const cur_callback = props.selected ? props.selected : () => {};
 
     this.state = {
       menu: cur_menu,

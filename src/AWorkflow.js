@@ -137,6 +137,18 @@ class AWorkflow extends Component {
     this.workflowDetailsStatus = this.workflowDetailsStatus.bind(this);
     this.workflowStatus = this.workflowStatus.bind(this);
 
+    // Define class variable fields
+    this.generated_ids = [];           // IDs of all elements we generated
+    this.mandatory_ids = [];           // IDs of mandatory elements we generated
+    this.new_workflow_idx = null;      // The index of a new workflow to specify (index into our state.workflow_defs)
+    this.workflow_configs = {};        // The configurations for workflows (values associated with different workflow defs)
+    this.workflow_status_timer = null; // The timer id for workflow status fetches
+    this.workflow_details_timer = null;// The timer id when fetching workflow details
+    this.workflow_details_status_timer = null; // The timer id when fetching workflow status while viewing details
+    this.prepared_messages = null;     // Prepared messages for display
+    this.prepared_errors = null;       // Prepared errors for display
+    this.prepare_lines_timer = null;   // Timer id for preparing message/error lines for display
+
     // Make a copy of the workflow definitions so we can manupulate them without affecting the originals
     const workflow_defs = [...workflowDefinitions];
 
@@ -158,18 +170,6 @@ class AWorkflow extends Component {
     if (!workflow_list) {
       workflow_list = [];
     }
-
-    // Define class variable fields
-    this.generated_ids = [];           // IDs of all elements we generated
-    this.mandatory_ids = [];           // IDs of mandatory elements we generated
-    this.new_workflow_idx = null;      // The index of a new workflow to specify (index into our state.workflow_defs)
-    this.workflow_configs = {};        // The configurations for workflows (values associated with different workflow defs)
-    this.workflow_status_timer = null; // The timer id for workflow status fetches
-    this.workflow_details_timer = null;// The timer id when fetching workflow details
-    this.workflow_details_status_timer = null; // The timer id when fetching workflow status while viewing details
-    this.prepared_messages = null;     // Prepared messages for display
-    this.prepared_errors = null;       // Prepared errors for display
-    this.prepare_lines_timer = null;   // Timer id for preparing message/error lines for display
 
     // Initializing our state variables
     this.state = {

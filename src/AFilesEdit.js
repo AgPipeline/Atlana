@@ -49,18 +49,18 @@ class AFilesEdit extends Component {
     this.onPathUpdated = this.onPathUpdated.bind(this);
     this.verifyMandatoryFieldsFilled = this.verifyMandatoryFieldsFilled.bind(this);
 
-    this.interface = FileInterfaces.getInterface(props.source);
-    this.interface_info = this.interface.initialize();
-
-    let cur_path = this.props.path ? this.props.path : '/';
-    let cur_name = this.props.edit_item ? this.props.edit_item.name : this.interface_info.name;
-
     // Class variables
     this.connected = false;          // Flag used to determine if we're connected
     this.pending_fetch = null;       // Current pending request
     this.pending_fetch_id = 1;       // The ID of the current pending fetch
     this.authentication_ids = [];    // IDs of authentication elements
     this.mandatory_check_ids = [];   // IDs of elements that need checks for mandatory values
+
+    this.interface = FileInterfaces.getInterface(props.source);
+    this.interface_info = this.interface.initialize();
+
+    let cur_path = this.props.path ? this.props.path : '/';
+    let cur_name = this.props.edit_item ? this.props.edit_item.name : this.interface_info.name;
 
     this.state = {
       cur_path: cur_path,               // Current working path
