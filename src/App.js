@@ -12,14 +12,12 @@ import './App.css';
 
 /**
  * Side menu items - not currently implemented
- * @type {Object.<id: string, name: string}[]
  */
 var sidemenu = [
 ];
 
 /**
  * The main menu
- * @type {Object.<name: string, items{Object.<name: string, id}[]}[]
  */
 var menu = [
 { 
@@ -45,6 +43,7 @@ class App extends Component {
   /**
    * Initializes instance of class
    * @param {Object} props - the properties associated with this object
+   * @constructor
    */
   constructor(props) {
     super(props);
@@ -67,48 +66,92 @@ class App extends Component {
 
   /**
    * Called when a new file or folder is defined
-   * @param {Object.<id, ...>} new_file_def - the definition of the new file object
+   * @param {Object} new_file_def - the definition of the new file/folder
+   * @param {string} new_file_def.id - the ID of the new file/folder entry
    */
   addFile(new_file_def) {
     ConfigStore.addFile(new_file_def);
   }
 
+  /**
+   * Called when a new workflow is defined
+   * @param {Object} new_workflow_def - the definition of the new workflow
+   * @param {string} new_workflow_def.id - the ID of the new workflow
+   */
   addWorkflow(new_workflow_def) {
     ConfigStore.addWorkflow(new_workflow_def);
   }
 
+  /**
+   * Removed the file/folder from the list by ID
+   * @param {string} item_id - the ID of the item to remove
+   */
   deleteFile(item_id) {
     ConfigStore.deleteFileById(item_id);
   }
 
+  /**
+   * Removed the workflow from the list by ID
+   * @param {string} item_id - the ID of the item to remove
+   */
   deleteWorkflow(item_id) {
     ConfigStore.deleteWorkflowById(item_id);
   }
 
+  /**
+   * Returns the list of file/folder that have been added
+   * @returns {Object[]} The list of files/folders that were added
+   */
   getFiles() {
     return ConfigStore.getFiles();
   }
 
+  /**
+   * Returns the list of workflows that have been added
+   * @returns {Object[]} The list of workflows that were added
+   */
   getWorkflows() {
     return ConfigStore.getWorkflows();
   }
 
+  /**
+   * Used to change what's displayed to the user
+   * @param {string:int} menu_id - the ID of the menu item selected
+   */
   mainMenuSelected(menu_id) {
     this.setState({mode: menu_id})
   }
 
+  /**
+   * Causes the main menu to display
+   */
   setMainMenu() {
     this.setState({mode: states.main_menu});
   }
 
+  /**
+   * Updates an existing file/folder entry with new values
+   * @param {string} old_item_id - the ID of the item to update; the updated item's ID can be the same value as this
+   * @param {Object} updated_file_def - the new definition of the file/folder
+   * @param {string} updated_file_def.id - the id of the new definition of the file/folder (can be the same as the old ID)
+   */
   updateFile(old_item_id, updated_file_def) {
     ConfigStore.updateFile(old_item_id, updated_file_def);
   }
 
+  /**
+   * Updates a workflow entry with new values
+   * @param {string} old_item_id - the ID of the entry to update; the updated entry's ID can be the same value as this
+   * @param {Object} updated_workflow_def - the new definition of the workflow
+   * @param {string} updated_workflow_def.id - the ID of the new definition of the workflow (can be the same as the old ID)
+   */
   updateWorkflow(old_item_id, updated_workflow_def) {
     ConfigStore.updateWorkflow(old_item_id, updated_workflow_def);
   }
 
+  /**
+   * Returns the UI
+   */
   render() {
     const main_menu = menu;
     // TODO: map menu to side menu when not on main page (new component?)

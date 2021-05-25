@@ -1,10 +1,21 @@
-// Server-side data browsing
+/**
+ * @fileoverview iRODS data browsing
+ * @author schnaufer@arizona.edu (Chris Schnaufer)
+ */
 import IData from './IData';
 import Utils from '../Utils';
 
+/**
+ * Browses an iRODS file system
+ * @extends IData
+ */
 class iRODS extends IData {
 
-  // Return information on this interface
+  /**
+   * Return information on this interface
+   * @returns {IData~FileStoreInformation}
+   * @override
+   */
   initialize() {
     return ({
       name: 'iRODS files',
@@ -15,7 +26,11 @@ class iRODS extends IData {
     });
   }
 
-  // Return authentication reqirements
+  /*
+   * Return authentication reqirements
+   * @returns {Object[]} The list of authentication information needed
+   * @override
+   */
   authentication() {
     // Need host name, port, user name, zone, and password
     return ([{
@@ -50,7 +65,13 @@ class iRODS extends IData {
       }]);
   }
 
-  // Attempt to connect to iRODS
+  /**
+   * Attempt to connect to iRODS
+   * @param {Object} auth_info - the authentification information
+   * @param success_cb - the callback for a successful connection
+   * @param failure_cb - the callback for a failed connection
+   * @override
+   */
   connect(auth_info, success_cb, failure_cb) {
     const uri = Utils.getHostOrigin().concat('/irods/connect');
 
@@ -80,7 +101,14 @@ class iRODS extends IData {
     }
   }
 
-  // Get the folder contents of the specified path
+  /**
+   * Get the folder contents of the specified path
+   * @param {string} path - the path to fetch the contents of
+   * @param {string|null} filter - a filter to apply to the folder ccontents
+   * @param success_cb - the callback for a successful listing
+   * @param failure_cb - the callback for a failed listing
+   * @override
+   */
   listFolder(path, filter, success_cb, failure_cb) {
     let uri = Utils.getHostOrigin().concat('/irods/files');
 

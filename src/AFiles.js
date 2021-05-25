@@ -1,4 +1,7 @@
-// Files UI implementation
+/**
+ * @fileoverview Interface for managing file accessability
+ * @author schnaufer@arizona.edu (Chris Schnaufer)
+ */
 import { Component } from 'react';
 import FileInterfaces from './FileInterfaces';
 import AFilesEdit from './AFilesEdit';
@@ -7,7 +10,9 @@ import Message from './Message';
 import Utils from './Utils';
 import './AFiles.css';
 
-// Table header names
+/**
+ * Table header names for display file/folder information
+ */
 var files_titles = [
   'Name',
   'Type',
@@ -18,9 +23,21 @@ var files_titles = [
   ' ',
 ];
 
+/**
+ * Largest file size we will upload
+ */
 var MAX_FILE_SIZE = 1000*1024*1024
 
+/**
+ * The class for displaying file/folder definitions
+ * @extends Component
+ */
 class AFiles extends Component {
+  /**
+   * Initializes class instance
+   * @props {Object} props - the properties of the class instance
+   * @constructor
+   */
   constructor(props) {
     super(props);
 
@@ -63,6 +80,7 @@ class AFiles extends Component {
       files_list = [];
     }
 
+    // Initialize our state variable
     this.state = {
       mode: null,               // What data source we're adding/editing
       mode_name: '',            // Working name when adding/editing
@@ -77,6 +95,10 @@ class AFiles extends Component {
     }
   }
 
+  /**
+   * Handles the user wanting to define a new file/folder configuratiton
+   * @param {Objec} ev - the triggering event
+   */
   addItem(ev) {
     if (!this.new_type_id) {
       let el = document.getElementById('files_types');
@@ -94,6 +116,9 @@ class AFiles extends Component {
                    edit_add: true, edit_item: null});
   }
 
+  /**
+   * Handles allowing the user to browse files for upload
+   */
   browseFiles() {
     let browse = document.getElementById('files_types_file_find');
     browse.value = null;
@@ -101,12 +126,21 @@ class AFiles extends Component {
     browse.click();
   }
 
+  /**
+   * Cancels the current editing of a file/folder configuration
+   * @param {string} edit_id - the ID of the edit to cancel
+   */
   cancelEdit(edit_id) {
     if ('' + this.state.mode === '' + edit_id) {
       this.setState({mode: null, mode_name: '', mode_title: ''});
     }
   }
 
+  /**
+   * Handles a request to delete a configuration
+   * @param {Object} ev - the triggering event
+   * @param {string} item_id - the ID of the configuration to  delette
+   */
   deleteItem(ev, item_id) {
     let found_item = this.state.files_list.find((item) => item.id === item_id);
     if (!found_item) {
@@ -115,20 +149,30 @@ class AFiles extends Component {
       return;
     }
 
-    if (this.props.hasOwnProperty('onDelete')) {
+    if (this.props.onDelete !== undefined) {
       this.props.onDelete(found_item.id);
       this.setState({'files_list': this.props.files()});
     }
   }
 
+  /**
+   * Used to dismiss displayed popup messages
+   */
   dismissMessage() {
     this.setState({errors: null});
   }
 
+  /**
+   * Used to display popup messages
+   */
   displayError(msg) {
     this.setState({errors: msg});
   }
 
+  /**
+   * Handles the drop portion of the user dragging and dropping files
+   * @param {Object} the drop event
+   */
   dragDrop(ev) {
     let el = document.getElementById('files_types_upload_border');
 
@@ -157,6 +201,10 @@ class AFiles extends Component {
     }
   }
 
+  /**
+   * Renoves visual clues during a drag and drop operation
+   * @param {Object} ev - the triggering event
+   */
   dragEnd(ev) {
     let el = document.getElementById('files_types_upload_border');
 
@@ -168,6 +216,10 @@ class AFiles extends Component {
     ev.stopPropagation();
   }
 
+  /**
+   * Adds visual clues during a drag and drop operation
+   * @param {Object} ev - the triggering event
+   */
   dragOver(ev) {
     let el = document.getElementById('files_types_upload_border');
 
@@ -179,11 +231,20 @@ class AFiles extends Component {
     ev.stopPropagation();
   }
 
+  /**
+   * Handles the start of a drag and drop event
+   * @param {Object}  ev - the triggering event
+   */
   dragStart(ev) {
     ev.preventDefault();
     ev.stopPropagation();
   }
 
+  /**
+   * Handles the request to edit an existing configuration
+   * @param {Object} ev - the triggering event
+   * @param {string} item_id - the ID of the configuration to edit
+   */
   editItem(ev, item_id) {
     console.log("Edit " + this.new_type_id);
     let found_item = this.state.files_list.find((item) => item.id === item_id);
@@ -193,21 +254,31 @@ class AFiles extends Component {
       return;
     }
 
-    console.log("ITEM:", found_item);
     this.setState({mode: found_item.data_type, name: found_item.name, mode_title: 'Edit ' +  found_item.name, 
                    mode_path: found_item.location, edit_cb: this.finishEdit, edit_add: false, edit_item: found_item});
   }
 
+  /**
+   * The function called when a new file/folder entry is configured
+   * @param {string|int} edit_type - the data source identifier
+   * @param {string} name - the name of the new configuration
+   * @param {string} path - the path of the new configuration
+   * @param {is_file} bool - true indicattes the path is a file, false means that it's a folder
+   * @param {Object} auth - authorization information for the data source
+   */
   finishAdd(edit_type, name, path, is_file, auth) {
     let new_state = {mode: null, mode_name: '', mode_title: ''};
 
     const new_entry = {name, location: path, path_is_file: is_file, auth, data_type: edit_type, id: Utils.getUuid()};
     this.props.onAdd(new_entry);
-    new_state['files_list'] = this.props.files();
+    new_state.files_list = this.props.files();
 
     this.setState(new_state);
   }
 
+  /**
+   * Called when the user has finished browsing for files to upload to staart the upload
+   */
   fileBrowsed() {
     let browse = document.getElementById('files_types_file_find');
     const selected_file = browse.files;
@@ -217,17 +288,31 @@ class AFiles extends Component {
     }
   }
 
+  /**
+   * Called when the user has finished updating a configuration
+   * @param {string|int} edit_type - the data source identifier
+   * @param {string} name - the name of the new configuration
+   * @param {string} path - the path of the new configuration
+   * @param {is_file} bool - true indicattes the path is a file, false means that it's a folder
+   * @param {Object} auth - authorization information for the data source
+   */
   finishEdit(edit_type, name, path, is_file, auth, item_id) {
     let new_state = {mode: null, mode_name: '', mode_title: ''};
 
     const new_entry = {name, location: path, path_is_file: is_file, auth, data_type: edit_type, id: item_id};
     const old_entry = this.state.files_list.find((item) => item.id === item_id);
     this.props.OnUpdate(old_entry.id, new_entry);
-    new_state['files_list'] = this.props.files();
+    new_state.files_list = this.props.files();
 
     this.setState(new_state);
   }
 
+  /**
+   * Returns the UI indicator for a file or folder entry
+   * @param {Object} item - the fle/folder to return the UI for
+   * @param {string} item.name - the name of the file or folder
+   * @param {bool} item.path_is_file - true when the item represents a file, and false otherwise
+   */
   generateIsFileUI(item){
     const checkmark_on = (item.path_is_file !== null && item.path_is_file !== undefined) ? item.path_is_file : null;
 
@@ -240,6 +325,9 @@ class AFiles extends Component {
     );
   }
 
+  /**
+   * Returns the UI for uploading files and new configurations
+   */
   generateNewFileUI() {
     let drag_drop_props = {};
     let upload_border_classes = 'files-types-upload-border-base';
@@ -250,12 +338,12 @@ class AFiles extends Component {
 
     // Only be responsive if we are not uploading something already
     if (!this.state.upload_count) {
-      drag_drop_props['onClick'] = this.browseFiles;
-      drag_drop_props['draggable'] = 'true';
-      drag_drop_props['onDragEnter'] = this.dragStart;
-      drag_drop_props['onDrop'] = this.dragDrop;
-      drag_drop_props['onDragOver'] = this.dragOver;
-      drag_drop_props['onDragLeave'] = this.dragEnd;
+      drag_drop_props.onClick = this.browseFiles;
+      drag_drop_props.draggable = 'true';
+      drag_drop_props.onDragEnter = this.dragStart;
+      drag_drop_props.onDrop = this.dragDrop;
+      drag_drop_props.onDragOver = this.dragOver;
+      drag_drop_props.onDragLeave = this.dragEnd;
     }
 
     return (
@@ -287,6 +375,10 @@ class AFiles extends Component {
     );
   }
 
+  /**
+   * Returns an indicator for when files are being uploaded
+   * @param {string} parent_id - the ID of the parent element this is aligned with
+   */
   generateUploadingUI(parent_id) {
     const el = document.getElementById(parent_id);
     if (!el) {
@@ -301,8 +393,8 @@ class AFiles extends Component {
     // Position ourselves over the parent element
     if (our_el) {
       const alignment_pos = this.getRightAlignedPos(el, our_el);
-      props['x'] = alignment_pos[0];
-      props['y'] = alignment_pos[1];
+      props.x = alignment_pos[0];
+      props.y = alignment_pos[1];
     } else {
       // We aren't visible yet, ty again later
       window.setTimeout(() => void this.rightAlignUploadingUI(parent_id, child_id, 0), 100);
@@ -320,6 +412,11 @@ class AFiles extends Component {
     );
   }
 
+  /**
+   * Returns the X & Y screen position to right-align a child element with the parent
+   * @param {string} parent_id - the element ID of the parent
+   * @param {string} child_id - the element  of the child element to aligh
+   */
   getRightAlignedPos(parent_el, child_el) {
     let parent_rect = parent_el.getBoundingClientRect();
     let child_rect = child_el.getBoundingClientRect();
@@ -330,6 +427,11 @@ class AFiles extends Component {
     return [parent_rect.x + x_adjust, parent_rect.y + y_adjust];
   }
 
+  /**
+   * Returns thee title entry for the table displaying ocnfigurations
+   * @param {string} item - the title to display
+   * @param {int|string} idx - the index associated with the item
+   */
   getTitle(item, idx) {
     if (item && (item.length > 0) && (item[0] !== '_')) {
       if (item !== ' ') {
@@ -341,6 +443,11 @@ class AFiles extends Component {
     return null;
   }
 
+  /**
+   * Checks for an existing configuration name
+   * @returns {bool} true is returned if we're adding a configuration and the name exists, or we're editing a configuration
+   * and the name already exists. A return value of false indicates a conflict
+   */
   nameCheck(name) {
     const found_item = this.state.files_list.find((item) => item.name === name);
     if (this.state.edit_add) {
@@ -350,10 +457,19 @@ class AFiles extends Component {
     }
   }
 
+  /**
+   * Handles the pressing of the back navigation button
+   */
   onGoBack() {
     this.props.onDone();
   }
 
+  /**
+   * Right aligns the upload indicator UI element
+   * @param {string} parent_id - the ID of the parent element to align with
+   * @param {string} child_id - the ID of the child element to align with it's parent
+   * @param {int} retry_count - the number of times we've tried to align the child element
+   */
   rightAlignUploadingUI(parent_id, child_id, retry_count) {
     const parent_el = document.getElementById(parent_id);
     const child_el = document.getElementById(child_id);
@@ -375,6 +491,10 @@ class AFiles extends Component {
     }
   }
 
+  /**
+   * Changes a UI element to it's initial display value - used to un-hide a hidden element
+   * @param {string} el_id - the element ID to make visible
+   */
   unhideElement(el_id) {
     let el = document.getElementById(el_id);
     if (!el) {
@@ -384,15 +504,27 @@ class AFiles extends Component {
     el.style.display = "initial";
   }
 
+  /**
+   * Handles the user changing tthe configuration type
+   * @param {Object} ev - the triggering event
+   */
   updateNewType(ev) {
     this.new_type_id = ev.target.value !== '' ? ev.target.value : null;
   }
 
+  /**
+   * Called when files have been uploaded
+   * @param {Object[]} the list of uploaded files
+   */
   uploadCompleted(files) {
     // TODO: report successful upload
     this.setState({upload_count: 0, display_uploading: false});
   }
 
+  /**
+   * Handles uploading of files to the server
+   * @param {Object[]} files - an array of File objects to  upload
+   */
   uploadHandle(files) {
     let upload_count = 0;
     let form_data = new FormData();
@@ -426,6 +558,9 @@ class AFiles extends Component {
     );
   }
 
+  /**
+   * Returns thee File UI
+   */
   render()  {
     const have_errors = this.state.errors !== null;
 

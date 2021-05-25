@@ -1,4 +1,7 @@
-// Workflow interface
+/**
+ * @fileoverview Workflow management interface
+ * @author schnaufer@arizona.edu (Chris Schnaufer)
+ */
 import {Component} from 'react';
 import WorkspaceTitlebar from './WorkspaceTitlebar';
 import TemplateUIElement from './TemplateUIElement';
@@ -8,7 +11,9 @@ import Message from './Message';
 import Utils from './Utils';
 import './AWorkflow.css';
 
-// Table header names
+/**
+ * Table header names for listing workflows
+ */
 var workflow_titles = [
   'Name',
   'Type',
@@ -19,7 +24,9 @@ var workflow_titles = [
   ' ',
 ];
 
-// Different workflow modes (states)
+/**
+ * Different workflow modes (states)
+ */
 var workflow_modes = {
   main: 0,      // List of workflows
   run: 1,       // Run a workflow
@@ -27,7 +34,9 @@ var workflow_modes = {
   details_finished: 3,   // Details for running workflows when the workflow has completed
 };
 
-// UI entry for a workflow's name
+/**
+ * UI entry for a workflow's name
+ */
 var name_ui_def =  {
   name: 'workflow_name',
   prompt: 'Name',
@@ -38,32 +47,54 @@ var name_ui_def =  {
   maxlength: '100',
 };
 
-// Used to keep track of what user want's to see
+/**
+ * Used to keep track of what user want's to see
+ */
 var message_types = {
   messages: 0,
   errors: 1
 };
 
-// Different job status values
+/**
+ * Different job status values
+ */
 var job_status = {
   started: 0,
   running: 1,
   completed: 2,
 };
 
-// Prefix to use for the ID of generated items
+/**
+ * Prefix to use for the ID of generated items
+ */
 var id_prefix = 'workflow_new_item_';
 
-// The number of times we try to find a workflow in our list
+/**
+ * The number of times we try to find a workflow in our list
+ */
 var max_find_workflow_retry_count = 5;
 
-// Maximum size of a workflow file to upload
+/**
+ * Maximum size of a workflow file to upload
+ */
 var MAX_FILE_SIZE = 100*1024
 
-// Our target uploaded workflow version
+/**
+ * Our target uploaded workflow version
+ */
 var WORKFLOW_CURRENT_VERSION = '1.0'
 
-class AWorkflows extends Component {
+/**
+ * Implements the UI for running workflows
+ * @extends Component
+ */
+class AWorkflow extends Component {
+
+  /**
+   * Initializes class instance
+   * @props {Object} props - the properties of the class instance
+   * @constructor
+   */
   constructor(props) {
     super(props);
 
@@ -128,6 +159,19 @@ class AWorkflows extends Component {
       workflow_list = [];
     }
 
+    // Define class variable fields
+    this.generated_ids = [];           // IDs of all elements we generated
+    this.mandatory_ids = [];           // IDs of mandatory elements we generated
+    this.new_workflow_idx = null;      // The index of a new workflow to specify (index into our state.workflow_defs)
+    this.workflow_configs = {};        // The configurations for workflows (values associated with different workflow defs)
+    this.workflow_status_timer = null; // The timer id for workflow status fetches
+    this.workflow_details_timer = null;// The timer id when fetching workflow details
+    this.workflow_details_status_timer = null; // The timer id when fetching workflow status while viewing details
+    this.prepared_messages = null;     // Prepared messages for display
+    this.prepared_errors = null;       // Prepared errors for display
+    this.prepare_lines_timer = null;   // Timer id for preparing message/error lines for display
+
+    // Initializing our state variables
     this.state = {
       mode: workflow_modes.main,    // The current display mode
       browse_files: null,           // Flag used to browse files, folders, or no-browse(=null)
@@ -148,17 +192,6 @@ class AWorkflows extends Component {
       errors: null,                 // Error information
     };
   }
-
-  generated_ids = [];           // IDs of all elements we generated
-  mandatory_ids = [];           // IDs of mandatory elements we generated
-  new_workflow_idx = null;      // The index of a new workflow to specify (index into our state.workflow_defs)
-  workflow_configs = {};        // The configurations for workflows (values associated with different workflow defs)
-  workflow_status_timer = null; // The timer id for workflow status fetches
-  workflow_details_timer = null;// The timer id when fetching workflow details
-  workflow_details_status_timer = null; // The timer id when fetching workflow status while viewing details
-  prepared_messages = null;     // Prepared messages for display
-  prepared_errors = null;       // Prepared errors for display
-  prepare_lines_timer = null;   // Timer id for preparing message/error lines for display
 
   /**
    * React component mounted event handler
@@ -206,7 +239,7 @@ class AWorkflows extends Component {
     const cur_template = this.state.workflow_defs[cur_index];
     let cur_name = cur_template.name;
     const title_name = cur_name;
-    const cur_item_name = this.workflow_configs[cur_template.id]['cur_item_name'];
+    const cur_item_name = this.workflow_configs[cur_template.id].cur_item_name;
     if (cur_item_name !== null && cur_item_name !== undefined) {
       cur_name = cur_item_name;
     }
@@ -375,7 +408,7 @@ class AWorkflows extends Component {
   }
 
   /**
-   * @callback workflowStatus
+   * @callback AWorkflow~WorkflowStatusCallback
    * @param {string} job_id - the ID of the job the status is related to
    * @param {Object} status - the status of the job
    */
@@ -383,7 +416,7 @@ class AWorkflows extends Component {
   /**
    * Retrieves the status of the workflow
    * @param {string} job_id - the ID of the job to get the status of
-   * @param {workflowStatus} success_cb - the callback function for handling the job status query results
+   * @param {AWorkflow~WorkflowStatusCallback} success_cb - the callback function for handling the job status query results
    */
   fetchWorkflowStatus(job_id, success_cb) {
     // Make the request to get the status
@@ -463,10 +496,10 @@ class AWorkflows extends Component {
     var wait_style = {};
     const client_rect = parent_el.getBoundingClientRect();
 
-    wait_style['left'] = client_rect.x;
-    wait_style['top'] = client_rect.y;
-    wait_style['width'] = client_rect.width;
-    wait_style['height'] = client_rect.height;
+    wait_style.left = client_rect.x;
+    wait_style.top = client_rect.y;
+    wait_style.width = client_rect.width;
+    wait_style.height = client_rect.height;
 
     return (
       <div id="workflow_details_pending_wrapper" className="workflow-details-pending-wrapper" style={wait_style}>
@@ -558,7 +591,7 @@ class AWorkflows extends Component {
     const field_lookup_prefix = idx + '_' + parent.command + '_';
 
     return (parent.fields.map((item) => {
-        if (item['visibility'] !== 'ui') {
+        if (item.visibility !== 'ui') {
           return null;
         }
 
@@ -567,21 +600,21 @@ class AWorkflows extends Component {
 
         const found_value = default_values[item_save_name] !== undefined ? default_values[item_save_name] : null;
         if (found_value !== null) {
-          item['default'] = found_value;
+          item.default = found_value;
         }
 
         let props = {};
         if (item.type === 'file') {
-          props['files'] = this.files;
-          props['browse'] = this.browseFiles;
-          if ((item['default'] === undefined) && (this.files.length > 0)) {
-            item['default'] = {location: this.files[0].location, id: item_save_name, auth: this.files[0].auth,
+          props.files = this.files;
+          props.browse = this.browseFiles;
+          if ((item.default === undefined) && (this.files.length > 0)) {
+            item.default = {location: this.files[0].location, id: item_save_name, auth: this.files[0].auth,
                                          data_type: this.files[0].data_type, path_is_file: true, name: this.files[0].location}
           }
         } else if (item.type === 'folder') {
-          props['folders'] = this.folders;
-          if ((item['default'] === undefined) && (this.folders.length > 0)) {
-            item['default'] = {location: this.folders[0].location, id: item_save_name, auth: this.folders[0].auth,
+          props.folders = this.folders;
+          if ((item.default === undefined) && (this.folders.length > 0)) {
+            item.default = {location: this.folders[0].location, id: item_save_name, auth: this.folders[0].auth,
                                          data_type: this.folders[0].data_type, path_is_file: false, name: this.folders[0].location}
           }
         }
@@ -791,8 +824,8 @@ class AWorkflows extends Component {
     this.prepared_messages = null;
     this.prepared_errors= null;
 
-    this.setState({job_messages: messages['messages'] !== undefined ? messages['messages'] : [],
-                   job_errors: messages['errors'] !== undefined ? messages['errors'] :  []});
+    this.setState({job_messages: messages.messages !== undefined ? messages.messages : [],
+                   job_errors: messages.errors !== undefined ? messages.errors :  []});
   }
 
   /**
@@ -809,17 +842,17 @@ class AWorkflows extends Component {
       return undefined;
     }
 
-    if (status['result'] === undefined) {
+    if (status.result === undefined) {
       console.log('Workflow Status: unknown workflow status found', status);
       return undefined;
     }
 
     let cur_status = '';
-    switch (status['result']){
+    switch (status.result){
       case job_status.started: cur_status = 'Starting'; break;
       case job_status.running: 
-        if (status['status'] !== undefined && status['status']['running'] !== undefined && status['status']['running']['message'] !== undefined) {
-          cur_status = status['status']['running']['message'];
+        if (status.status !== undefined && status.status.running !== undefined && status.status.running.message !== undefined) {
+          cur_status = status.status.running.message;
         } else {
           cur_status = 'Running'; 
         }
@@ -828,7 +861,7 @@ class AWorkflows extends Component {
       default: cur_status = 'unknown'; break;
     }
 
-    cur_workflow['status'] = cur_status;
+    cur_workflow.status = cur_status;
 
     // Update the UI
     let el = document.getElementById(update_el_id);
@@ -836,7 +869,7 @@ class AWorkflows extends Component {
       el.innerHTML = cur_status;
     }
 
-    return status['result'];
+    return status.result;
   }
 
   /**
@@ -998,7 +1031,7 @@ class AWorkflows extends Component {
 
     if (typeof cur_config[item_save_name] === 'object') {
       // Make sure we know what we're working with
-      if (cur_config[item_save_name]['location'] !== undefined) {
+      if (cur_config[item_save_name].location !== undefined) {
         cur_config[item_save_name].location = ev.target.value;
       } else {
         alert("Unknown object has been updated. Contact the developer to resolve");
@@ -1014,7 +1047,7 @@ class AWorkflows extends Component {
    */
   onNameChange(ev) {
     let cur_id = this.state.workflow_defs[this.new_workflow_idx].id;
-    this.workflow_configs[cur_id]['cur_item_name'] = ev.target.value;
+    this.workflow_configs[cur_id].cur_item_name = ev.target.value;
 
     this.setState({cur_item_name: ev.target.value});
   }
@@ -1104,15 +1137,15 @@ class AWorkflows extends Component {
       } else if (one_item !== 'steps') {
         clean_workflow[one_item] = workflow[one_item];
       } else {
-        clean_workflow['steps'] = []
-        for (let one_step of workflow['steps']) {
+        clean_workflow.steps = []
+        for (let one_step of workflow.steps) {
           let cur_step = {};
           for (let one_step_item in one_step) {
             if (one_step_item !== 'fields') {
               cur_step[one_step_item] = one_step[one_step_item];
             } else {
-              cur_step['fields'] = []
-              for (let one_field of one_step['fields']) {
+              cur_step.fields = []
+              for (let one_field of one_step.fields) {
                 let cur_field = {};
                 for (let one_field_item in one_field) {
                   switch (one_field_item) {
@@ -1127,12 +1160,12 @@ class AWorkflows extends Component {
                   }
                 }
 
-                cur_step['fields'].push(cur_field);
+                cur_step.fields.push(cur_field);
               }
             }
           }
 
-          clean_workflow['steps'].push(cur_step);
+          clean_workflow.steps.push(cur_step);
         }
       }
     }
@@ -1167,33 +1200,33 @@ class AWorkflows extends Component {
       if (el !== null) {
         let param_info = {id: el_id, value: el.value};
         if (el_id.startsWith(id_prefix)) {
-          param_info['name'] = el_id.substring(id_prefix.length);
+          param_info.name = el_id.substring(id_prefix.length);
         } else {
-          param_info['name'] = el_id.split('_').pop();
+          param_info.name = el_id.split('_').pop();
         }
 
         // Try to find the  element in our stored configuration values
         if (!el_id.startsWith(id_prefix)) {
           // We assume we have a workflow configuration item
           const key_parts = el_id.split('_');
-          param_info['step_idx'] = parseInt(key_parts.shift());
+          param_info.step_idx = parseInt(key_parts.shift());
           key_parts.pop();
-          param_info['step_name'] = key_parts.join('_');
+          param_info.step_name = key_parts.join('_');
 
           const found_key = Object.keys(cur_config).find((id) => cur_config[id].id === el_id);
           if (found_key !== undefined) {
-            param_info['config'] = cur_config[found_key];
+            param_info.config = cur_config[found_key];
           } else {
             let found_item = null
             for (let i = 0; i < cur_template.steps.length; i++) {
-              found_item = cur_template.steps[i].fields.find((item) => item['_ui_id'] !== undefined && item['_ui_id'] === el_id);
+              found_item = cur_template.steps[i].fields.find((item) => item._ui_id !== undefined && item._ui_id === el_id);
               if (found_item) {
                 break;
               }
             }
-            if (found_item && found_item['default'] !== undefined && 
-                            ((found_item['type'] === 'file') || (found_item['type'] === 'folder'))) {
-              param_info['config'] = found_item['default'];
+            if (found_item && found_item.default !== undefined && 
+                            ((found_item.type === 'file') || (found_item.type === 'folder'))) {
+              param_info.config = found_item.default;
             }
           }
         }
@@ -1211,22 +1244,22 @@ class AWorkflows extends Component {
     for (const param of values) {
       console.log("  param", param);
       let param_info = {};
-      if (param['step_idx'] !== undefined) {
-        param_info['command'] = cur_template.steps[param.step_idx].command;
-        param_info['field_name'] = param.name;
+      if (param.step_idx !== undefined) {
+        param_info.command = cur_template.steps[param.step_idx].command;
+        param_info.field_name = param.name;
       }
-      if (param['config'] !== undefined) {
-        param_info['auth'] = param.config.auth;
-        param_info['data_type'] = param.config.data_type;
-        param_info['value'] = param.config.location;
+      if (param.config !== undefined) {
+        param_info.auth = param.config.auth;
+        param_info.data_type = param.config.data_type;
+        param_info.value = param.config.location;
       } else {
         param_info[param.name] = param.value;
       }
       workflow_data.params.push(param_info);
     }
 
-    const name_item = workflow_data.params.find(item => item['workflow_name'] !== undefined);
-    let workflow_info = {id: Utils.getUuid(), name: name_item ? name_item['workflow_name'] : '',
+    const name_item = workflow_data.params.find(item => item.workflow_name !== undefined);
+    let workflow_info = {id: Utils.getUuid(), name: name_item ? name_item.workflow_name : '',
                          workflow_type: workflow_data.id, job_id: null}
 
     const uri = Utils.getHostOrigin().concat('/workflow/start');
@@ -1291,13 +1324,13 @@ class AWorkflows extends Component {
               );
 
         found_fields.forEach((one_field) => {
-          if (one_field && (!one_field['visibility'] || one_field['visibility'] === 'ui')) {
+          if (one_field && (!one_field.visibility || one_field.visibility === 'ui')) {
             const lookup_name = field_lookup_prefix + one_field.field_name
             const parent_field = parent.fields.find((item) => item.name === one_field.field_name);
-            one_field['id'] = lookup_name;
+            one_field.id = lookup_name;
             if (parent_field.type === 'file' || parent_field.type === 'folder') {
-              one_field['path_is_file'] = parent_field.type === 'file';
-              one_field['location'] = one_field.value;
+              one_field.path_is_file = parent_field.type === 'file';
+              one_field.location = one_field.value;
             }
             cur_config[lookup_name] = one_field;
           }
@@ -1420,4 +1453,4 @@ class AWorkflows extends Component {
   }
 }
 
-export default AWorkflows;
+export default AWorkflow;

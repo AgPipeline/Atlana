@@ -1,4 +1,7 @@
-//Implementation of file system interface
+/**
+ * @fileoverview Generates UI components allowing the user to configure file interfaces
+ * @author schnaufer@arizona.edu (Chris Schnaufer)
+ */
 import { Component } from 'react';
 import FileInterfaces from './FileInterfaces';
 import AFilesList from './AFilesList';
@@ -6,7 +9,16 @@ import Message from './Message';
 import IData from './data/IData';
 import './AFilesEdit.css';
 
+/**
+ * Generates the UI for user configuration of remote file servers
+ * @extends Component
+ */
 class AFilesEdit extends Component {
+  /**
+   * Initializes class instance
+   * @props {Object} props - the properties of the class instance
+   * @constructor
+   */
   constructor(props) {
     super(props);
 
@@ -43,6 +55,13 @@ class AFilesEdit extends Component {
     let cur_path = this.props.path ? this.props.path : '/';
     let cur_name = this.props.edit_item ? this.props.edit_item.name : this.interface_info.name;
 
+    // Class variables
+    this.connected = false;          // Flag used to determine if we're connected
+    this.pending_fetch = null;       // Current pending request
+    this.pending_fetch_id = 1;       // The ID of the current pending fetch
+    this.authentication_ids = [];    // IDs of authentication elements
+    this.mandatory_check_ids = [];   // IDs of elements that need checks for mandatory values
+
     this.state = {
       cur_path: cur_path,               // Current working path
       is_file: null,                    // Flag for current path being a file or folder
@@ -55,12 +74,9 @@ class AFilesEdit extends Component {
     }
   }
 
-  connected = false;          // Flag used to determine if we're connected
-  pending_fetch = null;       // Current pending request
-  pending_fetch_id = 1;       // The ID of the current pending fetch
-  authentication_ids = [];    // IDs of authentication elements
-  mandatory_check_ids = [];   // IDs of elements that need checks for mandatory values
-
+  /**
+   * Called when this componenent is mounted, before display
+   */
   componentDidMount() {
     // Hook up key screenings
     {
@@ -83,6 +99,9 @@ class AFilesEdit extends Component {
     }
   }
 
+  /**
+   * Called just before this component is unmounted and still displaying
+   */
   componentWillUnmount() {
     document.removeEventListener('keydown',  this.handleDocumentKey, false);
 
@@ -92,17 +111,39 @@ class AFilesEdit extends Component {
     }
   }
 
+  /**
+   * Called when an exception ocurrs while connecting to a remote server
+   * @param {Object} err - the error object
+   * @param {string} err.message - the message of the problem
+   */
   connectRequestCatch(err) {
     console.log('Error: File connect error: ', err);
     this.connectRequestError(err.message);
   }
 
+  /**
+   * Called when an error ocurrs during a connection request
+   * @param {string} msg - the message to display
+   */
   connectRequestError(msg) {
     this.displayError(msg);
     this.pending_fetch = null;
     this.setState({fetching: false});
   }
 
+  /**
+   * Called when a connection request is successful
+   * @callback AFilesEdit~ConnectRequestFinishCallback
+   * @param {string} path - the starting path returned by the remote server upon connecting
+   */
+
+  /**
+   * Called when a connection request has successfully completed
+   * @param {int} request_id - the ID of the connection request - used to prevent old requests from overwriting newer ones
+   * @param {Object} results - the result of the connection request
+   * @param {String} results.path - the result of the connection request
+   * @param {AFilesEdit~ConnectRequestFinishCallback} finish_cb - the callback for a successful request
+   */
   connectRequestFinish(request_id, results, finish_cb) {
     console.log("connectRequestFinish", results);
     // Ignore finished requests that are not us
@@ -111,7 +152,7 @@ class AFilesEdit extends Component {
     }
 
     // Remove pending status, indicate we're connected, and update state
-    const returned_path = results && results.hasOwnProperty('path') ? results['path'].replaceAll('\\', '/') : '/';
+    const returned_path = results && results.path !== undefined ? results.path.replaceAll('\\', '/') : '/';
     this.pending_fetch = null;
     this.connected = true;
     this.setState({fetching: false, cur_path: returned_path, path_contents: null, authentication_changed: false});
@@ -122,6 +163,10 @@ class AFilesEdit extends Component {
     }
   }
 
+  /**
+   * Starts the connection request to a remote server
+   * @param {AFilesEdit~ConnectRequestFinishCallback} connect_cb - callback upon a successful connection request
+   */
   connectRequestStart(connect_cb) {
     if (this.pending_fetch) {
       console.log("ERROR: cancel the previous request before trying again to connect");
@@ -142,23 +187,40 @@ class AFilesEdit extends Component {
       .catch(this.connectRequestCatch);
   }
 
+  /**
+   * Called when the user dismisses an error message
+   */
   dismissMessage() {
     this.setState({errors: null});
   }
 
+  /**
+   * Called when a fetch request throws an error
+   * @param {Object} err - the error object
+   * @param {string} err.message - the error message
+   */
   fetchRequestCatch(err) {
     console.log('Error: file fetch error: ', err);
     this.fetchRequestError(err.message);
   }
 
+  /**
+   * Called to display an error when fetching folder contents from a remote server
+   * @param {string} msg - the message to display
+   */
   fetchRequestError(msg) {
     this.displayError(msg);
     this.pending_fetch = null;
     this.setState({fetching: false});
   }
 
+  /**
+   * Called upon successfull completion of a folder's contents request
+   * @param {int} request_id - the ID of the request, used to prevent old requests from overwriting newer ones
+   * @param {string} path - the path the contents were fetched from
+   * @param {Object[]} results - the array of the folder contents
+   */
   fetchRequestFinish(request_id, path, results) {
-    console.log("fetchRequestFinish",request_id, path, results);
     // Ignore finished requests that are not us
     if (this.pending_fetch_id !== request_id + 1) {
       return;
@@ -169,6 +231,10 @@ class AFilesEdit extends Component {
     this.setState({fetching: false, cur_path: path.replaceAll('\\', '/'), is_file: false, path_contents: results});
   }
 
+  /**
+   * Make a request for the folder contents of the specified path from the remote server
+   * @param {string} path - the path to fetch the contents of
+   */
   fetchRequestStart(path) {
     if (this.pending_fetch) {
       console.log("ERROR: cancel previous file fetch before begining a new one");
@@ -187,10 +253,18 @@ class AFilesEdit extends Component {
       .catch(this.fetchRequestCatch);
   }
 
+  /**
+   * Handles a file being selected by the user
+   * @param {string} new_path - the path to the file
+   */
   fileSelected(new_path) {
     this.setState({cur_path: new_path.replaceAll('\\', '/'), is_file: true});
   }
 
+  /**
+   * Handles the folder selected by the user
+   * @param {string} new_path - the path to the selected folder
+   */
   folderSelected(new_path) {
     let cur_path = new_path;
 
@@ -212,19 +286,33 @@ class AFilesEdit extends Component {
     this.fetchRequestStart(cur_path);
   }
 
+  /**
+   * Returns the UI of the results in a disabled state
+   */
   displayDisabledResults() {
     return this.displayResultsOverlay('', 'file-edit-path-display-disabled');
   }
 
+  /**
+   * Handles showing error messages
+   * @param {string} msg - the message to show
+   */
   displayError(msg) {
-    console.log("ERROR", msg);
     this.setState({errors: msg});
   }
 
+  /**
+   * Returns the UI while waiting for results
+   */
   displayFetchWait() {
     return this.displayResultsOverlay('Waiting...', 'file-edit-path-display-wait');
   }
 
+  /**
+   * Common function returning a disabling overlay of folder content UI
+   * @param {string} [msg] - optional message to display
+   * @param {string[]} [additional_class_names] - optional class names to apply to the top-level UI element
+   */
   displayResultsOverlay(msg, additional_class_names) {
     let parent_el = document.getElementById('file_edit_path_display');
     if (!parent_el) {
@@ -237,10 +325,10 @@ class AFilesEdit extends Component {
     var wait_style = {};
     const client_rect = parent_el.getBoundingClientRect();
 
-    wait_style['left'] = client_rect.x;
-    wait_style['top'] = client_rect.y;
-    wait_style['width'] = client_rect.width;
-    wait_style['height'] = client_rect.height;
+    wait_style.left = client_rect.x;
+    wait_style.top = client_rect.y;
+    wait_style.width = client_rect.width;
+    wait_style.height = client_rect.height;
 
     return (
       <div id="file_edit_path_display_overlay_wrapper" className={'file-edit-path-display-overlay-wrapper ' + additional_class_names} style={wait_style}>
@@ -249,25 +337,29 @@ class AFilesEdit extends Component {
     );
   }
 
+  /**
+   * Returns the UI for a Text template
+   * @param {Object} item - the template item to generate the UI for
+   */
   generatePlainUI(item) {
     var props = {};
-    const min_length = item.hasOwnProperty('minlength') ? item.minlength : null;
-    const max_length = item.hasOwnProperty('maxlength') ? item.maxlength : null;
-    const is_dropdown = item.hasOwnProperty('choices');
-    const is_mandatory = item.hasOwnProperty('mandatory') ? item.mandatory : true;
+    const min_length = item.minlength !== undefined ? item.minlength : null;
+    const max_length = item.maxlength !== undefined ? item.maxlength : null;
+    const is_dropdown = item.choices !== undefined;
+    const is_mandatory = item.mandatory !== undefined ? item.mandatory : true;
 
     if (!is_dropdown) {
       const element_id = 'file_edit_interface_table_value_' + item.name;
       this.authentication_ids.push(element_id);
 
-      if (min_length) props['minlength'] = '' + min_length;
-      if (max_length) props['maxlength'] = '' + max_length;
-      if (item.hasOwnProperty('default')) {
-        props['defaultValue'] = item.default;
+      if (min_length) props.minlength = '' + min_length;
+      if (max_length) props.maxlength = '' + max_length;
+      if (item.default !== undefined) {
+        props.defaultValue = item.default;
       }
       if (is_mandatory) {
-        props['required'] = 'required';
-        props['onChange'] = this.onMandatoryCheck;
+        props.required = 'required';
+        props.onChange = this.onMandatoryCheck;
         this.mandatory_check_ids.push(element_id);
       }
 
@@ -281,12 +373,12 @@ class AFilesEdit extends Component {
       const element_id = 'file_edit_interface_table_' + item.name;
       this.authentication_ids.push(element_id);
 
-      if (item.hasOwnProperty('default')) {
-        props['defaultValue'] = item.default;
+      if (item.default !== undefined) {
+        props.defaultValue = item.default;
       }
       if (is_mandatory) {
-        props['required'] = 'required';
-        props['onChange'] = this.onMandatoryCheck;
+        props.required = 'required';
+        props.onChange = this.onMandatoryCheck;
         this.mandatory_check_ids.push(element_id);
       }
 
@@ -301,22 +393,26 @@ class AFilesEdit extends Component {
     }
   }
 
+  /**
+   * Returns the UI for Secret (not password) template
+   * @param {Object} item - the template item to generate the UI for
+   */
   generateSecretUI(item) {
-    const min_length = item.hasOwnProperty('minlength') ? item.minlength : null;
-    const max_length = item.hasOwnProperty('maxlength') ? item.maxlength : null;
-    const is_mandatory = item.hasOwnProperty('mandatory') ? item.mandatory : true;
+    const min_length = item.minlength !== undefined ? item.minlength : null;
+    const max_length = item.maxlength !== undefined ? item.maxlength : null;
+    const is_mandatory = item.mandatory !== undefined ? item.mandatory : true;
     const element_id = 'file_edit_interface_table_value_' + item.name;
     this.authentication_ids.push(element_id);
 
     var props = {};
-    if (min_length) props['minlength'] = '' + min_length;
-    if (max_length) props['maxlength'] = '' + max_length;
-    if (item.hasOwnProperty('default')) {
-      props['defaultValue'] = item.default;
+    if (min_length) props.minlength = '' + min_length;
+    if (max_length) props.maxlength = '' + max_length;
+    if (item.default !== undefined) {
+      props.defaultValue = item.default;
     }
     if (is_mandatory) {
-      props['required'] = 'required';
-      props['onChange'] = this.onMandatoryCheck;
+      props.required = 'required';
+      props.onChange = this.onMandatoryCheck;
       this.mandatory_check_ids.push(element_id);
     }
 
@@ -328,23 +424,27 @@ class AFilesEdit extends Component {
     );
   }
 
+  /**
+   * Returns the UI for a Password template
+   * @param {Object} item - the template item to generate the UI for
+   */
   generatePasswordUI(item) {
-    const min_length = item.hasOwnProperty('minlength') ? item.minlength : null;
-    const max_length = item.hasOwnProperty('maxlength') ? item.maxlength : null;
-    const is_mandatory = item.hasOwnProperty('mandatory') ? item.mandatory : true;
+    const min_length = item.minlength !== undefined ? item.minlength : null;
+    const max_length = item.maxlength !== undefined ? item.maxlength : null;
+    const is_mandatory = item.mandatory !== undefined ? item.mandatory : true;
     const element_id = 'file_edit_interface_table_value_' + item.name;
     this.authentication_ids.push(element_id);
 
     // TODO: Add checkbox for showing password in plain text
     var props = {};
-    if (min_length) props['minlength'] = '' + min_length;
-    if (max_length) props['maxlength'] = '' + max_length;
-    if (item.hasOwnProperty('default')) {
-      props['defaultValue'] = item.default;
+    if (min_length) props.minlength = '' + min_length;
+    if (max_length) props.maxlength = '' + max_length;
+    if (item.default !== undefined) {
+      props.defaultValue = item.default;
     }
     if (is_mandatory) {
-      props['required'] = 'required';
-      props['onChange'] = this.onMandatoryCheck;
+      props.required = 'required';
+      props.onChange = this.onMandatoryCheck;
       this.mandatory_check_ids.push(element_id);
     }
 
@@ -356,6 +456,10 @@ class AFilesEdit extends Component {
     );
   }
 
+  /**
+   * Returns the UI for a templated item
+   * @param {Object} item - the template item to generate the UI for
+   */
   generateInterfaceItem(item) {
     switch (item.style) {
       case IData.auth_ui_type.plain:
@@ -375,6 +479,10 @@ class AFilesEdit extends Component {
     return null;
   }
 
+  /**
+   * Generates the interface UI for browsing remote file systems.
+   * Auto-generates thee UI components for the remote server
+   */
   generateInterfaceUI() {
     const interface_ui = this.interface.authentication();
     this.mandatory_check_ids = [];
@@ -405,10 +513,17 @@ class AFilesEdit extends Component {
     );
   }
 
+  /**
+   * Returns the UI element for mandatory fields
+   */
   generateMandatoryUI() {
     return (<span className="file-edit-interface-value-mandatory">*</span>);
   }
 
+  /**
+   * Retrieves the authentication fields from the UI
+   * @return {Object} the field ids and their associated values
+   */
   getAuthenticationFields() {
     let fields = {};
 
@@ -429,6 +544,11 @@ class AFilesEdit extends Component {
     return fields;
   }
 
+  /**
+   * Handles the user pressing a key
+   * @param {Object} ev - the triggering event
+   * @param {string} ev.key - the key the user pressed
+   */
   handleDocumentKey(ev) {
     switch(ev.key) {
       case 'Enter':
@@ -447,6 +567,9 @@ class AFilesEdit extends Component {
     }
   }
 
+  /**
+   * Handle the user pressing the 'Go' button to fetch the contents of a path from the remote server
+   */
   handleGoButton() {
     let path_el = document.getElementById('file_edit_path_edit');
 
@@ -459,6 +582,12 @@ class AFilesEdit extends Component {
     }
   }
 
+  /**
+   * Handles the user pressing a key while editing the path
+   * @param {Object} ev - the triggering event
+   * @param {string} ev.key - the key the user pressed
+   * @param stopImmediatePropagation - called to stop the event from propagating
+   */
   handlePathKey(ev) {
     switch(ev.key) {
       case 'Enter':
@@ -476,14 +605,25 @@ class AFilesEdit extends Component {
     }
   }
 
+  /**
+   * Maps a UI ID to a field name
+   * @param {string} el_id - the ID to map
+   */
   mapGeneratedIdToName(el_id) {
     return el_id.substr('file_edit_interface_table_value_'.length);
   }
 
+  /**
+   * Handles cancelling the browsing of files 
+   */
   onCancel() {
     this.props.cancel(this.props.source);
   }
 
+  /**
+   * Checks if all mandatory fields are filled
+   * @param {Object} ev - the triggering event
+   */
   onMandatoryCheck(ev) {
     let el = null;
     let res = this.mandatory_check_ids.every((id) => {
@@ -500,16 +640,24 @@ class AFilesEdit extends Component {
     let new_state = {authentication_changed: true};
 
     if (res !== this.state.mandatory_fields_filled) {
-      new_state['mandatory_fields_filled'] = res;
+      new_state.mandatory_fields_filled = res;
     }
 
     this.setState(new_state);
   }
 
+  /**
+   * Called when the name of the configuration has been updated
+   * @param {Object} ev - the triggering event
+   * @param {string} ev.target.value - the element value at the time of the event
+   */
   onNameUpdated(ev) {
     this.setState({name: ev.target.value});
   }
 
+  /**
+   * Called when the user wants to save the configuration
+   */
   onOk() {
     let el = document.getElementById('file_edit_name_edit');
     const name = el ? el.value : '';
@@ -535,7 +683,7 @@ class AFilesEdit extends Component {
     }
 
     el =  document.getElementById('file_edit_name_edit');
-    if (this.props.hasOwnProperty('name_check')) {
+    if (this.props.name_check !== undefined) {
       if (!this.props.name_check(name)) {
         this.displayError("Duplicate or invalid name found. Please rename and try again.");
         el.focus();
@@ -544,19 +692,28 @@ class AFilesEdit extends Component {
     }
 
     let item_id = null;
-    if (this.props.hasOwnProperty('edit_item') && this.props.edit_item) {
-      if (this.props.edit_item.hasOwnProperty('id')) {
-        item_id = this.props.edit_item['id'];
+    if (this.props.edit_item !== undefined && this.props.edit_item) {
+      if (this.props.edit_item.id !== undefined) {
+        item_id = this.props.edit_item.id;
       }
     }
 
     this.props.submit(this.props.source, name, path, this.state.is_file, this.getAuthenticationFields(), item_id);
   }
 
+  /**
+   * Called when the user changes the path on the UI
+   * @param {Object} ev - the triggering event
+   * @param {string} ev.target.value - the element value at the time of the event
+   */
   onPathUpdated(ev) {
     this.setState({cur_path: ev.target.value});
   }
 
+  /**
+   * Checks that all the mandatory fields have been filled out on the UI
+   * @returns {bool} true indicates that all fields have been filled, and false that they haven't been filled
+   */
   verifyMandatoryFieldsFilled() {
     let el = document.getElementById('file_edit_name_edit');
     if (el) {
@@ -594,6 +751,9 @@ class AFilesEdit extends Component {
     return true;
   }
 
+  /**
+   * Generates the UI for defining remote server connections and folders
+   */
   render() {
     const cur_path = this.state.cur_path;
     const cur_name = this.state.name;

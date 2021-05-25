@@ -1,8 +1,21 @@
-// Templated UI generator
+/**
+ * @fileoverview Generates UI components for templated fields
+ * @author schnaufer@arizona.edu (Chris Schnaufer)
+ */
 import {Component} from 'react';
 import './TemplateUIElement.css';
 
+/**
+ * Generates UI components using templated information
+ * @extends Component
+ */
 class TemplateUIElement extends Component {
+
+  /**
+   * Initializes class instance
+   * @props {Object} props - the properties of the class instance
+   * @constructor
+   */
   constructor(props) {
     super(props);
 
@@ -17,32 +30,49 @@ class TemplateUIElement extends Component {
     this.generateSecretUI = this.generateSecretUI.bind(this);
     this.generateWorkflowItem = this.generateWorkflowItem.bind(this);
 
-    this.default_id_prefix = this.props.hasOwnProperty('id_prefix') && this.props.id_prefix ? '' + this.props.id_prefix : 'template_item_';
-    this.item_id = this.props.hasOwnProperty('id') && this.props.id ? this.props.id : null;
+    this.default_id_prefix = ((this.props.id_prefix !== undefined) && this.props.id_prefix) ? '' + this.props.id_prefix : 'template_item_';
+    this.item_id = ((this.props.id !== undefined) && this.props.id) ? this.props.id : null;
   }
 
+  /**
+   * Callback function for handling a browse request
+   * @callback TemplateUIElement~BrowseRequestCallback
+   * @param {Object} ev - the triggering event
+   * @param {string} element_id - the ID of the element associated with the browse request (not the button)
+   * @param {Object} item - the template item used to generate the UI
+   */
+
+  /**
+   * Common UI generator for folders and files (with a browse button)
+   * @param {Object} item - the template item to render
+   * @param {Object[]} choices - choices available for selection
+   * @param {string} choices.name - the name of the choice
+   * @param {string} choices.location - the path of the file/folder
+   * @param {string} choices.id - the ID of the choice
+   * @param {TemplateUIElement~BrowseRequestCallback} browse_cb - called when the user wants to browse
+   */
   generateBrowseUI(item, choices, browse_cb) {
     var default_string = null;
     var props = {};
     var name_value_map = {};
-    const is_mandatory = item.hasOwnProperty('mandatory') ? item.mandatory : true;
+    const is_mandatory = item.mandatory !== undefined ? item.mandatory : true;
     const have_browse_callback = (typeof browse_cb === 'function') ? true : false;
     const element_id = this.item_id !== null ? this.item_id : this.default_id_prefix + item.name;
     if (this.props.new_id) this.props.new_id(item, element_id);
 
-    if (item.hasOwnProperty('default')) {
-      default_string = item.default['location'];
+    if (item.default !== undefined) {
+      default_string = item.default.location;
       if (choices && choices.find((val) => val === item.default) === undefined) {
         choices = [...choices, item.default];
       }
     }
 
     if (!choices || (choices.length <= 0)) {
-      props['disabled'] = 'disabled';
+      props.disabled = 'disabled';
     }
 
     if (is_mandatory) {
-      props['required'] = 'required';
+      props.required = 'required';
     }
 
     if (typeof this.props.change === 'function') {
@@ -50,8 +80,8 @@ class TemplateUIElement extends Component {
         choices.forEach((item, idx) => {name_value_map[item.name + '_' + idx] = item.location;});
       }
 
-      props['onChange'] = (ev) => {
-        const location = name_value_map.hasOwnProperty(ev.target.value) ? name_value_map[ev.target.value] : null;
+      props.onChange = (ev) => {
+        const location = name_value_map[ev.target.value] !== undefined ? name_value_map[ev.target.value] : null;
         this.props.change(ev, location);
       };
     }
@@ -62,7 +92,7 @@ class TemplateUIElement extends Component {
           {choices && choices.map((item, idx) => {
             let option_props = {}
             if (default_string && (default_string === item.location)) {
-              option_props['selected'] = 'true';
+              option_props.selected = 'true';
             }
             return (
               <option value={item.name + '_' + idx} key={item.name + '_' + idx} {...option_props}
@@ -81,32 +111,38 @@ class TemplateUIElement extends Component {
     );
   }
 
+  /**
+   * Returns the UI for File templates
+   */
   generateFileUI() {
     const item = this.props.template;
     return this.generateBrowseUI(item, this.props.files, this.props.browse);
   }
 
+  /**
+   * Returns the UI for Float value templates
+   */
   generateFloatUI() {
     const item = this.props.template;
-    const minimum = item.hasOwnProperty('lowerbound') ? item.lowerbound : null;
-    const maximum = item.hasOwnProperty('upperbound') ? item.upperbound : null;
-    const step = item.hasOwnProperty('step') ? item.step : '0.01';
-    const is_mandatory = item.hasOwnProperty('mandatory') ? item.mandatory : true;
+    const minimum = item.lowerbound !== undefined ? item.lowerbound : null;
+    const maximum = item.upperbound !== undefined ? item.upperbound : null;
+    const step = item.step !== undefined ? item.step : '0.01';
+    const is_mandatory = item.mandatory !== undefined ? item.mandatory : true;
     const element_id = this.item_id !== null ? this.item_id : this.default_id_prefix + item.name;
     if (this.props.new_id) this.props.new_id(item, element_id);
 
     var props = {};
-    if (minimum) props['min'] = '' + minimum;
-    if (maximum) props['max'] = '' + maximum;
-    if (step) props['step']  = '' + step; 
-    if (item.hasOwnProperty('default')) {
-      props['defaultValue'] = item.default;
+    if (minimum) props.min = '' + minimum;
+    if (maximum) props.max = '' + maximum;
+    if (step) props.step  = '' + step; 
+    if (item.default !== undefined) {
+      props.defaultValue = item.default;
     }
     if (is_mandatory) {
-      props['required'] = 'required';
+      props.required = 'required';
     }
     if (typeof this.props.change === 'function') {
-      props['onChange'] = this.props.change;
+      props.onChange = this.props.change;
     }
 
     return (
@@ -117,32 +153,38 @@ class TemplateUIElement extends Component {
     );
   }
 
+  /**
+   * Returns the UI for Folder templates
+   */
   generateFolderUI() {
     const item = this.props.template;
     return this.generateBrowseUI(item, this.props.folders, null);
   }
 
+  /**
+   * Returns the UI for Integer templates
+   */
   generateIntegerUI() {
     const item = this.props.template;
-    const minimum = item.hasOwnProperty('lowerbound') ? item.lowerbound : null;
-    const maximum = item.hasOwnProperty('upperbound') ? item.upperbound : null;
-    const step = item.hasOwnProperty('step') ? item.step : null;
-    const is_mandatory = item.hasOwnProperty('mandatory') ? item.mandatory : true;
+    const minimum = item.lowerbound !== undefined ? item.lowerbound : null;
+    const maximum = item.upperbound !== undefined ? item.upperbound : null;
+    const step = item.step !== undefined ? item.step : null;
+    const is_mandatory = item.mandatory !== undefined ? item.mandatory : true;
     const element_id = this.item_id !== null ? this.item_id : this.default_id_prefix + item.name;
     if (this.props.new_id) this.props.new_id(item, element_id);
 
     var props = {};
-    if (minimum) props['min'] = '' + minimum;
-    if (maximum) props['max'] = '' + maximum;
-    if (step) props['step']  = '' + step; 
-    if (item.hasOwnProperty('default')) {
-      props['defaultValue'] = item.default;
+    if (minimum) props.min = '' + minimum;
+    if (maximum) props.max = '' + maximum;
+    if (step) props.step  = '' + step; 
+    if (item.default !== undefined) {
+      props.defaultValue = item.default;
     }
     if (is_mandatory) {
-      props['required'] = 'required';
+      props.required = 'required';
     }
     if (typeof this.props.change === 'function') {
-      props['onChange'] = this.props.change;
+      props.onChange = this.props.change;
     }
 
     return (
@@ -153,36 +195,43 @@ class TemplateUIElement extends Component {
     );
   }
 
+  /**
+   * Returns the UI indicator for required templates
+   * @param {bool} is_mandatory - flag indicating that the field is mandatory; assumed to true if null or undefined
+   */
   generateMandatoryUI(is_mandatory) {
     const cur_mandatory = is_mandatory || (is_mandatory === null) || (is_mandatory === undefined);
     return (<span className="template-ui-value-mandatory">{cur_mandatory ? '*' : ' '}</span>);
   }
 
+  /**
+   * Returns the UI for a text value entry template (can include specific choices for selection)
+   */
   generatePlainUI() {
     const item = this.props.template;
-    const min_length = item.hasOwnProperty('minlength') ? item.minlength : null;
-    const max_length = item.hasOwnProperty('maxlength') ? item.maxlength : null;
-    const is_dropdown = item.hasOwnProperty('choices');
-    const is_mandatory = item.hasOwnProperty('mandatory') ? item.mandatory : true;
+    const min_length = item.minlength !== undefined ? item.minlength : null;
+    const max_length = item.maxlength !== undefined ? item.maxlength : null;
+    const is_dropdown = item.choices !== undefined;
+    const is_mandatory = item.mandatory !== undefined ? item.mandatory : true;
     const element_id = this.item_id !== null ? this.item_id : this.default_id_prefix + item.name;
     if (this.props.new_id) this.props.new_id(item, element_id);
 
     var props = {};
     var default_string = null;
-    if (item.hasOwnProperty('default')) {
-      props['defaultValue'] = item.default;
-      default_string = props['defaultValue'];
+    if (item.default !== undefined) {
+      props.defaultValue = item.default;
+      default_string = props.defaultValue;
     }
     if (is_mandatory) {
-      props['required'] = 'required';
+      props.required = 'required';
     }
     if (typeof this.props.change === 'function') {
-      props['onChange'] = this.props.change;
+      props.onChange = this.props.change;
     }
 
     if (!is_dropdown) {
-      if (min_length) props['minLength'] = '' + min_length;
-      if (max_length) props['maxLength'] = '' + max_length;
+      if (min_length) props.minLength = '' + min_length;
+      if (max_length) props.maxLength = '' + max_length;
 
       return (
         <div id={element_id + '_wrapper'} className="template-ui-table-value-wrapper">
@@ -198,7 +247,7 @@ class TemplateUIElement extends Component {
             {item.choices.map((value) => {
               let option_props = {}
               if (default_string && (default_string === value)) {
-                option_props['selected'] = 'true';
+                option_props.selected = 'true';
               }
               return(<option key={item.name + '.' + value} value={value} {...option_props}>{value}</option>);})
             }
@@ -209,26 +258,29 @@ class TemplateUIElement extends Component {
     }
   }
 
+  /**
+   * Returns the UI for a Password template
+   */
   generatePasswordUI() {
     const item = this.props.template;
-    const min_length = item.hasOwnProperty('minlength') ? item.minlength : null;
-    const max_length = item.hasOwnProperty('maxlength') ? item.maxlength : null;
-    const is_mandatory = item.hasOwnProperty('mandatory') ? item.mandatory : true;
+    const min_length = item.minlength !== undefined ? item.minlength : null;
+    const max_length = item.maxlength !== undefined ? item.maxlength : null;
+    const is_mandatory = item.mandatory !== undefined ? item.mandatory : true;
     const element_id = this.item_id !== null ? this.item_id : this.default_id_prefix + item.name;
     if (this.props.new_id) this.props.new_id(item, element_id);
 
     // TODO: Add checkbox for showing password in plain text
     var props = {};
-    if (min_length) props['minLength'] = '' + min_length;
-    if (max_length) props['maxLength'] = '' + max_length;
-    if (item.hasOwnProperty('default')) {
-      props['defaultValue'] = item.default;
+    if (min_length) props.minLength = '' + min_length;
+    if (max_length) props.maxLength = '' + max_length;
+    if (item.default !== undefined) {
+      props.defaultValue = item.default;
     }
     if (is_mandatory) {
-      props['required'] = 'required';
+      props.required = 'required';
     }
     if (typeof this.props.change === 'function') {
-      props['onChange'] = this.props.change;
+      props.onChange = this.props.change;
     }
 
     return (
@@ -239,25 +291,28 @@ class TemplateUIElement extends Component {
     );
   }
 
+  /**
+   * Returns the UI for Secret templates (not a password, but needs to be hidden)
+   */
   generateSecretUI() {
     const item = this.props.template;
-    const min_length = item.hasOwnProperty('minlength') ? item.minlength : null;
-    const max_length = item.hasOwnProperty('maxlength') ? item.maxlength : null;
-    const is_mandatory = item.hasOwnProperty('mandatory') ? item.mandatory : true;
+    const min_length = item.minlength !== undefined ? item.minlength : null;
+    const max_length = item.maxlength !== undefined ? item.maxlength : null;
+    const is_mandatory = item.mandatory !== undefined ? item.mandatory : true;
     const element_id = this.item_id !== null ? this.item_id : this.default_id_prefix + item.name;
     if (this.props.new_id) this.props.new_id(item, element_id);
 
     var props = {};
-    if (min_length) props['minLength'] = '' + min_length;
-    if (max_length) props['maxLength'] = '' + max_length;
-    if (item.hasOwnProperty('default')) {
-      props['defaultValue'] = item.default;
+    if (min_length) props.minLength = '' + min_length;
+    if (max_length) props.maxLength = '' + max_length;
+    if (item.default !== undefined) {
+      props.defaultValue = item.default;
     }
     if (is_mandatory) {
-      props['required'] = 'required';
+      props.required = 'required';
     }
     if (typeof this.props.change === 'function') {
-      props['onChange'] = this.props.change;
+      props.onChange = this.props.change;
     }
 
     return (
@@ -268,6 +323,9 @@ class TemplateUIElement extends Component {
     );
   }
 
+  /**
+   * Returns the UI representing the specific Template type
+   */
   generateWorkflowItem() {
 
     switch(this.props.template.type) {
@@ -295,6 +353,9 @@ class TemplateUIElement extends Component {
     }
   }
 
+  /**
+   * Returns the UI for the template (includes template specific UI)
+   */
   render() {
     const base_id = this.default_id_prefix + this.props.template.name;
 
