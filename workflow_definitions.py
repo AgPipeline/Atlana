@@ -17,7 +17,12 @@ WORKFLOW_DEFINTIONS = [
       'description': 'Source image to process',
       'type': 'file',
       'mandatory': True,
-    }]  # End  of fields
+    }],   # End  of fields
+    'results': [{
+      'name': 'Soil masked image',
+      'type': 'file',
+      'restricted': False,
+    }]    # End of results
   }, {
     'name': 'Plot Clip',
     'description': 'Clips image to plot',
@@ -37,7 +42,12 @@ WORKFLOW_DEFINTIONS = [
       'type': 'file',
       'mandatory': True,
       'prev_command_path': 'file:0:path',
-    }]  # End  of fields
+    }],   # End  of fields
+    'results': [{
+      'name': 'Image clipped to plots',
+      'type': 'folder',
+      'restricted': False,
+    }]    # End of results
   }, {
     'name': 'Find files',
     'command': 'find_files2json',
@@ -55,7 +65,12 @@ WORKFLOW_DEFINTIONS = [
       'type': 'folder',
       'mandatory': True,
       'prev_command_path': 'top_path',
-    }]  # End  of fields
+    }],   # End  of fields
+    'results': [{
+      'name': 'Found files JSON file',
+      'type': 'file',
+      'restricted': True,
+    }]    # End of results
   }, {
     'name': 'Canopy Cover',
     'description': 'Calculate canopy cover on images',
@@ -82,7 +97,12 @@ WORKFLOW_DEFINTIONS = [
       'type': 'string',
       'mandatory': True,
       'prev_command_path': 'results_search_folder',
-    }]  # End  of fields
+    }],   # End  of fields
+    'results': [{
+      'name': 'Canopy cover calculation per plot',
+      'type': 'folder',
+      'restricted': False,
+    }]    # End of results
   }, {
     'name': 'Merge CSV',
     'command': 'merge_csv',
@@ -93,7 +113,12 @@ WORKFLOW_DEFINTIONS = [
       'type': 'folder',
       'mandatory': True,
       'prev_command_path': 'top_path',
-    }]  # End  of fields
+    }],   # End  of fields
+    'results': [{
+      'name': 'Canopy cover calculation file',
+      'type': 'file',
+      'restricted': False,
+    }]    # End of results
   }]  # End of steps
 }, {
   'name': 'Ratio Canopy Cover',
@@ -120,7 +145,12 @@ WORKFLOW_DEFINTIONS = [
       'lowerbound': 0.0,
       'upperbound': 255.0,
       'default': 1.0,
-    }]  # End  of fields
+    }],   # End  of fields
+    'results': [{
+      'name': 'Ratio soil masked image',
+      'type': 'file',
+      'restricted': False,
+    }]    # End of results
   }, {
     'name': 'Plot Clip',
     'description': 'Clips image to plot',
@@ -140,7 +170,12 @@ WORKFLOW_DEFINTIONS = [
       'type': 'file',
       'mandatory': True,
       'prev_command_path': 'file:0:path',
-    }]  # End  of fields
+    }],   # End  of fields
+    'results': [{
+      'name': 'Image clipped to plots',
+      'type': 'folder',
+      'restricted': False,
+    }]    # End of results
   }, {
     'name': 'Find files',
     'command': 'find_files2json',
@@ -158,7 +193,12 @@ WORKFLOW_DEFINTIONS = [
       'type': 'folder',
       'mandatory': True,
       'prev_command_path': 'top_path',
-    }]  # End  of fields
+    }],   # End  of fields
+    'results': [{
+      'name': 'Found files JSON file',
+      'type': 'file',
+      'restricted': True,
+    }]    # End of results
   }, {
     'name': 'Canopy Cover',
     'description': 'Calculate canopy cover on images',
@@ -185,7 +225,12 @@ WORKFLOW_DEFINTIONS = [
       'type': 'string',
       'mandatory': True,
       'prev_command_path': 'results_search_folder',
-    }]  # End  of fields
+    }],   # End  of fields
+    'results': [{
+      'name': 'Canopy cover calculation per plot',
+      'type': 'folder',
+      'restricted': False,
+    }]    # End of results
   }, {
     'name': 'Merge CSV',
     'command': 'merge_csv',
@@ -196,7 +241,12 @@ WORKFLOW_DEFINTIONS = [
       'type': 'folder',
       'mandatory': True,
       'prev_command_path': 'top_path',
-    }]  # End  of fields
+    }],   # End  of fields
+    'results': [{
+      'name': 'Canopy cover calculation file',
+      'type': 'file',
+      'restricted': False,
+    }]    # End of results
   }]  # End of steps
 },{
   'name': 'Greenness Levels',
@@ -214,7 +264,12 @@ WORKFLOW_DEFINTIONS = [
       'description': 'Source image to process',
       'type': 'file',
       'mandatory': True,
-    }]  # End  of fields
+    }],   # End  of fields
+    'results': [{
+      'name': 'Soil masked image',
+      'type': 'file',
+      'restricted': False,
+    }]    # End of results
   }, {
     'name': 'Plot Clip',
     'description': 'Clips image to plot',
@@ -234,7 +289,12 @@ WORKFLOW_DEFINTIONS = [
       'type': 'file',
       'mandatory': True,
       'prev_command_path': 'file:path',
-    }]  # End  of fields
+    }],   # End  of fields
+    'results': [{
+      'name': 'Image clipped to plots',
+      'type': 'folder',
+      'restricted': False,
+    }]    # End of results
   }, {
     'name': 'Find files',
     'command': 'find_files2json',
@@ -252,7 +312,12 @@ WORKFLOW_DEFINTIONS = [
       'type': 'folder',
       'mandatory': True,
       'prev_command_path': 'top_path',
-    }]  # End  of fields
+    }],   # End  of fields
+    'results': [{
+      'name': 'Found files JSON file',
+      'type': 'file',
+      'restricted': True,
+    }]    # End of results
   }, {
     'name': 'Greenness Indices',
     'description': 'Calculate greenness indicies on images',
@@ -279,7 +344,12 @@ WORKFLOW_DEFINTIONS = [
       'type': 'string',
       'mandatory': True,
       'prev_command_path': 'results_search_folder',
-    }]  # End  of fields
+    }],   # End  of fields
+    'results': [{
+      'name': 'Greeenness indices calculation per plot',
+      'type': 'folder',
+      'restricted': False,
+    }]    # End of results
   }, {
     'name': 'Merge CSV',
     'command': 'merge_csv',
@@ -290,7 +360,12 @@ WORKFLOW_DEFINTIONS = [
       'type': 'folder',
       'mandatory': True,
       'prev_command_path': 'top_path',
-    }]  # End  of fields
+    }],   # End  of fields
+    'results': [{
+      'name': 'Calculated greenness indices file',
+      'type': 'file',
+      'restricted': False,
+    }]    # End of results
   }]  # End of steps
 }, {
   'name': 'Ratio Greenness Levels',
@@ -317,7 +392,12 @@ WORKFLOW_DEFINTIONS = [
       'lowerbound': 0.0,
       'upperbound': 255.0,
       'default': 1.0,
-    }]  # End  of fields
+    }],   # End  of fields
+    'results': [{
+      'name': 'Ratio soil masked image',
+      'type': 'file',
+      'restricted': False,
+    }]    # End of results
   }, {
     'name': 'Plot Clip',
     'description': 'Clips image to plot',
@@ -337,7 +417,12 @@ WORKFLOW_DEFINTIONS = [
       'type': 'file',
       'mandatory': True,
       'prev_command_path': 'file:path',
-    }]  # End  of fields
+    }],   # End  of fields
+    'results': [{
+      'name': 'Image clipped to plots',
+      'type': 'folder',
+      'restricted': False,
+    }]    # End of results
   }, {
     'name': 'Find files',
     'command': 'find_files2json',
@@ -355,7 +440,12 @@ WORKFLOW_DEFINTIONS = [
       'type': 'folder',
       'mandatory': True,
       'prev_command_path': 'top_path',
-    }]  # End  of fields
+    }],   # End  of fields
+    'results': [{
+      'name': 'Found files JSON file',
+      'type': 'file',
+      'restricted': True,
+    }]    # End of results
   }, {
     'name': 'Greenness Indices',
     'description': 'Calculate greenness indicies on images',
@@ -382,7 +472,12 @@ WORKFLOW_DEFINTIONS = [
       'type': 'string',
       'mandatory': True,
       'prev_command_path': 'results_search_folder',
-    }]  # End  of fields
+    }],   # End  of fields
+    'results': [{
+      'name': 'Greeenness indices calculation per plot',
+      'type': 'folder',
+      'restricted': False,
+    }]    # End of results
   }, {
     'name': 'Merge CSV',
     'command': 'merge_csv',
@@ -393,7 +488,12 @@ WORKFLOW_DEFINTIONS = [
       'type': 'folder',
       'mandatory': True,
       'prev_command_path': 'top_path',
-    }]  # End  of fields
+    }],   # End  of fields
+    'results': [{
+      'name': 'Calculated greenness indices file',
+      'type': 'file',
+      'restricted': False,
+    }]    # End of results
   }]  # End of steps
 }
 ]

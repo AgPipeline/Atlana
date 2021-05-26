@@ -596,9 +596,7 @@ def handle_find_files2json(parameters: tuple, input_folder: str, working_folder:
     Return:
         A dictionary of addittional parameters to pass to the next command or None
     """
-    print("FINDFILES",parameters)
     search_name, search_folder = _find_parameter_values(parameters, ('file_name', 'top_path'))
-    print("FINDFILES PARAMS",str(search_name), str(search_folder))
 
     # Ensure we have our mandatory parameters
     _handle_missing_parameters('find_files2json', (search_name, search_folder), ('file_name','top_path'))
