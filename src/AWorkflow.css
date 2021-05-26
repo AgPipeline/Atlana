@@ -172,6 +172,12 @@
     cursor: pointer;
 }
 
+.workflow-details-refresh-pending {
+    border-color: lightgrey;
+    background-color: rgb(220, 255, 220);
+    cursor: default;
+}
+
 .workflow-details-details-wrapper {
     margin: 0px 10px 10px 10px;
     border: 1px solid black;

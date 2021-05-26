@@ -145,14 +145,14 @@ WORKFLOW_DEFINTIONS = [
     'name': 'Find files',
     'command': 'find_files2json',
     'fields': [{
-      'name': 'filename',
+      'name': 'file_name',
       'visibility': 'server',
       'description': 'File name to find',
       'type': 'string',
       'mandatory': True,
       'prev_command_path': 'file_name',
       }, {
-      'name': 'toppath',
+      'name': 'top_path',
       'visibility': 'server',
       'description': 'Top level folder to search on',
       'type': 'folder',
@@ -172,14 +172,14 @@ WORKFLOW_DEFINTIONS = [
       'type': 'file',
       'mandatory': False,
       }, {
-      'name': 'foundjsonfile',
+      'name': 'found_json_file',
       'visibility': 'server',
       'description': 'JSON file containing information on files to process',
       'type': 'file',
       'mandatory': True,
       'prev_command_path': 'found_json_file',
       }, {
-      'name': 'resultssearchfolder',
+      'name': 'results_search_folder',
       'visibility': 'server',
       'description': 'Search path as it appears in the results',
       'type': 'string',
@@ -190,7 +190,7 @@ WORKFLOW_DEFINTIONS = [
     'name': 'Merge CSV',
     'command': 'merge_csv',
     'fields': [{
-      'name': 'toppath',
+      'name': 'top_path',
       'visibility': 'server',
       'description': 'Top level folder to search on',
       'type': 'folder',
@@ -199,8 +199,8 @@ WORKFLOW_DEFINTIONS = [
     }]  # End  of fields
   }]  # End of steps
 },{
-  'name': 'Canopy Cover',
-  'description': 'Plot level canopy cover calculation',
+  'name': 'Greenness Levels',
+  'description': 'Plot level greenness level calculations',
   'id': 3,
   'steps': [{
     'name': 'Mask Soil on Image',
@@ -239,14 +239,14 @@ WORKFLOW_DEFINTIONS = [
     'name': 'Find files',
     'command': 'find_files2json',
     'fields': [{
-      'name': 'filename',
+      'name': 'file_name',
       'visibility': 'server',
       'description': 'File name to find',
       'type': 'string',
       'mandatory': True,
       'prev_command_path': 'file_name',
       }, {
-      'name': 'toppath',
+      'name': 'top_path',
       'visibility': 'server',
       'description': 'Top level folder to search on',
       'type': 'folder',
@@ -266,14 +266,14 @@ WORKFLOW_DEFINTIONS = [
       'type': 'file',
       'mandatory': False,
       }, {
-      'name': 'foundjsonfile',
+      'name': 'found_json_file',
       'visibility': 'server',
       'description': 'JSON file containing information on files to process',
       'type': 'file',
       'mandatory': True,
       'prev_command_path': 'found_json_file',
       }, {
-      'name': 'resultssearchfolder',
+      'name': 'results_search_folder',
       'visibility': 'server',
       'description': 'Search path as it appears in the results',
       'type': 'string',
@@ -284,7 +284,7 @@ WORKFLOW_DEFINTIONS = [
     'name': 'Merge CSV',
     'command': 'merge_csv',
     'fields': [{
-      'name': 'toppath',
+      'name': 'top_path',
       'visibility': 'server',
       'description': 'Top level folder to search on',
       'type': 'folder',
@@ -293,8 +293,8 @@ WORKFLOW_DEFINTIONS = [
     }]  # End  of fields
   }]  # End of steps
 }, {
-  'name': 'Ratio Canopy Cover',
-  'description':  'Plot level canopy cover calculation using a ratio-based soil mask',
+  'name': 'Ratio Greenness Levels',
+  'description':  'Plot level greenness levels calculation using a ratio-based soil mask',
   'id': 4,
   'steps': [{
     'name': 'Mask Soil on Image',
@@ -342,14 +342,14 @@ WORKFLOW_DEFINTIONS = [
     'name': 'Find files',
     'command': 'find_files2json',
     'fields': [{
-      'name': 'filename',
+      'name': 'file_name',
       'visibility': 'server',
       'description': 'File name to find',
       'type': 'string',
       'mandatory': True,
       'prev_command_path': 'file_name',
       }, {
-      'name': 'toppath',
+      'name': 'top_path',
       'visibility': 'server',
       'description': 'Top level folder to search on',
       'type': 'folder',
@@ -369,7 +369,7 @@ WORKFLOW_DEFINTIONS = [
       'type': 'file',
       'mandatory': False,
       }, {
-      'name': 'foundjsonfile',
+      'name': 'found_json_file',
       'visibility': 'server',
       'description': 'JSON file containing information on files to process',
       'type': 'file',
@@ -387,7 +387,7 @@ WORKFLOW_DEFINTIONS = [
     'name': 'Merge CSV',
     'command': 'merge_csv',
     'fields': [{
-      'name': 'toppath',
+      'name': 'top_path',
       'visibility': 'server',
       'description': 'Top level folder to search on',
       'type': 'folder',

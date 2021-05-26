@@ -390,6 +390,12 @@ class AWorkflow extends Component {
     // Make the request to get the messages
     const uri = Utils.getHostOrigin().concat('/workflow/messages/' + job_id);
 
+    let el = document.getElementById('workflow_details_refresh');
+    if (el) {
+      el.classList.add('workflow-details-refresh-pending');
+    }
+    let reset_el = () => void el.classList.remove('workflow-details-refresh-pending');
+    
     this.setState({pending_request: true});
     try {
       fetch(uri, {
@@ -397,10 +403,11 @@ class AWorkflow extends Component {
         credentials: 'include',
         }
       )
-      .then(response => {if (response.ok) return response.json(); else throw response.statusText})
-      .then(success => {this.setState({pending_request: false});this.handleWorkflowMessages(job_id, success)})
-      .catch(error => {this.setState({pending_request: false});console.log("ERROR",error);});
+      .then(response => {if (response.ok) return response.json(); else throw response.statusText;})
+      .then(success => {this.setState({pending_request: false});this.handleWorkflowMessages(job_id, success);reset_el();})
+      .catch(error => {reset_el(); this.setState({pending_request: false});console.log("ERROR",error);});
     } catch (err) {
+      reset_el();
       this.setState({pending_request: false});
       console.log("Fetch workflow details exception", err);
       throw err;
