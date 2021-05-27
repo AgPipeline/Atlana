@@ -1,11 +1,29 @@
-//Implementation of message display
+/**
+ * @fileoverview Implementation of message display
+ * @author schnaufer@arizona.edu (Chris Schnaufer)
+ */
 import { Component } from 'react';
 import './Message.css';
 
+/**
+ * Message title values
+ */
 var message_title = ['Error', 'Warning', 'Information'];
+
+/**
+ * Button text values
+ */
 var button_text = ['Done', 'Cancel', 'Ignore'];
 
+/**
+ * Handles displaying a message on the UI
+ * @extends Component
+ */
 class Message extends Component {
+  /**
+   * Initializes the class instance
+   * @param {Object} props - the properties of the instance
+   */
   constructor(props) {
     super(props);
 
@@ -13,6 +31,10 @@ class Message extends Component {
     this.onClose = this.onClose.bind(this);
     this.onIgnore = this.onIgnore.bind(this);
     this.onOk = this.onOk.bind(this);
+
+    // Initializing class instances
+    this.timer_id = null;      // The ID of the current timer
+    this.timeout = 3000;       // The total number of ms to show the window
 
     const cur_type = this.props.hasOwnProperty('type') ? this.props['type'] : Message.type.information;
     const cur_msg = (this.props.hasOwnProperty('msg') && this.props['msg']) ? this.props['msg'] : '<missing message>';
@@ -31,21 +53,27 @@ class Message extends Component {
     };
   }
 
-  timer_id = null;      // The ID of the current timer
-  timeout = 3000;       // The total number of ms to show the window
-
+  /**
+   * Type of message to display
+   */
   static type = {
     error: 0,
     warning: 1,
     information: 2,
   };
 
+  /**
+   * Number of buttons to display
+   */
   static buttons = {
     one: 1,     // OK button
     two: 2,     // OK-Cancel button
     three: 3,   // Ok-Ignore-Cancel button
   };
 
+  /**
+   * Called when the component is about to be unmounted
+   */
   componentWillUnmount() {
     let current_id = this.timer_id;
     this.timer_id = null;
@@ -55,6 +83,9 @@ class Message extends Component {
     }
   }
 
+  /**
+   * Generates the UI for the buttons
+   */
   generateButtons() {
     return (
       <>
@@ -83,27 +114,36 @@ class Message extends Component {
     );
   }
 
+  /**
+   * Handle the user clicking the close button
+   */
   onClose() {
-    console.log("CLOSE");
     if (this.props.hasOwnProperty('cancel')) {
       this.props['cancel'](this.props['id']);
     }
   }
 
+  /**
+   * Handle the user clicking the ignore button
+   */
   onIgnore() {
-    console.log("IGNORE");
     if (this.props.hasOwnProperty('ignore')) {
       this.props['ignore'](this.props['id']);
     }
   }
 
+  /**
+   * Handle the user clicking the ok button
+   */
   onOk(){
-    console.log("OK");
     if (this.props.hasOwnProperty('ok')) {
       this.props['ok'](this.props['id']);
     }
   }
 
+  /**
+   * Returns the UI for the message
+   */
   render() {
     let window_type_style = '';
     let close_button_style = '';

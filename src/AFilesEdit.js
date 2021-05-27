@@ -17,7 +17,6 @@ class AFilesEdit extends Component {
   /**
    * Initializes class instance
    * @props {Object} props - the properties of the class instance
-   * @constructor
    */
   constructor(props) {
     super(props);
@@ -117,7 +116,6 @@ class AFilesEdit extends Component {
    * @param {string} err.message - the message of the problem
    */
   connectRequestCatch(err) {
-    console.log('Error: File connect error: ', err);
     this.connectRequestError(err.message);
   }
 
@@ -145,7 +143,6 @@ class AFilesEdit extends Component {
    * @param {AFilesEdit~ConnectRequestFinishCallback} finish_cb - the callback for a successful request
    */
   connectRequestFinish(request_id, results, finish_cb) {
-    console.log("connectRequestFinish", results);
     // Ignore finished requests that are not us
     if (this.pending_fetch_id !== request_id + 1) {
       return;
@@ -200,7 +197,6 @@ class AFilesEdit extends Component {
    * @param {string} err.message - the error message
    */
   fetchRequestCatch(err) {
-    console.log('Error: file fetch error: ', err);
     this.fetchRequestError(err.message);
   }
 

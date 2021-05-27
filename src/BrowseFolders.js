@@ -15,7 +15,6 @@ class BrowseFolders extends Component {
   /**
    * Initializes class instance
    * @props {Object} props - the properties of the class instance
-   * @constructor
    */
   constructor(props) {
     super(props);
@@ -77,7 +76,6 @@ class BrowseFolders extends Component {
    * @param {string} err.message - the error meessage
    */
   connectRequestCatch(err) {
-    console.log('Error: File connect error: ', err);
     this.connectRequestError(err.message);
   }
 

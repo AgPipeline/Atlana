@@ -13,7 +13,6 @@ class MainMenu extends Component {
   /**
    * Initializes class instance
    * @props {Object} props - the properties of the class instance
-   * @constructor
    */
   constructor(props) {
     super(props);

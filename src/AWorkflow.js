@@ -3,12 +3,12 @@
  * @author schnaufer@arizona.edu (Chris Schnaufer)
  */
 import {Component} from 'react';
-import WorkspaceTitlebar from './WorkspaceTitlebar';
-import TemplateUIElement from './TemplateUIElement';
-import BrowseFolders  from './BrowseFolders';
-import workflowDefinitions from './WorkflowDefinitions';
-import Message from './Message';
-import Utils from './Utils';
+import WorkspaceTitlebar from './WorkspaceTitlebar.js';
+import TemplateUIElement from './TemplateUIElement.js';
+import BrowseFolders  from './BrowseFolders.js';
+import workflowDefinitions from './WorkflowDefinitions.js';
+import Message from './Message.js';
+import Utils from './Utils.js';
 import './AWorkflow.css';
 
 /**
@@ -93,7 +93,6 @@ class AWorkflow extends Component {
   /**
    * Initializes class instance
    * @props {Object} props - the properties of the class instance
-   * @constructor
    */
   constructor(props) {
     super(props);
@@ -133,6 +132,7 @@ class AWorkflow extends Component {
     this.prepareWorkflowStatus = this.prepareWorkflowStatus.bind(this);
     this.refreshWorkflowMessages = this.refreshWorkflowMessages.bind(this);
     this.runWorkflow = this.runWorkflow.bind(this);
+    this.showDownloadOptions = this.showDownloadOptions.bind(this);
     this.updateNewType = this.updateNewType.bind(this);
     this.workflowDetailsStatus = this.workflowDetailsStatus.bind(this);
     this.workflowStatus = this.workflowStatus.bind(this);
@@ -449,7 +449,7 @@ class AWorkflow extends Component {
         }
       )
       .then(response => {if (response.ok) return response.json(); else throw response.statusText})
-      .then(success => {this.setState({pending_request: false});console.log("STATUS",success);success_cb(job_id, success);})
+      .then(success => {this.setState({pending_request: false});success_cb(job_id, success);})
       .catch(error => {this.setState({pending_request: false});console.log("ERROR",error);});
     } catch (err) {
       this.setState({pending_request: false});
@@ -531,8 +531,15 @@ class AWorkflow extends Component {
 
   /**
    * Returns the UI of the workflow download indicator
+   * @param {Object} workflow_item - the workflow item to download the indicator for
+   * @param {int} workflow_item.status_code - the code of the workflow status
    */
-  generateDownloadUI() {
+  generateDownloadUI(workflow_item) {
+    // Only download when the job is complete
+    if (workflow_item.status_code !== job_status.completed) {
+      return null;
+    }
+
     return (
       <>
         <div id="workflow_details_download_wrapper" className="workflow-details-download-wrapper" >
@@ -709,7 +716,7 @@ class AWorkflow extends Component {
                     <td id={'workflow_detail_messages_' + item.id} className="workflow-detail-item workflow-detail-messages" onClick={(ev) => this.onViewDetails(ev, item.id)}>View</td>
                     <td id={'workflow_detail_del_' + item.id} className="workflow-detail-item workflow-detail-delete" onClick={(ev) => this.onDeleteItem(ev, item.id)}>Delete</td>
                     <td id={'workflow_detail_download_' + item.id} className="workflow-detail-item workflow-detail-download" onClick={(ev) => this.onDownloadItem(ev, item.id)}>
-                      {this.generateDownloadUI()}
+                      {this.generateDownloadUI(item)}
                     </td>
                   </tr>
                 ); 
@@ -856,7 +863,6 @@ class AWorkflow extends Component {
    * @param {string} update_el_id - the UI ID of the element to show the updated status
    */
   handleWorkflowStatus(job_id, status, update_el_id) {
-    console.log("Handle workflow status:", job_id, status, update_el_id);
     let cur_workflow = this.state.workflow_list.find(item => item.job_id === job_id);
 
     if (!cur_workflow) {
@@ -883,6 +889,7 @@ class AWorkflow extends Component {
     }
 
     cur_workflow.status = cur_status;
+    cur_workflow.status_code = status.result;
 
     // Update the UI
     let el = document.getElementById(update_el_id);
@@ -991,6 +998,11 @@ class AWorkflow extends Component {
       // TODO: Display error
       return;
     }
+    if (found_item.status_code !== job_status.completed) {
+      console.log("Unable to download workflow until it has completed");
+      // TODO: display error
+      return;
+    }
 
     const workflow_def = this.state.workflow_defs.find((item) => item.id === found_item.workflow_type);
     console.log("FOUND:", found_item, workflow_def);
@@ -1004,6 +1016,12 @@ class AWorkflow extends Component {
     form_data.append('workflow', JSON.stringify(this.prepareWorkflowForExport(workflow_def)));
     form_data.append('data', JSON.stringify(found_item.workflow_data));
     form_data.append('filename', save_filename);
+
+    const found_step = workflow_def.steps.find((item) => item.command === 'merge_csv');
+    if (found_step && found_step.results) {
+      let found_return = found_step.results.find((item) => item.type === 'file');
+      form_data.append('result', found_step.command + '/' + found_return.name);
+    }
 
     const uri = Utils.getHostOrigin().concat('/workflow/download');
     try {
@@ -1263,7 +1281,6 @@ class AWorkflow extends Component {
       params: [],
     };
     for (const param of values) {
-      console.log("  param", param);
       let param_info = {};
       if (param.step_idx !== undefined) {
         param_info.command = cur_template.steps[param.step_idx].command;
@@ -1298,6 +1315,15 @@ class AWorkflow extends Component {
       console.log("Run workflow exception", err);
       throw err;
     }
+  }
+
+  /**
+   * Enables the displaying of download options
+   * @param {Object} ev - the triggering event
+   * @param {string} workflow_id -the workflow ID associated with the download event
+   */
+  showDownloadOptions(ev, workflow_id) {
+    this.setState({downloading_id: workflow_id});
   }
 
   /**
@@ -1363,8 +1389,6 @@ class AWorkflow extends Component {
       let updated_workflow_defs = this.state.workflow_defs;
       updated_workflow_defs.push(cur_workflow);
       const cur_index = updated_workflow_defs.findIndex((item) => item.id === cur_workflow.id);
-
-      console.log('RUN WORKFLOW',this.workflow_configs[cur_workflow.id], updated_workflow_defs)
 
       // Reset some class variables
       this.generated_ids = [];

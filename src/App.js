@@ -43,7 +43,6 @@ class App extends Component {
   /**
    * Initializes instance of class
    * @param {Object} props - the properties associated with this object
-   * @constructor
    */
   constructor(props) {
     super(props);

@@ -29,7 +29,6 @@ class AFilesList extends Component {
   /**
    * Class instance initialization
    * @props {Object} props - the properties of the class instance
-   * @constructor
    */
   constructor(props) {
     super(props);

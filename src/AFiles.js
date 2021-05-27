@@ -36,7 +36,6 @@ class AFiles extends Component {
   /**
    * Initializes class instance
    * @props {Object} props - the properties of the class instance
-   * @constructor
    */
   constructor(props) {
     super(props);
@@ -246,7 +245,6 @@ class AFiles extends Component {
    * @param {string} item_id - the ID of the configuration to edit
    */
   editItem(ev, item_id) {
-    console.log("Edit " + this.new_type_id);
     let found_item = this.state.files_list.find((item) => item.id === item_id);
     if (!found_item) {
       this.displayError('Internal error prevented editing of this entry');
@@ -551,7 +549,6 @@ class AFiles extends Component {
     .then(response => {if (response.ok) return response.json(); else throw response.statusText})
     .then(success => {this.uploadCompleted(success);})
     .catch(error => {
-                     console.log('ERROR', error);
                      this.displayError('Unable to complete upload request: ' + error);
                      this.setState({upload_count: 0, display_uploading: false});
                     }
