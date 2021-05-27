@@ -244,10 +244,22 @@ class AWorkflow extends Component {
       cur_name = cur_item_name;
     }
 
+    // Reset some class variables
+    this.generated_ids = [];
+    this.mandatory_ids = [];
+    this.prepared_messages = null;
+    this.prepared_errors = null;
+
     // Set the state to show the workflow configuration UI
-    this.setState({mode: workflow_modes.run, cur_item_index: cur_index, cur_item_name: cur_name, 
-                   cur_item_title: 'New ' +  title_name, edit_add: true, edit_item: null,
-                   met_requirements: this.haveRequiredWorkflowParameters()});
+    this.setState({mode: workflow_modes.run,
+                   cur_item_index: cur_index,
+                   cur_item_name: cur_name, 
+                   cur_item_title: 'New ' +  title_name,
+                   edit_add: true,
+                   edit_item: null,
+                   met_requirements: this.haveRequiredWorkflowParameters(),
+                   errors: null,
+                   cur_messages: null});
   }
 
   /**
@@ -755,12 +767,14 @@ class AWorkflow extends Component {
             <div id="workflow_details_bar_wrapper" className="workflow-details-bar-wrapper">
               <div id="workflow_details_show_messages" className={messages_class_names} onClick={this.displayWorkflowMessages}>
                 <div className="workflow-details-show-text-wrapper">
-                  Messages <span className="details-count-item details-count-message">{message_count_string}</span>
+                  <img src="MessagesIndicator.png" alt="Messages" className="workflow-details-messages-indicator" />
+                  <span className="details-count-item details-count-message">{message_count_string}</span>
                 </div>
               </div>
               <div id="workflow_details_show_errors" className={error_class_names} onClick={this.displayWorkflowErrors}>
                 <div className="workflow-details-show-text-wrapper">
-                  Errors <span className="details-count-item details-count-error">{error_count_string}</span>
+                  <img src="ErrorsIndicator.png" alt="Other messages" className="workflow-details-errors-indicator" />
+                  <span className="details-count-item details-count-error">{error_count_string}</span>
                 </div>
               </div>
               <div className="workflow-details-show-spacer"></div>
@@ -1352,6 +1366,12 @@ class AWorkflow extends Component {
 
       console.log('RUN WORKFLOW',this.workflow_configs[cur_workflow.id], updated_workflow_defs)
 
+      // Reset some class variables
+      this.generated_ids = [];
+      this.mandatory_ids = [];
+      this.prepared_messages = null;
+      this.prepared_errors = null;
+
       // Set the state to show the workflow configuration UI
       this.setState({mode: workflow_modes.run,
                      workflow_defs: updated_workflow_defs,
@@ -1360,7 +1380,9 @@ class AWorkflow extends Component {
                      cur_item_title: 'Run ' +  cur_workflow.name,
                      edit_add: true,
                      edit_item: null,
-                     met_requirements: this.haveRequiredWorkflowParameters()});
+                     met_requirements: this.haveRequiredWorkflowParameters(),
+                     errors: null,
+                     cur_messages: null});
     }
   }
 

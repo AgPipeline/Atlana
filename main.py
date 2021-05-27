@@ -19,7 +19,7 @@ from flask import Flask, make_response, render_template, request, send_file, ses
 from flask_cors import CORS, cross_origin
 from werkzeug.utils import secure_filename
 
-from workflow_definitions import WORKFLOW_DEFINTIONS
+from workflow_definitions import WORKFLOW_DEFINITIONS
 
 def _get_secret_key():
     """Returns a value to be used as a secret key"""
@@ -773,7 +773,7 @@ def handle_workflow_start() -> tuple:
     print("Workflow data:", workflow_data)
 
     # Find the workflow
-    for one_workflow in WORKFLOW_DEFINTIONS:
+    for one_workflow in WORKFLOW_DEFINITIONS:
         if one_workflow['id'] == workflow_data['id']:
             cur_workflow = one_workflow
             break
@@ -817,6 +817,23 @@ def handle_workflow_start() -> tuple:
         session['workflows'] = cur_workflows
 
     return json.dumps({'id': workflow_id})
+
+
+#@app.route('/workflow/recover', methods=['GET'])
+#@cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
+#def handle_workflow_recover() -> tuple:
+#    """Attempts to recover workflows
+#    """
+#    cur_workflows = session['workflows']
+#    found_workflow_ids = []
+#    if cur_workflows:
+#        for one_workflow_id in cur_workflows:
+#            working_dir = os.path.join(tempfile.gettempdir(), 'atlana', one_workflow_id)
+#            workflow_info = os.path.join(working_dir, 'queue')
+#            if os.path.exists(working_dir) and os.path.isdir(working_dir) and
+#               os.path.exists(workflow_info) and os.path.isfile(workflow_info):
+#                # Recover the workflow
+#                found_workflows.append(one_workflow_dir)
 
 
 @app.route('/workflow/delete/<string:workflow_id>', methods=['PUT'])

@@ -116,10 +116,20 @@
 }
 
 .workflow-details-show-text-wrapper {
+    display:  flex;
+    flex-direction: row;
 }
 
 .workflow-details-show-text-wrapper:hover {
     background-color: #e0e0e0;
+}
+
+.workflow-details-messages-indicator {
+    margin-right:  7px;
+}
+
+.workflow-details-errors-indicator {
+    margin-right:  7px;
 }
 
 .workflow-details-show-messages {

@@ -1,6 +1,6 @@
 """Contains workflow definitions"""
 
-WORKFLOW_DEFINTIONS = [
+WORKFLOW_DEFINITIONS = [
 {
   'name': 'Canopy Cover',
   'description': 'Plot level canopy cover calculation',
@@ -288,7 +288,7 @@ WORKFLOW_DEFINTIONS = [
       'description': 'Source image to process',
       'type': 'file',
       'mandatory': True,
-      'prev_command_path': 'file:path',
+      'prev_command_path': 'file:0:path',
     }],   # End  of fields
     'results': [{
       'name': 'Image clipped to plots',
@@ -416,7 +416,7 @@ WORKFLOW_DEFINTIONS = [
       'description': 'Source image to process',
       'type': 'file',
       'mandatory': True,
-      'prev_command_path': 'file:path',
+      'prev_command_path': 'file:0:path',
     }],   # End  of fields
     'results': [{
       'name': 'Image clipped to plots',

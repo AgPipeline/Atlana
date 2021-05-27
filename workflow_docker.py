@@ -253,6 +253,7 @@ def _run_command(command: str, input_folder: str, output_folder: str, json_file_
         logging.error('Unable to retrieve messages and/or errors for command: %s', command)
         logging.warning('Ignoring problems with fetching output for command: %s', command)
 
+    logging.error("HACK: RETURN VALUE: %s" % str(return_value))
     return return_value
 
 
