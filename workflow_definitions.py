@@ -118,6 +118,7 @@ WORKFLOW_DEFINITIONS = [
       'name': 'Canopy cover calculation file',
       'type': 'file',
       'restricted': False,
+      'filename': 'canopycover.csv',
     }]    # End of results
   }]  # End of steps
 }, {
@@ -246,6 +247,7 @@ WORKFLOW_DEFINITIONS = [
       'name': 'Canopy cover calculation file',
       'type': 'file',
       'restricted': False,
+      'filename': 'canopycover.csv',
     }]    # End of results
   }]  # End of steps
 },{
@@ -365,6 +367,7 @@ WORKFLOW_DEFINITIONS = [
       'name': 'Calculated greenness indices file',
       'type': 'file',
       'restricted': False,
+      'filename': 'rgb_plot.csv',
     }]    # End of results
   }]  # End of steps
 }, {
@@ -493,6 +496,7 @@ WORKFLOW_DEFINITIONS = [
       'name': 'Calculated greenness indices file',
       'type': 'file',
       'restricted': False,
+      'filename': 'rgb_plot.csv',
     }]    # End of results
   }]  # End of steps
 }

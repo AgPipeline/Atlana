@@ -1,6 +1,7 @@
 """Server side API"""
 
 import json
+import datetime
 import os
 import fnmatch
 import time
@@ -767,10 +768,10 @@ def handle_workflow_start() -> tuple:
     Request body:
         config: the workflow configuration to run
     """
+    print("Workflow start")
     cur_workflow = None
 
     workflow_data = request.get_json(force=True)
-    print("Workflow data:", workflow_data)
 
     # Find the workflow
     for one_workflow in WORKFLOW_DEFINITIONS:
@@ -779,7 +780,6 @@ def handle_workflow_start() -> tuple:
             break
 
     # If we can't find the workflow, check for uploaded workflows
-    print("RUN:", str(cur_workflow), session)
     if cur_workflow is None and 'workflow_files' in session and session['workflow_files'] is not None:
         if workflow_data['id'] in session['workflow_files']:
             workflow_file_path = os.path.join(WORKFLOW_FILE_START_PATH, session['workflow_files'][workflow_data['id']])
@@ -816,7 +816,7 @@ def handle_workflow_start() -> tuple:
         cur_workflows.append(workflow_id)
         session['workflows'] = cur_workflows
 
-    return json.dumps({'id': workflow_id})
+    return json.dumps({'id': workflow_id, 'start_ts': datetime.datetime.now().isoformat().split('.')[0]})
 
 
 #@app.route('/workflow/recover', methods=['GET'])
@@ -946,8 +946,9 @@ def return_workflow_download() -> tuple:
     # Get the form contents
     workflow = json.loads(request.form['workflow'])
     workflow_data = json.loads(request.form['data'])
-    save_filename = request.form['filename']
-    if not save_filename:
+    if 'filename' in request.form:
+        save_filename = request.form['filename']
+    else:
         save_filename = 'workflow.json'
 
     print("Download: ", workflow,  workflow_data, save_filename)
@@ -967,6 +968,70 @@ def return_workflow_download() -> tuple:
     }
 
     response = make_response(json.dumps(return_workflow, indent=2))
+    response.headers.set('Content-Type', 'text')
+    response.headers.set('Content-Disposition', 'attachment', filename=save_filename)
+
+    return response
+
+
+@app.route('/workflow/artifact', methods=['POST'])
+@cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
+def return_workflow_artifact() -> tuple:
+    """Handles returning a workflow for downloading"""
+    # Get the form contents
+    print("Workflow artifact")
+    workflow = json.loads(request.form['workflow'])
+    workflow_id = request.form['workflow_id']
+    data_path = request.form['workflow_path']
+    if 'filename' in request.form:
+        save_filename = request.form['filename']
+    else:
+        save_filename = None
+
+    print("ARTIFACT:", workflow_id, data_path, str(save_filename), workflow)
+
+    # Check parameters
+    cur_workflows = session['workflows']
+    if not cur_workflows or workflow_id not in cur_workflows:
+        msg = "ERROR: attempt made to access invalid workflow %s" % workflow_id
+        print(msg)
+        return msg, 400     # Bad request
+
+    start_dir = os.path.join(tempfile.gettempdir(), 'atlana')
+    working_dir = os.path.abspath(os.path.join(start_dir, workflow_id))
+    if not working_dir.startswith(start_dir):
+        print('Invalid workflow artifact requested: "%s"' % workflow_id, flush=True)
+        return 'Resource not found', 400
+
+    # Find the file to download
+    found_file = None
+    step_command, artifact_name = data_path.split('|')
+    print("ARTIFACT:",step_command, artifact_name)
+    for one_step in workflow['steps']:
+        if one_step['command'] == step_command:
+            for one_result in one_step['results']:
+                if one_result['name'] == artifact_name:
+                    found_file = one_result['filename']
+                    break
+        if found_file is not None:
+            break
+
+    # Check that we can download it
+    artifact_path = os.path.abspath(os.path.join(working_dir, step_command, found_file))
+    print("ARTIFACT PATH:",artifact_path,working_dir)
+    if not artifact_path.startswith(working_dir):
+        print('Invalid workflow artifact requested: "%s" "%s"' % (workflow_id, artifact_name), flush=True)
+        return 'Resource not found', 400
+    if not os.path.exists(artifact_path) or not os.path.isfile(artifact_path):
+        print('Invalid workflow artifact file requested: "%s" "%s"' % (workflow_id, artifact_name), flush=True)
+        return 'Resource not found', 400
+
+    if not save_filename:
+        save_filename = found_file
+
+    print("ARTIFACT RETURNING", artifact_path, save_filename)
+    with open(artifact_path, 'r') as in_file:
+        response = make_response(in_file.read())
     response.headers.set('Content-Type', 'text')
     response.headers.set('Content-Disposition', 'attachment', filename=save_filename)
 

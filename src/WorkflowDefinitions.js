@@ -143,7 +143,8 @@ var workflowDefinitions = [
           {
             "name": "Canopy cover calculation file",
             "type": "file",
-            "restricted": false
+            "restricted": false,
+            "filename": "canopycover.csv"
           }
         ]
       }
@@ -303,7 +304,8 @@ var workflowDefinitions = [
           {
             "name": "Canopy cover calculation file",
             "type": "file",
-            "restricted": false
+            "restricted": false,
+            "filename": "canopycover.csv"
           }
         ]
       }
@@ -357,7 +359,7 @@ var workflowDefinitions = [
             "description": "Source image to process",
             "type": "file",
             "mandatory": true,
-            "prev_command_path": "file:path"
+            "prev_command_path": "file:0:path"
           }
         ],
         "results": [
@@ -453,7 +455,8 @@ var workflowDefinitions = [
           {
             "name": "Calculated greenness indices file",
             "type": "file",
-            "restricted": false
+            "restricted": false,
+            "filename": "rgb_plot.csv"
           }
         ]
       }
@@ -517,7 +520,7 @@ var workflowDefinitions = [
             "description": "Source image to process",
             "type": "file",
             "mandatory": true,
-            "prev_command_path": "file:path"
+            "prev_command_path": "file:0:path"
           }
         ],
         "results": [
@@ -613,7 +616,8 @@ var workflowDefinitions = [
           {
             "name": "Calculated greenness indices file",
             "type": "file",
-            "restricted": false
+            "restricted": false,
+            "filename": "rgb_plot.csv"
           }
         ]
       }

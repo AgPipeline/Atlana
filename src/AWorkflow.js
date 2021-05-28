@@ -18,6 +18,7 @@ var workflow_titles = [
   'Name',
   'Type',
   'Status',
+  'Started',
   'ID',
   ' ',
   ' ',
@@ -707,11 +708,13 @@ class AWorkflow extends Component {
             </thead>
             <tbody>
               {this.state.workflow_list.map((item) => {
+                const ts_string = item.start_ts ? item.start_ts.replace('T', ' ') : '';
                 return (
                   <tr id={'workflow_detail_row_' + item.id} key={item.id} className="workflow-detail-row">
                     <td id={'workflow_detail_name_' + item.id} className="workflow-detail-item workflow-detail-name">{item.name}</td>
                     <td id={'workflow_detail_type_' + item.id} className="workflow-detail-item workflow-detail-type">{item.workflow_type}</td>
                     <td id={'workflow_detail_status_' + item.id} className="workflow-detail-item workflow-detail-status">{item.status}</td>
+                    <td id={'workflow_detail_started_' + item.id} className="workflow-detail-item workflow-detail-started">{ts_string}</td>
                     <td id={'workflow_detail_id_' + item.id} className="workflow-detail-item workflow-detail-id">{item.id}</td>
                     <td id={'workflow_detail_messages_' + item.id} className="workflow-detail-item workflow-detail-messages" onClick={(ev) => this.onViewDetails(ev, item.id)}>View</td>
                     <td id={'workflow_detail_del_' + item.id} className="workflow-detail-item workflow-detail-delete" onClick={(ev) => this.onDeleteItem(ev, item.id)}>Delete</td>
@@ -828,6 +831,7 @@ class AWorkflow extends Component {
     console.log(results, workflow_info, workflow_data);
     workflow_info.job_id = results.id;
     workflow_info.workflow_data = workflow_data;
+    workflow_info.start_ts = results.start_ts;
 
     // Add the job
     this.props.onAdd(workflow_info);
@@ -874,6 +878,8 @@ class AWorkflow extends Component {
       return undefined;
     }
 
+    const prev_status_code = cur_workflow.status_code;
+
     let cur_status = '';
     switch (status.result){
       case job_status.started: cur_status = 'Starting'; break;
@@ -895,6 +901,11 @@ class AWorkflow extends Component {
     let el = document.getElementById(update_el_id);
     if (el) {
       el.innerHTML = cur_status;
+    }
+    
+    if (status.result === job_status.completed && prev_status_code === job_status.completed) {
+      // Refresh the whole UI
+      this.setState({workflow_list: this.state.workflow_list});
     }
 
     return status.result;
@@ -1017,12 +1028,6 @@ class AWorkflow extends Component {
     form_data.append('data', JSON.stringify(found_item.workflow_data));
     form_data.append('filename', save_filename);
 
-    const found_step = workflow_def.steps.find((item) => item.command === 'merge_csv');
-    if (found_step && found_step.results) {
-      let found_return = found_step.results.find((item) => item.type === 'file');
-      form_data.append('result', found_step.command + '/' + found_return.name);
-    }
-
     const uri = Utils.getHostOrigin().concat('/workflow/download');
     try {
       fetch(uri, {
@@ -1056,6 +1061,51 @@ class AWorkflow extends Component {
       throw err;
     }
 
+    const found_step = workflow_def.steps.find((item) => item.command === 'merge_csv');
+    if (found_step && found_step.results) {
+      let found_return = found_step.results.find((item) => item.type === 'file');
+      if (found_return) {
+        const save_filename = found_return.filename !== undefined ? found_return.filename : found_return.name.replaceAll(' ', '_');
+        const form_data = new FormData();
+        form_data.append('workflow', JSON.stringify(this.prepareWorkflowForExport(workflow_def)));
+        form_data.append('workflow_id', found_item.job_id);
+        form_data.append('workflow_path', found_step.command + '|' + found_return.name);
+        form_data.append('filename', save_filename);
+
+        const uri = Utils.getHostOrigin().concat('/workflow/artifact');
+        try {
+          fetch(uri, {
+            method: 'POST',
+            credentials: 'include',
+            body: form_data
+            }
+          )
+          .then(response => response.blob())
+          .then(blob => {
+            // Create a download object
+            const url = window.URL.createObjectURL(
+              new Blob([blob]),
+            );
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute(
+              'download',
+              save_filename,
+            );
+            // Append to html link element page
+            document.body.appendChild(link);
+            // Start download
+            link.click();
+            // Clean up and remove the link
+            link.parentNode.removeChild(link);
+          })
+          .catch(error => console.log("ERROR",error));
+        } catch (err) {
+          console.log("Run workflow exception", err);
+          throw err;
+        }
+      }
+    }
   }
 
   /**

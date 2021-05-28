@@ -728,8 +728,8 @@ def handle_greenness_indices(parameters: tuple, input_folder: str, working_folde
     logging.debug("Command JSON: %s", str(json_args))
 
     # Run the command
-    ret_value = _run_command('canopycover', input_folder, working_folder, json_file_path, msg_func, err_func,
-                             [[new_json_filename,'/scif/apps/src/greenness_indices_files.json']])
+    ret_value = _run_command('greenness-indices', input_folder, working_folder, json_file_path, msg_func, err_func,
+                             [[new_json_filename,'/scif/apps/src/greenness-indices_files.json']])
 
     command_results = None
     if ret_value == 0:
