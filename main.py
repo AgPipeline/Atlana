@@ -571,7 +571,7 @@ def sendfile(filename: str):
 
     # Make sure we're only serving something that's in the same location that we are in and that it exists
     if not fullpath or not os.path.exists(fullpath) or not fullpath.startswith(RESOURCE_START_PATH):
-        return 'Resource not found', 400
+        return 'Resource not found', 404
 
     return send_file(fullpath)
 
@@ -585,7 +585,7 @@ def sendcss(filename: str):
     fullpath = os.path.realpath(os.path.join(RESOURCE_START_PATH, 'css', filename))
 
     if not filename or not os.path.exists(fullpath) or not fullpath.startswith(RESOURCE_START_PATH):
-        return 'Resource not found', 400
+        return 'Resource not found', 404
 
     return send_file(fullpath)
 
@@ -599,7 +599,7 @@ def sendjs(filename: str):
     fullpath = os.path.realpath(os.path.join(RESOURCE_START_PATH, 'js', filename))
 
     if not filename or not os.path.exists(fullpath) or not fullpath.startswith(RESOURCE_START_PATH):
-        return 'Resource not found', 400
+        return 'Resource not found', 404
 
     return send_file(fullpath)
 
@@ -855,7 +855,7 @@ def handle_workflow_delete(workflow_id: str) -> tuple:
         working_dir = os.path.abspath(os.path.join(start_dir, workflow_id))
         if not working_dir.startswith(start_dir):
             print('Invalid workflow requested: "%s"' % workflow_id, flush=True)
-            return 'Resource not found', 400
+            return 'Resource not found', 404
 
         if os.path.isdir(working_dir):
             # If it's not completed running, return a message
@@ -892,7 +892,7 @@ def handle_workflow_status(workflow_id: str) -> tuple:
         working_dir = os.path.abspath(os.path.join(start_dir, workflow_id))
         if not working_dir.startswith(start_dir):
             print('Invalid workflow requested: "%s"' % workflow_id, flush=True)
-            return 'Resource not found', 400
+            return 'Resource not found', 404
 
         if not os.path.isdir(working_dir):
             msg = "ERROR: requested workflow no longer exists"
@@ -925,7 +925,7 @@ def get_workflow_messages(workflow_id: str) -> tuple:
         working_dir = os.path.abspath(os.path.join(start_dir, workflow_id))
         if not working_dir.startswith(start_dir):
             print('Invalid workflow requested: "%s"' % workflow_id, flush=True)
-            return 'Resource not found', 400
+            return 'Resource not found', 404
 
         if not os.path.isdir(working_dir):
             msg = "ERROR: requested workflow no longer exists"
@@ -1001,7 +1001,7 @@ def return_workflow_artifact() -> tuple:
     working_dir = os.path.abspath(os.path.join(start_dir, workflow_id))
     if not working_dir.startswith(start_dir):
         print('Invalid workflow artifact requested: "%s"' % workflow_id, flush=True)
-        return 'Resource not found', 400
+        return 'Resource not found', 404
 
     # Find the file to download
     found_file = None
@@ -1021,10 +1021,10 @@ def return_workflow_artifact() -> tuple:
     print("ARTIFACT PATH:",artifact_path,working_dir)
     if not artifact_path.startswith(working_dir):
         print('Invalid workflow artifact requested: "%s" "%s"' % (workflow_id, artifact_name), flush=True)
-        return 'Resource not found', 400
+        return 'Resource not found', 404
     if not os.path.exists(artifact_path) or not os.path.isfile(artifact_path):
         print('Invalid workflow artifact file requested: "%s" "%s"' % (workflow_id, artifact_name), flush=True)
-        return 'Resource not found', 400
+        return 'Resource not found', 404
 
     if not save_filename:
         save_filename = found_file
@@ -1110,6 +1110,40 @@ def workflow_upload_file():
         session['workflow_files'] = {}.update(session['workflow_files']).update(loaded_file_info)
 
     return json.dumps({'workflows': return_workflows, 'messages': return_messages})
+
+
+
+@app.route('/template/<lang>/<algorithm>', methods=['GET'])
+@cross_origin(origin='127.0.0.1:3000')
+def template_file(lang: str, algorithm: str):
+    """Upload template file for editing"""
+    print("CODE TEMPLATE", lang, algorithm)
+
+    template_base_path = os.path.realpath(os.path.join(OUR_LOCAL_PATH, 'template'))
+    template_path = os.path.realpath(os.path.join(template_base_path, lang))
+    print("Path:",  template_path)
+
+    if not template_path.startswith(template_base_path) or not os.path.exists(template_path):
+        print('Invalid template requested: "%s"' % template_path, flush=True)
+        return 'Resource not found', 404
+
+    # Find the requested template
+    found_name = None
+    for one_name in os.listdir(template_path):
+        if one_name.startswith(algorithm):
+            cur_file_path = os.path.join(template_path, one_name)
+            if os.path.isfile(cur_file_path):
+                found_name = cur_file_path
+                break
+
+    if found_name is None:
+        print('Unable to find requested algorithm: "%s" "%s"' % (algorithm, template_path), flush=True)
+        return 'Algorithm not found', 400
+
+    with open(found_name, 'r') as in_file:
+        response = make_response(in_file.read())
+    response.headers.set('Content-Type', 'text')
+    return response
 
 
 if __name__ == '__main__':

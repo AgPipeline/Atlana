@@ -902,7 +902,7 @@ class AWorkflow extends Component {
     if (el) {
       el.innerHTML = cur_status;
     }
-    
+
     if (status.result === job_status.completed && prev_status_code === job_status.completed) {
       // Refresh the whole UI
       this.setState({workflow_list: this.state.workflow_list});

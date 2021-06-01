@@ -5,6 +5,8 @@
 import { Component } from 'react';
 import states from './States.js';
 import MainMenu from './MainMenu.js';
+import AAlgorithm from './AAlgorithm.js';
+import AAlgorithmTypes from './AAlgorithmTypes.js';
 import AFiles from './AFiles.js';
 import AWorkflow from './AWorkflow.js';
 import ConfigStore from './ConfigStore.js';
@@ -31,6 +33,12 @@ var menu = [
   items: [{
     name: 'Image',
     id: states.workflow_image
+  }]
+}, {
+  name: 'Algorithms',
+  items: [{
+    name: 'RGB Plot',
+    id: states.algorithm_rgb_plot
   }]
 }
 ];
@@ -178,7 +186,8 @@ class App extends Component {
               {this.state.mode === states.data_files && <AFiles files={this.getFiles} onAdd={this.addFile} onUpdate={this.updateFile}
                                                            onDelete={this.deleteFile} onDone={this.setMainMenu} />}
               {this.state.mode === states.workflow_image && <AWorkflow workflows={this.getWorkflows} files={this.getFiles} onAdd={this.addWorkflow}
-                                                          onDelete={this.deleteWorkflow} onUpdate={this.updateWorkflow} onDone={this.setMainMenu}/>}
+                                                          onDelete={this.deleteWorkflow} onUpdate={this.updateWorkflow} onDone={this.setMainMenu} />}
+              {this.state.mode === states.algorithm_rgb_plot && <AAlgorithm type={AAlgorithmTypes.rgb_plot} onDone={this.setMainMenu} />}
             </div>
           </span>
         </span>

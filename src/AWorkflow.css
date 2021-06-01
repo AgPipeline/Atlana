@@ -275,6 +275,27 @@
     cursor: default;
 }
 
+.workflow-detail-row {
+}
+
+.workflow-detail-item{
+}
+
+.workflow-detail-name {
+}
+
+.workflow-detail-type{
+}
+
+.workflow-detail-status {
+}
+
+.workflow-detail-started {
+}
+
+.workflow-detail-id {
+}
+
 .workflow-detail-messages {
     margin: 5px;
     padding: 5px;

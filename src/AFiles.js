@@ -60,7 +60,6 @@ class AFiles extends Component {
     this.getTitle = this.getTitle.bind(this);
     this.uploadHandle = this.uploadHandle.bind(this);
     this.nameCheck = this.nameCheck.bind(this);
-    this.onGoBack = this.onGoBack.bind(this);
     this.updateNewType = this.updateNewType.bind(this);
 
     // Initialize variables that are used while uploading files
@@ -453,13 +452,6 @@ class AFiles extends Component {
     } else {
       return found_item !== undefined;
     }
-  }
-
-  /**
-   * Handles the pressing of the back navigation button
-   */
-  onGoBack() {
-    this.props.onDone();
   }
 
   /**
