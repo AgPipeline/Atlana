@@ -1,7 +1,6 @@
 
 .algorithm-edit-wrapper {
-    ma-width: 100%;
-    min-height: 100%;
+    max-width: 100%;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
@@ -9,42 +8,138 @@
     align-items: stretch;
 }
 
-.algorithm-edit-props-wrapper {
-    display:  flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    align-content: flex-start;
-    align-items: flex-start;
-}
-
 .algorithm-edit-edit-wrapper {
     margin-top: 20px;
-    height: 65vh;
-    max-width:  700px;
+    height: 60vh;
+    max-width: 700px;
     display: inline-block;
     position: relative;
 }
 
-.algorithm-edit-prop-item-wrapper {
-    margin-left:  20px;
-    display:  flex;
+.algorithm-edit-variables-wrapper {
+    display: flex;
     flex-direction: row;
     justify-content: flex-start;
     align-content: flex-start;
-    align-items: flex-start;
+    align-items: stretch;
 }
 
-.algorithm-edit-prop-item-prompt {
-    margin-right: 10px;
+.algorithm-edit-prop-wrapper {
+    border: 1px solid black;
+    border-radius: 3px;
+    padding: 5px;
+    font-size: small;
+    height: 5em;
+    overflow: scroll;
 }
 
-.algorithm-edit-prop-item {
+.algorithm-field-edit-wrapper {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    align-content: flex-start;
+    align-items: stretch;
 }
 
-.algorithm-edit-prop-item-author-prompt {
+.algorithm-field-edit-prompt {
 }
 
-.algorithm-edit-prop-item-author {
+.algorithm-field-edit-spacer {
+    flex: 20;
+}
+
+.algorithm-field-edit-button {
+    position: fixed;
+    padding: 1px 3px 1px 3px;
+    border: 1px solid black;
+    border-radius: 5px;
+    background-color: lightgreen;
+    cursor: pointer;
+}
+
+.algorithm-field-wrapper {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-content: flex-start;
+    align-items: stretch;
+}
+
+.algorithm-field-prompt {
+    font-weight: bold;
+}
+
+.algorithm-field-value:before {
+    content: "\"";
+}
+
+.algorithm-field-value {
+    font-style: italic;
+}
+
+.algorithm-field-value:after {
+    content: "\"";
+}
+
+.return-variables-wrapper {
+    margin-left: 20px;
+    border: 1px solid black;
+    border-radius: 3px;
+    padding: 5px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-content: flex-start;
+    align-items: stretch;
+    font-size: x-small;
+}
+
+.return-variables-prompt-wrapper {
+    margin-bottom: 5px;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-content: flex-start;
+    align-items: stretch;
+    font-size: small;
+}
+
+.return-variables-spacer {
+    flex: 30;
+}
+
+.return-variables-edit-button {
+    align-self: end;
+    margin-left: 10px;
+    padding: 1px 3px 1px 3px;
+    border: 1px solid black;
+    border-radius: 5px;
+    background-color: lightgreen;
+    cursor: pointer;
+}
+
+.return-variables-definition-wrapper {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-content: flex-start;
+    align-items: stretch;
+}
+
+.return-variables-definition-prompt {
+    font-weight: bold;
+}
+
+.return-variables-definition-value:before {
+    content: "\"";
+}
+
+.return-variables-definition-value {
+    font-style: italic;
+}
+
+.return-variables-definition-value:after {
+    content: "\"";
 }
 
 .algorithm-edit-editor {

@@ -1,0 +1,95 @@
+
+.algorithm-edit-fields-background {
+    background-color: rgb(128, 128, 128, .25);
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    width: 100vw;
+    height: 100vh;
+}
+
+.algorithm-edit-fields-wrapper {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-content: center;
+    align-items: center;
+}
+
+.algorithm-edit-fields-titlebar {
+    background-color: lightgrey;
+    border-radius: 10px 10px 0 0 ;
+    border-bottom: 1px solid grey;
+    color: black;
+    font-size: large;
+    text-align: center;
+    min-height: 1.5em;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+}
+
+.algorithm-edit-fields-titlebar-left {
+    flex: 1;
+}
+
+.algorithm-edit-fields-titlebar-center {
+    flex: 20;
+}
+
+.algorithm-edit-fields-titlebar-right {
+    flex: 1;
+    padding-right: 10px;
+    text-align: center;
+    align-self: center;
+}
+
+.algorithm-edit-fields-titlebar-close {
+    cursor: pointer;
+    margin-top: 2px;
+}
+
+.algorithm-edit-fields-titlebar-close:hover {
+    border: 1px solid black;
+    border-radius: 5px;
+}
+
+
+.algorithm-edit-fields-footer {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.algorithm-edit-fields-footer-spacer {
+    flex: 80%;
+}
+
+.algorithm-edit-fields-button {
+    min-width: 20px;
+    height: 20px;
+    border: 1px solid grey;
+    padding-right: 5px;
+    padding-left: 5px;
+    border-radius: 5px;
+}
+
+.algorithm-edit-fields-ok {
+    background-color: #d8ffd8;
+    margin-left: 20px;
+    cursor: pointer;
+}
+
+.algorithm-edit-fields-cancel {
+    background-color: #e0e0e0;
+    margin-right: 20px;
+    cursor: pointer;
+}

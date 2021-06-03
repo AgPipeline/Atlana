@@ -1,12 +1,10 @@
+import numpy as np
 
-# The pixels of the plot image are now in pxarray as a numpy array
-pxarray = get_image()
+# Entry point for plot-level RBG algorithm
+def calculate(pxarray: np.ndarray):
 
-# Perform your calculations here
-# (replace the following line with your algorithm)
-value = pxarray.shape[0] * pxarray.shape[1]
+    # Replace the following lines with your algorithm
+    channel_size = pxarray[:, :, 1].size
 
-# Call set_result for each calculated value
-# (replace the following line with your results)
-set_result('pixel count', value, 'pixels')
-
+    # Replace the following return with your calculated values
+    return channel_size
