@@ -16,6 +16,15 @@
     position: relative;
 }
 
+.algorithm-edit-edit-wrapper-minimized {
+    margin-top: 20px;
+    height: 20vh;
+    max-width: 700px;
+    display: inline-block;
+    position: relative;
+    border: 2px solid black;
+}
+
 .algorithm-edit-variables-wrapper {
     display: flex;
     flex-direction: row;
@@ -29,8 +38,14 @@
     border-radius: 3px;
     padding: 5px;
     font-size: small;
+}
+
+.algorithm-edit-prop-wrapper-list {
     height: 5em;
     overflow: scroll;
+}
+
+.algorithm-edit-prop-wrapper-edit {    
 }
 
 .algorithm-field-edit-wrapper {
@@ -63,6 +78,7 @@
     justify-content: flex-start;
     align-content: flex-start;
     align-items: stretch;
+    font-size: small;
 }
 
 .algorithm-field-prompt {
@@ -81,6 +97,11 @@
     content: "\"";
 }
 
+.algorithm-field-value-edit  {
+    margin-top: 3px;
+    margin-left: 10px;
+}
+
 .return-variables-wrapper {
     margin-left: 20px;
     border: 1px solid black;
@@ -91,7 +112,20 @@
     justify-content: flex-start;
     align-content: flex-start;
     align-items: stretch;
+}
+
+.return-variables-wrapper-list {
     font-size: x-small;
+}
+
+.return-variables-wrapper-edit {
+    font-size:  smaller;
+    max-height: 50vh;
+    overflow: scroll;
+}
+
+.return-variables-edit-instructions {
+    margin-bottom: 5px;
 }
 
 .return-variables-prompt-wrapper {
@@ -150,9 +184,38 @@
     left: 0;
 }
 
+.algorithm-edit-return-table {
+    border: 1px solid black;
+}
 
+.algorithm-edit-return-table-heading {
+    font-weight: bold;
+    background-color: #e0e0e0;
+}
 
+.algorithm_edit_return_cell {
+    padding: 2px 4px 2px 4px;
+    border: 1px solid lightgrey;
+    min-height: 0.75em;
+    min-width: 30px;
+}
 
+.algorithm-edit-return-edit-field {
+    position: absolute;
+}
 
+.algorithm_edit_return_name {
+    cursor: pointer;
+}
 
+.algorithm_edit_return_unit {
+    cursor: pointer;
+}
 
+.algorithm_edit_return_label {
+    cursor: pointer;
+}
+
+.algorithm_edit_return_name_new {
+    cursor: pointer;
+}
