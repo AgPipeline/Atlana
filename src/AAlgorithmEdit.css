@@ -22,7 +22,7 @@
     max-width: 700px;
     display: inline-block;
     position: relative;
-    border: 2px solid black;
+    border: 2px solid lightgrey;
 }
 
 .algorithm-edit-variables-wrapper {
@@ -218,4 +218,27 @@
 
 .algorithm_edit_return_name_new {
     cursor: pointer;
+}
+
+.algorithm-edit-editor-disable-overlay {
+    position: absolute;
+    background-color: rgb(200, 200, 200, 0.8);
+    cursor: pointer;
+}
+
+.algorithm-edit-editor-disable-message-wrapper {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-content: center;
+    align-items: center;
+}
+
+.algorithm-edit-editor-disable-message {
+    width: max-content;
+    padding: 2px 5px 2px 5px;
+    background-color: white;
+    border: 1px solid black;
+    border-radius: 7px;
 }

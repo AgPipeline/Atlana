@@ -119,8 +119,10 @@ class AAlgorithmEdit extends Component {
     this.editVariables = this.editVariables.bind(this);
     this.generateAlgorithmFieldsEdit = this.generateAlgorithmFieldsEdit.bind(this);
     this.generateAlgorithmFieldsList = this.generateAlgorithmFieldsList.bind(this);
+    this.generateEditorDisabled = this.generateEditorDisabled.bind(this);
     this.generateReturnVariablesEdit = this.generateReturnVariablesEdit.bind(this);
     this.generateReturnVariablesList = this.generateReturnVariablesList.bind(this);
+    this.handleDisabledEditorClick = this.handleDisabledEditorClick.bind(this);
     this.handleDocumentKey = this.handleDocumentKey.bind(this);
     this.onUpdatedFieldValue = this.onUpdatedFieldValue.bind(this);
 
@@ -157,9 +159,7 @@ class AAlgorithmEdit extends Component {
 
     // When the editor gains focus, set the state to editing
     this.editor.on('focus', () => {
-      console.log("EDITOR FOCUS CALLBACK");
       if (this.state.mode !== algo_modes.main) {
-        console.log("Setting mode");
         this.setState({mode: algo_modes.main});
       }
     });
@@ -353,6 +353,40 @@ class AAlgorithmEdit extends Component {
   }
 
   /**
+   * Generates the UI for indicating that editing is disabled
+   */
+  generateEditorDisabled() {
+
+    // Set a timeout so that we can position ourselved correctly
+    window.setTimeout(() => {
+      let parent_el = document.getElementById('algorithm_edit_editor');
+      let el = document.getElementById('algorithm_edit_editor_disable_overlay');
+      if (!parent_el || !el) {
+        return;
+      }
+
+      // Get the the position information
+      let parent_rect = parent_el.getBoundingClientRect();
+
+      //  Update the position
+      el.style.top = parent_rect.y + 'px';
+      el.style.left = parent_rect.x + 'px';
+      el.style.width = parent_rect.width + 'px';
+      el.style.height = parent_rect.height + 'px';
+    }, 1);
+
+    return (
+      <div id="algorithm_edit_editor_disable_overlay" className="algorithm-edit-editor-disable-overlay" onClick={this.handleDisabledEditorClick}>
+        <div id="algorithm_edit_editor_disable_message_wrapper" className="algorithm-edit-editor-disable-message-wrapper">
+          <div id="algorithm_edit_editor_disable_message" className="algorithm-edit-editor-disable-message">
+          Click here to save changes and resume editing
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /**
    * Returns the display elements for editing return value items
    */
   generateReturnVariablesEdit() {
@@ -496,6 +530,17 @@ class AAlgorithmEdit extends Component {
   }
 
   /**
+   *
+   */
+  handleDisabledEditorClick() {
+    if (this.editing_return_field === true) {
+      window.dispatchEvent(new KeyboardEvent('keypress', {'key':'Enter'}))
+    } else {
+      this.editor.focus(); 
+    }
+  }
+
+  /**
    * Handles the user pressing a key
    * @param {Object} ev - the triggering event
    * @param {string} ev.key - the key the user pressed
@@ -553,13 +598,11 @@ class AAlgorithmEdit extends Component {
       window.setTimeout(() => {
         if (this.editor_cursor_position) {
           const cur_cursor_pos = this.editor_cursor_position;
-          console.log("CURSOR POS", cur_cursor_pos);
           this.editor_cursor_position = null;
           this.editor.moveCursorTo(cur_cursor_pos.row, cur_cursor_pos.column);
         }
         if (this.editor_selection_range) {
           const cur_selection_range = this.editor_selection_range;
-          console.log("SELECTION RANGE", cur_selection_range);
           this.editor_selection_range = null;
           this.editor.selection.setSelectionRange(cur_selection_range, false);
         }
@@ -576,6 +619,7 @@ class AAlgorithmEdit extends Component {
         <div id="algorithm_edit_edit_wrapper" className={editor_wrapper_class_name}>
           <div id="algorithm_edit_editor" className="algorithm-edit-editor">Loading template ...</div>
         </div>
+        {this.state.mode !== algo_modes.main && this.generateEditorDisabled()}
       </div>
     );
   }
