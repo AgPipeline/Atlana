@@ -131,6 +131,7 @@ class AAlgorithmEdit extends Component {
   constructor(props) {
     super(props);
 
+    this.checkCodeChangedDuringCheck = this.checkCodeChangedDuringCheck.bind(this);
     this.checkCodeQuality = this.checkCodeQuality.bind(this);
     this.editFields = this.editFields.bind(this);
     this.editReturnField = this.editReturnField.bind(this);
@@ -144,16 +145,20 @@ class AAlgorithmEdit extends Component {
     this.generateReturnVariablesList = this.generateReturnVariablesList.bind(this);
     this.handleDisabledEditorClick = this.handleDisabledEditorClick.bind(this);
     this.handleDocumentKey = this.handleDocumentKey.bind(this);
+    this.onTestCode = this.onTestCode.bind(this);
     this.onUpdatedFieldValue = this.onUpdatedFieldValue.bind(this);
 
     window.ace.config.setModuleUrl("ace/mode/python", "https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/mode-python.min.js")
 
-    this.editor = null;                 // The editor element
-    this.editor_cursor_position = null; // The working editor cursor position
-    this.editor_selection_range = null; // The working editor selection range
-    this.editing_return_field = false;  // Flag used to indicate we're editing a return field
-    this.was_edited = false;            // Flag used to indicate that the code was edited
-    this.code_check = null;             // Used to manage requests to check code
+    this.editor = null;                   // The editor element
+    this.editor_cursor_position = null;   // The working editor cursor position
+    this.editor_selection_range = null;   // The working editor selection range
+    this.editing_return_field = false;    // Flag used to indicate we're editing a return field
+    this.was_edited = false;              // Flag used to indicate that the code was edited
+    this.code_check = null;               // Used to manage requests to check code
+    this.change_during_code_check = false;// Flag indicating a change was detected while we were checking the code
+    this.skip_code_checks = true;         // Used to signal that a checking of the code should be skipped
+    this.prev_gutter_decorations = [];    // The list of previous gutter decoration lines
 
     // Setup default values
     let current_return_variables = {};
@@ -204,54 +209,39 @@ class AAlgorithmEdit extends Component {
   }
 
   /**
+   * Checks if the code changed while we were checking it and schedules another check if it did
+   */
+  checkCodeChangedDuringCheck() {
+    if (this.change_during_code_check) {
+      window.setTimeout(this.checkCodeQuality, 1);
+    }
+  }
+
+  /**
    * Checks the code quality
    */
   checkCodeQuality() {
     this.was_edited = true;
 
-    // Don't check the code if we're already checking it
-    if (this.code_check !== null) {
+    // Don't check the code if we're to skip a check
+    if (this.skip_code_checks) {
       return;
     }
 
-    const code = this.editor.getValue();
-    const variables = {};
-    algo_fields.forEach((item) => {
-      let val = '';
-      if (this.state.current_field_values.hasOwnProperty(item.name)) {
-        val = this.state.current_field_values[item.name];
-      }
-      variables[item.variable_name] = val;
-    });
-    algo_returns.forEach((item) => {
-      let val = '';
-      if (this.state.current_return_variables.hasOwnProperty(item.name)) {
-        val = this.state.current_return_variables[item.name].join(',');
-      }
-      variables[item.variable_name] = val;
-    });
-
-    const form_data = new FormData();
-    form_data.append('code', code);
-    form_data.append('variables', JSON.stringify(variables));
-    
-    const uri = Utils.getHostOrigin().concat('/code/check/python');
-    try {
-      this.code_check = window.setTimeout(() => {
-        fetch(uri, {
-          method: 'PUT',
-          body: code,
-          credentials: 'include',
-          }
-        )
-        .then(response => {if (response.ok) return response.json(); else throw response.statusText})
-        .then(success => {console.log("SUCCESS:",success); this.code_check = null;})
-        .catch(error => {console.log("ERROR",error); this.code_check =  null;});
-      }, 1);
-    } catch (err) {
-      console.log("Check code quality exception", err);
-      throw err;
+    // Don't check the code if we're already checking it
+    if (this.code_check !== null) {
+      this.change_during_code_check = true;
+      return;
     }
+
+    // Inidicate we haven't made changes yet while checking the code
+    this.change_during_code_check = false;
+
+    this.makeCodeServerCall('check', 
+          'python',
+          (success) => {this.code_check = null; this.handleCodeQualityResult(success); this.checkCodeChangedDuringCheck();},
+          (error) => {this.code_check = null; this.checkCodeChangedDuringCheck();}
+    );
   }
 
   /**
@@ -437,8 +427,9 @@ class AAlgorithmEdit extends Component {
 
     return (
       <div id="algorithm_edit_code_indicator_wrapper" className="algorithm-edit-code-indicator-wrapper">
+        <div id="algorithm_edit_code_test_button" className="algorithm-edit_code-error-indicator-test" onClick={this.onTestCode}>Test</div>
         <div className="algorithm-edit-code-indicator-separator"></div>
-        <div id="algorithm_edit_code_error_indicator" className={'algorithm-edit_code-error-indicator' + code_indicator_extra_class}></div>
+        <div id="algorithm_edit_code_error_indicator" className={'algorithm-edit_code-error-indicator-button' + code_indicator_extra_class}></div>
       </div>
     );
   }
@@ -604,7 +595,7 @@ class AAlgorithmEdit extends Component {
    * @param {int|string} algo - the algorithm type of the template
    */
   getStartingTemplate(lang, algo) {
-    const uri = Utils.getHostOrigin().concat(`/template/${lang}/${algo}`);
+    const uri = Utils.getHostOrigin().concat(encodeURI(`/template/${lang}/${algo}`));
 
     try {
       fetch(uri, {
@@ -612,7 +603,14 @@ class AAlgorithmEdit extends Component {
         }
       )
       .then(response => {if (response.ok) return response.text(); else throw response.statusText})
-      .then(success => {this.editor.selectAll();this.editor.insert(success);  this.editor.moveCursorTo(6, 4);this.editor.selection.selectLineEnd();this.editor.focus();})
+      .then(success => {this.skip_code_checks = true;
+                        this.editor.selectAll();
+                        this.editor.insert(success);
+                        this.editor.moveCursorTo(6, 4);
+                        this.editor.selection.selectLineEnd();
+                        this.editor.focus();
+                        this.skip_code_checks = false;
+                      })
       .catch(error => {console.log("ERROR",error);});
     } catch (err) {
       console.log("Fetch starting template exception", err);
@@ -621,7 +619,30 @@ class AAlgorithmEdit extends Component {
   }
 
   /**
-   *
+   * Handles the results of a code quality check by updating the editor
+   * @param {Array} results - the results containing problem information
+   * @param {int} results[].line - the line that has the problem
+   * @param {int} results[].message - the column that has the problem
+   */
+  handleCodeQualityResult(results) {
+    let cur_code_ok = true;
+
+    if (this.editor.session.getAnnotations) {
+      this.editor.session.clearAnnotations();
+    }
+
+    if (results.length > 0) {
+      this.editor.session.setAnnotations(results.map((item) => {return ({row: parseInt(item.line) - 1, column: 0, text: item.message, type: 'warning'});}));
+      cur_code_ok = false;
+    }
+
+    if (this.state.code_ok !== cur_code_ok) {
+      this.setState({code_ok: cur_code_ok});
+    }
+  }
+
+  /**
+   * Handles the user clicking on the disabled editor window
    */
   handleDisabledEditorClick() {
     if (this.editing_return_field === true) {
@@ -662,6 +683,110 @@ class AAlgorithmEdit extends Component {
 
       default: break;
     }
+  }
+
+  /**
+   * Displays the result of a succcessful test run (does not mean the test succeeded)
+   * @param {Object} success - the result returned by the server
+   */
+  handleTestSuccess(success) {
+
+  }
+
+  /**
+   * @callback AAlgorithmEdit~CodeSuccessCallback
+   * @param {object} success - the object returned by the server
+   */
+
+  /**
+   * @callback AAlgorithmEdit~CodeErrorCallback
+   * @param {string} error - the error string returned by the server
+   */
+
+  /**
+   * @callback AAlgorithmEdit~CodeExceptionCallback
+   * @param {Object} error - the error exception object that wass thrown
+   */
+
+  /**
+   * Common function for making code-related calls
+   * @param {string} type - the type of code call being made: one of 'check', 'test'
+   * @param {string} language - the code language that's being checked: one of 'python'
+   * @param {AAlgorithmEdit~CodeSuccessCallback} success_cb - the callback function for when the call succeeds
+   * @param {AAlgorithmEdit~CodeErrorCallback} error_cb - the callback function for when the server returns an error
+   * @param {AAlgorithmEdit~CodeExceptionCallback} [exception_cb] - optional callback function for when an exception is thrown
+   */
+  makeCodeServerCall(type, language, success_cb, error_cb, exception_cb) {
+
+    // Prepare the parameters
+    const code = this.editor.getValue();
+    const variables = {};
+    algo_fields.forEach((item) => {
+      let val = '';
+      if (this.state.current_field_values.hasOwnProperty(item.name)) {
+        val = this.state.current_field_values[item.name];
+      }
+      variables[item.variable_name] = val;
+    });
+    algo_returns.forEach((item) => {
+      let val = '';
+      if (this.state.current_return_variables.hasOwnProperty(item.name)) {
+        val = this.state.current_return_variables[item.name].join(',');
+      }
+      variables[item.variable_name] = val;
+    });
+
+    const form_data = new FormData();
+    form_data.append('code', code);
+    form_data.append('variables', JSON.stringify(variables));
+    
+    // Make the call
+    const uri = Utils.getHostOrigin().concat(encodeURI(`/code/${type}/${language}`));
+    try {
+      this.code_check = window.setTimeout(() => {
+        fetch(uri, {
+          method: 'GET',
+          body: form_data,
+          credentials: 'include',
+          }
+        )
+        .then(response => { if (response.ok)
+                              // Check if we've had an error on the server side indicated by non-200 status
+                              if (response.status === 200)
+                                return response.json();
+                              else
+                                return []
+                            else
+                              throw response.statusText
+                          })
+        .then(success => {console.log("SUCCESS:",success); success_cb(success);})
+        .catch(error => {console.log("ERROR",error); error_cb(error);});
+      }, 1);
+    } catch (err) {
+      console.log(`Code server call (${type} ${language}) exception:`, err);
+      if (exception_cb) {
+        exception_cb(err);
+      } else {
+        throw err;
+      }
+    }
+  }
+
+  /**
+   * Handles testing the code
+   */
+  onTestCode() {
+    // Make sure we have no errors
+    if (this.state.code_ok !== true) {
+      return;
+    }
+
+    this.makeCodeServerCall('test',
+            'rgb_plot/python',
+            (success) => {this.handleTestSuccess();},
+            (error) => {/*TODO:*/}
+    );
+
   }
 
   /**
@@ -709,7 +834,7 @@ class AAlgorithmEdit extends Component {
         </div>
         <div id="algorithm_edit_edit_wrapper" className={editor_wrapper_class_name}>
           {this.generateCodeIndicators()}
-          <div id="algorithm_edit_editor" className="algorithm-edit-editor">Loading template ...</div>
+          <div id="algorithm_edit_editor" className="algorithm-edit-editor"></div>
         </div>
         {this.state.mode !== algo_modes.main && this.generateEditorDisabled()}
       </div>

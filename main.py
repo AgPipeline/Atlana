@@ -65,6 +65,20 @@ if CODE_CHECKING_PATH is None:
 if not os.path.exists(CODE_CHECKING_PATH):
     os.makedirs(CODE_CHECKING_PATH)
 
+# Starting point for testing code files
+CODE_TESTING_PATH = os.getenv('CODE_CHECK_FOLDER')
+if CODE_TESTING_PATH is None:
+    CODE_TESTING_PATH = os.path.join(OUR_LOCAL_PATH, 'code_test')
+if not os.path.exists(CODE_TESTING_PATH):
+    os.makedirs(CODE_TESTING_PATH)
+
+# Starting point for testing code files
+CODE_TEMPLATE_PATH = os.getenv('CODE_TEMPLATE_FOLDER')
+if CODE_TEMPLATE_PATH is None:
+    CODE_TEMPLATE_PATH = os.path.join(OUR_LOCAL_PATH, 'test_template')
+if not os.path.exists(CODE_TEMPLATE_PATH):
+    os.makedirs(CODE_TEMPLATE_PATH)
+
 # Status codes for checking on processes
 STATUS_NOT_STARTED = 0
 STATUS_RUNNNG = 1
@@ -123,8 +137,71 @@ def _clean_for_json(dirty: object) -> dict:
     return dirty
 
 
+def _get_num_code_lines(code: list) -> int:
+    """Calculates the number of code lines are available for use
+    Arguments:
+        code: the list of code lines
+    Returns:
+        Return the number of code lines that should be processed
+    Notes:
+        This will strip trailing whitespace from the code lines
+    """
+    num_lines = len(code)
+    while num_lines > 0:
+        cur_line = code[num_lines - 1].strip()
+        if len(cur_line) <= 0:
+            num_lines -= 1
+        else:
+            break
 
-def _write_python_file(filepath: str, code: str, variables: dict =  {}) ->  tuple:
+    return num_lines
+
+
+def _get_python_preamble(code: list, start_index: int = 0) -> int:
+    """Returns the python preamble (the part before variables can be written)
+    Arguments:
+        code: the list of code lines
+        start_index: the starting index to begin processing
+    Returns:
+        Returns the ending index of the preamble
+    """
+    # We skip over blank lines, imports, comments, and docstrings
+    num_lines = len(code)
+    cur_line_idx = start_index
+    in_docstring = False
+    while cur_line_idx < num_lines:
+        cur_line = code[cur_line_idx].strip()
+        if in_docstring:
+            cur_line_idx += 1
+            if cur_line.count('"""') % 2 == 1:
+                in_docstring = False
+        elif len(cur_line) == 0:
+            cur_line_idx += 1
+        else:
+            have_special = False
+            for special_start in ['from', 'import']:
+                if cur_line.startswith(special_start):
+                    have_special = True
+                    break
+            if have_special is True:
+                cur_line_idx += 1
+            elif cur_line.startswith('def') or cur_line.startswith('class'):
+                # We are done, check if we need to back up some rows
+                if cur_line_idx > start_index:
+                    while True:
+                        cur_line_idx -= 1
+                        cur_line = code[cur_line_idx].strip()
+                        if len(cur_line) <= 0 or cur_line[0] != '#':
+                            break
+                    break
+            else:
+                in_docstring = cur_line.count('"""') % 2 == 1
+                cur_line_idx += 1
+
+    return cur_line_idx
+
+
+def _write_python_file(filepath: str, code: str, variables: dict = None) ->  tuple:
     """Writes the Python code to the specified file overwriting the current contents of the file
     Arguments:
         filepath - the file to write to
@@ -135,53 +212,102 @@ def _write_python_file(filepath: str, code: str, variables: dict =  {}) ->  tupl
     """
     # Break the code apart into new lines
     code_lines = code.split('\n')
-    num_lines = len(code_lines)
+    num_lines = _get_num_code_lines(code_lines)
 
+    # Prepare for the run
+    if variables is None:
+        variables = {}
 
     # Write the code
     variable_start_line = -1
     with open(filepath, 'w') as out_file:
-        line_index = 0;
-        in_docstring = False
-        wrote_variables = False
-        while (line_index < num_lines):
-            trim_line = code_lines[line_index].trim()
+        line_index = 0
 
-            if in_docstring:
-                # Handle docstrings
-                out_file.write(code_lines[line_index] + '\n')
-                if trim_line.count('"""') % 2 == 1:
-                    in_docstring = False
-            elif len(trim_line) == 0:
-                # Handle empty lines
-                out_file.write(code_lines[line_index] + '\n')
-            elif wrote_variables == False:
-                # Check for special starting strings
-                special_start = False
-                for one_start in ['#', 'import', 'from']:
-                    if code_lines[line_index].startswith(one_start):
-                        special_start = True
-                        break
-                if special_start:
-                    out_file.write(code_lines[line_index] + '\n')
-                else:
-                    # Write our variables followed by the line
-                    variable_start_line = line_index + 1
-                    for key, value in variables.items():
-                        out_file.write(key + '="' + value + '"\n')
-                    out_file.write(code_lines[line_index] + '\n')
+        # Write preamble
+        end_index = _get_python_preamble(code_lines, line_index)
+        while line_index <= end_index:
+            out_file.write(code_lines[line_index].rstrip() + '\n')
+            line_index += 1;
 
-                in_docstring = trim_line.count('"""') % 2 == 1
-            else:
-                # We write the rest of the file
-                out_file.write(code_lines[line_index] + '\n')
+        # Write variables
+        variable_start_line = line_index + 1
+        if variables:
+            for key, value in variables.items():
+                out_file.write(key + ' = "' + value + '"\n')
+            out_file.write('\n')
 
+        # Write remainder
+        while line_index < num_lines:
+            out_file.write(code_lines[line_index].rstrip() + '\n')
             line_index += 1
 
-        # If the variables weren't written yete, write them now
-        if variable_start_line == -1:
-            for key, value in variables.items():
-                out_file.write(key + '="' + value + '"\n')
+    with open(filepath, 'r') as in_file:
+        print(in_file.read())
+
+    return (len(variables), variable_start_line)
+
+
+def _lint_python_file(filepath: str) -> list:
+    """Lints the specified python file and returns the findings"""
+    import sys
+    try:
+        from io import StringIO
+    except:
+        from StringIO import StringIO
+    from pylint import lint
+    from pylint.reporters.text import TextReporter
+
+    class WritableObject(object):
+        def __init__(self):
+            self.content = []
+        def write(self, st):
+            self.content.append(st)
+        def read(self):
+            return self.content
+
+    pylint_output = WritableObject()
+    args = ['-r', 'n', '--rcfile=pylint.rc', '--msg-template=\'{C}:{line}:{column}:{msg}:{symbol}:{msg_id}\'', '--errors-only']
+    _ = lint.Run([filepath]+args, reporter=TextReporter(pylint_output), exit=False)
+
+    return pylint_output.read()
+
+
+def _test_python_file(algo_type: str, lang: str, filepath: str, test_folder: str):
+    """Tests the python file
+    Arguments:
+        algo_type: the type of algorithm to test
+        lang: the language to test
+        filepath: the file to test
+        test_folder: the folder to run the test in
+    Returns:
+        Returns the result of the test
+    Exceptions:
+        Raises RuntimeError if the environment is not properly configured
+    """
+    # Copy over needed files from the template
+    template_folder = os.path.join(CODE_TEMPLATE_PATH, algo_type, lang)
+    if not os.path.exists(template_folder) or not os.path.isdir(template_folder):
+        raise RuntimeError('Expected template folder "%s" is not found' % os.path.join('/', algo_type, lang))
+
+    # Copy template files over
+    for one_file in os.listdir(template_folder):
+        src_name = os.path.join(template_folder, one_file)
+        if os.path.isfile(src_name):
+            if src_name.endswith('.py'):
+                shutil.copyfile(src_name, os.path.join(test_folder, one_file))
+
+    # Copy test images over
+    images_folder = os.path.join(CODE_TEMPLATE_PATH, algo_type, 'images')
+    dest_folder = os.path.join(test_folder, 'images')
+    if not os.path.exists(dest_folder):
+        os.makedirs(dest_folder)
+    for one_file in os.listdir(images_folder):
+        src_name = os.path.join(images_folder,  one_file)
+        if os.path.isfile(src_name):
+            shutil.copyfile(src_name, os.path.join(dest_folder, one_file))
+
+    # Run the test
+    
 
 
 def normalize_path(path: str) -> str:
@@ -1216,29 +1342,100 @@ def template_file(lang: str, algorithm: str):
     response.headers.set('Content-Type', 'text')
     return response
 
-@app.route('/code/check/python', methods=['PUT'])
+@app.route('/code/check/<lang>', methods=['GET'])
 @cross_origin(origin='127.0.0.1:3000')
-def check_python_code():
+def check_python_code(lang: str):
     """Performs a check on the python code"""
-    print("Code check Python")
+    print('CODE CHECK', lang)
+    if lang.lower() != 'python':
+        return 'Unsupported language', 404
+
     # Check that the length of the request is reasonable
-    print("REQUEST LENGTH", request.content_length)
-    if (request.content_length > MAX_CODE_LENGTH):
+    if request.content_length > MAX_CODE_LENGTH:
         print('Too large a file size was requested: %s' % str(request.content_length))
-        return 'Code size is too large', 413
+        return 'Code size is too large', 413    # Payload too large
 
     # Save the code to a file and run pylint over it
+    results = []
     code = request.form['code']
     variables = json.loads(request.form['variables'])
     out_fd, code_file_name = tempfile.mkstemp(suffix='.py', dir=CODE_CHECKING_PATH, text=True)
     try:
         os.close(out_fd)
-        _write_python_file(code_file_name, code, variables)
+        num_vars, start_var_line = _write_python_file(code_file_name, code, variables)
 
         lint_results = _lint_python_file(code_file_name)
+
+        for one_result in lint_results:
+            if not ':' in  one_result:
+                continue
+            cur_info = one_result.split(':')
+            print("LINT:", one_result)
+
+            cur_line = int(cur_info[1])
+            if cur_line > start_var_line:
+                cur_line = cur_line - num_vars - 1
+
+            cur_message = cur_info[3]
+            if cur_info[5] == 'E0001':
+                cur_message = cur_message.split('(')[0].strip()
+
+            results.append({
+                'type': cur_info[0],
+                'line': str(cur_line),
+                'column': cur_info[2],
+                'message': cur_message,
+                'code': cur_info[4]
+            })
+
+    except Exception as ex:
+        msg = 'Exception caught while trying to check python code "%s"' % code
+        print(msg, ex)
+        traceback.print_exc()
+        return 'Error checking Python code', 202   # Accepted, but non-comittal
     finally:
         if code_file_name and os.path.exists(code_file_name):
             os.remove(code_file_name)
+
+    return json.dumps(results)
+
+@app.route('/code/test/<algo_type>/<lang>', methods=['GET'])
+@cross_origin(origin='127.0.0.1:3000')
+def check_python_code(algo_type: str, lang: str):
+    """Performs a check on the python code
+    Arguments:
+        algo_type: the transformer type this code represents
+        lang: the language of thee code to test
+    """
+    print("TEST PYTHON CODE", algo_type, lang)
+    if algo_type.lower() != rgb_plot:
+        return 'Unsupported algorithm type', 404
+    if lang.lower() != 'python':
+        return 'Unsupported language', 404
+
+    # Check that the length of the request is reasonable
+    if request.content_length > MAX_CODE_LENGTH:
+        print('Too large a file size was requested: %s' % str(request.content_length))
+        return 'Code size is too large', 413    # Payload too large
+
+    # Save the code to a file and run pylint over it
+    results = []
+    code = request.form['code']
+    variables = json.loads(request.form['variables'])
+    with tempfile.TemporaryDirectory(dir=CODE_TESTING_PATH) as test_folder:
+        code_file_name = os.path.join(test_folder, 'rgb_algorithm.py')
+        try:
+            _, _ = _write_python_file(code_file_name, code, variables)
+
+            test_results = _test_python_file(algo_type, lang, 'transformer.py', test_folder)
+
+        except Exception as ex:
+            msg = 'Exception caught while trying to check python code "%s"' % code
+            print(msg, ex)
+            traceback.print_exc()
+            return 'Error checking Python code', 202   # Accepted, but non-comittal
+
+    return json.dumps(results)
 
 
 if __name__ == '__main__':

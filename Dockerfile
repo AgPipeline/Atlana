@@ -56,6 +56,10 @@ RUN mkdir templates && mv index.html templates/
 COPY ./*.py ./*.sh ./
 COPY ./test_data ./test_data
 
+# TODO: Get the pylint resource file
+# TODO: install testing environment
+# TODO: install test images:https://data.cyverse.org/dav-anon/iplant/projects/aes/cct/diag/sample-data/sample_plot_images.zip
+
 EXPOSE ${PORT_NUMBER}
 
 ENV PYTHONPATH="${PYTHONPATH}:/app/react_frontend"  \
