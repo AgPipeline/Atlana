@@ -47,16 +47,23 @@ OUR_LOCAL_PATH = os.path.abspath(os.path.dirname(__file__))
 # Starting point for seaching for user files on server
 FILE_START_PATH = os.getenv('WORKING_FOLDER')
 if FILE_START_PATH is None:
-    FILE_START_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'upload')
+    FILE_START_PATH = os.path.join(OUR_LOCAL_PATH, 'upload')
 if not os.path.exists(FILE_START_PATH):
     os.makedirs(FILE_START_PATH)
 
 # Starting point for uploaded workflow files
 WORKFLOW_FILE_START_PATH = os.getenv('WORKFLOW_FOLDER')
 if WORKFLOW_FILE_START_PATH is None:
-    WORKFLOW_FILE_START_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'workflow')
+    WORKFLOW_FILE_START_PATH = os.path.join(OUR_LOCAL_PATH, 'workflow')
 if not os.path.exists(WORKFLOW_FILE_START_PATH):
     os.makedirs(WORKFLOW_FILE_START_PATH)
+
+# Starting point for code checking files
+CODE_CHECKING_PATH = os.getenv('CODE_CHECK_FOLDER')
+if CODE_CHECKING_PATH is None:
+    CODE_CHECKING_PATH = os.path.join(OUR_LOCAL_PATH, 'code_temp')
+if not os.path.exists(CODE_CHECKING_PATH):
+    os.makedirs(CODE_CHECKING_PATH)
 
 # Status codes for checking on processes
 STATUS_NOT_STARTED = 0
@@ -83,6 +90,9 @@ CURRENT_WORKFLOW_SAVE_VERSION = '1.0'
 
 # List of workflow save file versions we understand and can handle
 WORKFLOW_SAVE_VERSIONS_SUPPORTED = [CURRENT_WORKFLOW_SAVE_VERSION]
+
+# Maximum code length acccepted
+MAX_CODE_LENGTH = 30 * 1024
 
 
 def _clean_for_json(dirty: object) -> dict:
@@ -111,6 +121,67 @@ def _clean_for_json(dirty: object) -> dict:
         return set((_clean_for_json(el) for el in dirty if not callable(el)))
 
     return dirty
+
+
+
+def _write_python_file(filepath: str, code: str, variables: dict =  {}) ->  tuple:
+    """Writes the Python code to the specified file overwriting the current contents of the file
+    Arguments:
+        filepath - the file to write to
+        code - the python to write
+        variables - variables to add to the python code that's being written
+    Return:
+        Returns the number of variables written and the starting line number of the variables as a 2-tuple
+    """
+    # Break the code apart into new lines
+    code_lines = code.split('\n')
+    num_lines = len(code_lines)
+
+
+    # Write the code
+    variable_start_line = -1
+    with open(filepath, 'w') as out_file:
+        line_index = 0;
+        in_docstring = False
+        wrote_variables = False
+        while (line_index < num_lines):
+            trim_line = code_lines[line_index].trim()
+
+            if in_docstring:
+                # Handle docstrings
+                out_file.write(code_lines[line_index] + '\n')
+                if trim_line.count('"""') % 2 == 1:
+                    in_docstring = False
+            elif len(trim_line) == 0:
+                # Handle empty lines
+                out_file.write(code_lines[line_index] + '\n')
+            elif wrote_variables == False:
+                # Check for special starting strings
+                special_start = False
+                for one_start in ['#', 'import', 'from']:
+                    if code_lines[line_index].startswith(one_start):
+                        special_start = True
+                        break
+                if special_start:
+                    out_file.write(code_lines[line_index] + '\n')
+                else:
+                    # Write our variables followed by the line
+                    variable_start_line = line_index + 1
+                    for key, value in variables.items():
+                        out_file.write(key + '="' + value + '"\n')
+                    out_file.write(code_lines[line_index] + '\n')
+
+                in_docstring = trim_line.count('"""') % 2 == 1
+            else:
+                # We write the rest of the file
+                out_file.write(code_lines[line_index] + '\n')
+
+            line_index += 1
+
+        # If the variables weren't written yete, write them now
+        if variable_start_line == -1:
+            for key, value in variables.items():
+                out_file.write(key + '="' + value + '"\n')
 
 
 def normalize_path(path: str) -> str:
@@ -1144,6 +1215,30 @@ def template_file(lang: str, algorithm: str):
         response = make_response(in_file.read())
     response.headers.set('Content-Type', 'text')
     return response
+
+@app.route('/code/check/python', methods=['PUT'])
+@cross_origin(origin='127.0.0.1:3000')
+def check_python_code():
+    """Performs a check on the python code"""
+    print("Code check Python")
+    # Check that the length of the request is reasonable
+    print("REQUEST LENGTH", request.content_length)
+    if (request.content_length > MAX_CODE_LENGTH):
+        print('Too large a file size was requested: %s' % str(request.content_length))
+        return 'Code size is too large', 413
+
+    # Save the code to a file and run pylint over it
+    code = request.form['code']
+    variables = json.loads(request.form['variables'])
+    out_fd, code_file_name = tempfile.mkstemp(suffix='.py', dir=CODE_CHECKING_PATH, text=True)
+    try:
+        os.close(out_fd)
+        _write_python_file(code_file_name, code, variables)
+
+        lint_results = _lint_python_file(code_file_name)
+    finally:
+        if code_file_name and os.path.exists(code_file_name):
+            os.remove(code_file_name)
 
 
 if __name__ == '__main__':

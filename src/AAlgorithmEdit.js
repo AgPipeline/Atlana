@@ -11,45 +11,59 @@ import './AAlgorithmEdit.css';
  */
 var algo_fields = [
   {
+    name: 'var_version',
+    prompt: 'Version',
+    description: 'Version number for algorithm',
+    variable_name: 'VERSION',
+    type: 'plain',
+    mandatory: false,
+  }, {
     name: 'var_name',
     prompt: 'Author',
     description: 'The author of the algorithm',
+    variable_name: 'ALGORITHM_AUTHOR',
     type: 'plain',
     mandatory: false,
   }, {
     name: 'var_email',
     prompt: 'Email',
     description: 'Email address of the author',
+    variable_name: 'ALGORITHM_AUTHOR_EMAIL',
     type: 'plain',
     mandatory: false,
   }, {
     name: 'var_contributors',
     prompt: 'Contributors',
     description: 'Name of other contributors',
+    variable_name: 'ALGORITHM_CONTRIBUTORS',
     type: 'plain',
     mandatory: false,
   }, {
     name: 'var_algo_name',
     prompt: 'Algorithm name',
     description: 'Name of the algorithm',
+    variable_name: 'ALGORITHM_NAME',
     type: 'plain',
     mandatory: false,
   }, {
     name: 'var_algo_description',
     prompt: 'Algorithm description',
     description: 'Describe the algorithm',
+    variable_name: 'ALGORITHM_DESCRIPTION',
     type: 'plain',
     mandatory: false,
   }, {
     name: 'var_citation_author',
     prompt: 'Citation author',
     description: 'The author to cite',
+    variable_name: 'CITATION_AUTHOR',
     type: 'plain',
     mandatory: false,
   }, {
     name: 'var_citation_title',
     prompt: 'Citation title',
     description: 'The title of the citation',
+    variable_name: 'CITATION_TITLE',
     type: 'plain',
     mandatory: false,
   }, {
@@ -58,6 +72,7 @@ var algo_fields = [
     description: 'The year of the citation',
     minLength: 2,
     maxlength: 4,
+    variable_name: 'CITATION_YEAR',
     type: 'plain',
     mandatory: false,
   }
@@ -75,6 +90,7 @@ var algo_returns = [
     prompt: 'VARIABLE_NAMES',
     description: 'Name of variables that are returned',
     return_id: algo_return_ids.return_names,
+    variable_name: 'VARIABLE_NAMES',
     type: 'plain',
     mandatory: false,
   }, {
@@ -82,6 +98,7 @@ var algo_returns = [
     prompt: 'VARIABLE_UNITS',
     description: 'Units associated with returned variables',
     return_id: algo_return_ids.return_units,
+    variable_name: 'VARIABLE_UNITS',
     type: 'plain',
     mandatory: false,
   }, {
@@ -89,6 +106,7 @@ var algo_returns = [
     prompt: 'VARIABLE_LABELS',
     description: 'Labels for returned variables',
     return_id: algo_return_ids.return_labels,
+    variable_name: 'VARIABLE_LABELS',
     type: 'plain',
     mandatory: false,
   }
@@ -113,12 +131,14 @@ class AAlgorithmEdit extends Component {
   constructor(props) {
     super(props);
 
+    this.checkCodeQuality = this.checkCodeQuality.bind(this);
     this.editFields = this.editFields.bind(this);
     this.editReturnField = this.editReturnField.bind(this);
     this.editReturnFieldBlur = this.editReturnFieldBlur.bind(this);
     this.editVariables = this.editVariables.bind(this);
     this.generateAlgorithmFieldsEdit = this.generateAlgorithmFieldsEdit.bind(this);
     this.generateAlgorithmFieldsList = this.generateAlgorithmFieldsList.bind(this);
+    this.generateCodeIndicators = this.generateCodeIndicators.bind(this);
     this.generateEditorDisabled = this.generateEditorDisabled.bind(this);
     this.generateReturnVariablesEdit = this.generateReturnVariablesEdit.bind(this);
     this.generateReturnVariablesList = this.generateReturnVariablesList.bind(this);
@@ -132,6 +152,8 @@ class AAlgorithmEdit extends Component {
     this.editor_cursor_position = null; // The working editor cursor position
     this.editor_selection_range = null; // The working editor selection range
     this.editing_return_field = false;  // Flag used to indicate we're editing a return field
+    this.was_edited = false;            // Flag used to indicate that the code was edited
+    this.code_check = null;             // Used to manage requests to check code
 
     // Setup default values
     let current_return_variables = {};
@@ -142,7 +164,8 @@ class AAlgorithmEdit extends Component {
     this.state = {
       mode: algo_modes.main,        // The current display mode
       current_field_values: {},     // Current values for fields
-      current_return_variables,     // The return variabless
+      current_return_variables,     // The return variables
+      code_ok: true,                // Code quality flag
     };
   }
 
@@ -164,6 +187,9 @@ class AAlgorithmEdit extends Component {
       }
     });
 
+    // Indicate when something was changed in the editor window
+    this.editor.on('change', this.checkCodeQuality);
+
     // Get the template associated with the laguage and algorithm type
     this.getStartingTemplate(this.props.lang, this.props.type);
 
@@ -175,6 +201,57 @@ class AAlgorithmEdit extends Component {
    */
   componentWillUnmount() {
     document.removeEventListener('keydown',  this.handleDocumentKey, false);
+  }
+
+  /**
+   * Checks the code quality
+   */
+  checkCodeQuality() {
+    this.was_edited = true;
+
+    // Don't check the code if we're already checking it
+    if (this.code_check !== null) {
+      return;
+    }
+
+    const code = this.editor.getValue();
+    const variables = {};
+    algo_fields.forEach((item) => {
+      let val = '';
+      if (this.state.current_field_values.hasOwnProperty(item.name)) {
+        val = this.state.current_field_values[item.name];
+      }
+      variables[item.variable_name] = val;
+    });
+    algo_returns.forEach((item) => {
+      let val = '';
+      if (this.state.current_return_variables.hasOwnProperty(item.name)) {
+        val = this.state.current_return_variables[item.name].join(',');
+      }
+      variables[item.variable_name] = val;
+    });
+
+    const form_data = new FormData();
+    form_data.append('code', code);
+    form_data.append('variables', JSON.stringify(variables));
+    
+    const uri = Utils.getHostOrigin().concat('/code/check/python');
+    try {
+      this.code_check = window.setTimeout(() => {
+        fetch(uri, {
+          method: 'PUT',
+          body: code,
+          credentials: 'include',
+          }
+        )
+        .then(response => {if (response.ok) return response.json(); else throw response.statusText})
+        .then(success => {console.log("SUCCESS:",success); this.code_check = null;})
+        .catch(error => {console.log("ERROR",error); this.code_check =  null;});
+      }, 1);
+    } catch (err) {
+      console.log("Check code quality exception", err);
+      throw err;
+    }
   }
 
   /**
@@ -353,6 +430,20 @@ class AAlgorithmEdit extends Component {
   }
 
   /**
+   * Generates the UI to be used for code indicators
+   */
+  generateCodeIndicators() {
+    const code_indicator_extra_class = this.state.code_ok ? ' algorithm-edit_code-error-indicator-ok' : ' algorithm-edit_code-error-indicator-error';
+
+    return (
+      <div id="algorithm_edit_code_indicator_wrapper" className="algorithm-edit-code-indicator-wrapper">
+        <div className="algorithm-edit-code-indicator-separator"></div>
+        <div id="algorithm_edit_code_error_indicator" className={'algorithm-edit_code-error-indicator' + code_indicator_extra_class}></div>
+      </div>
+    );
+  }
+
+  /**
    * Generates the UI for indicating that editing is disabled
    */
   generateEditorDisabled() {
@@ -432,7 +523,7 @@ class AAlgorithmEdit extends Component {
                   const unit_id = 'algorithm_edit_return_unit_' + idx;
                   const label_id = 'algorithm_edit_return_label_' + idx;
                   return (
-                    <tr>
+                    <tr key={name}>
                       <td id={name_id}
                           className="algorithm_edit_return_cell algorithm_edit_return_name"
                           onClick={() => void this.editReturnField(name_id, name, algo_return_ids.return_names, idx)}>
@@ -479,7 +570,7 @@ class AAlgorithmEdit extends Component {
     const return_value = this.state.current_return_variables.hasOwnProperty(return_item.name) ? this.state.current_return_variables[return_item.name].join(',') : '';
 
     return (
-      <div id="return_variables_definition_wrapper" className="return-variables-definition-wrapper">
+      <div id="return_variables_definition_wrapper" className="return-variables-definition-wrapper" key={return_item.name}>
         <div id="return_variables_definition_names" className="return-variables-definition-prompt">{return_item.prompt}&nbsp;=&nbsp;</div>
         <div id="return_variables_definition_names_value" className="return-variables-definition-value">{return_value}</div>
       </div>
@@ -617,6 +708,7 @@ class AAlgorithmEdit extends Component {
           {this.generateReturnVariablesUI()}
         </div>
         <div id="algorithm_edit_edit_wrapper" className={editor_wrapper_class_name}>
+          {this.generateCodeIndicators()}
           <div id="algorithm_edit_editor" className="algorithm-edit-editor">Loading template ...</div>
         </div>
         {this.state.mode !== algo_modes.main && this.generateEditorDisabled()}
