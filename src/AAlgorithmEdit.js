@@ -116,6 +116,7 @@ var algo_modes = {
   main: 1,
   edit_fields: 2,
   edit_variables: 3,
+  test_code: 4,
 };
 
 /**
@@ -141,10 +142,14 @@ class AAlgorithmEdit extends Component {
     this.generateAlgorithmFieldsList = this.generateAlgorithmFieldsList.bind(this);
     this.generateCodeIndicators = this.generateCodeIndicators.bind(this);
     this.generateEditorDisabled = this.generateEditorDisabled.bind(this);
+    this.generateFooter = this.generateFooter.bind(this);
     this.generateReturnVariablesEdit = this.generateReturnVariablesEdit.bind(this);
     this.generateReturnVariablesList = this.generateReturnVariablesList.bind(this);
+    this.generateTestResults = this.generateTestResults.bind(this);
     this.handleDisabledEditorClick = this.handleDisabledEditorClick.bind(this);
     this.handleDocumentKey = this.handleDocumentKey.bind(this);
+    this.onTestResultsHide = this.onTestResultsHide.bind(this);
+    this.onTestResultsShow = this.onTestResultsShow.bind(this);
     this.onTestCode = this.onTestCode.bind(this);
     this.onUpdatedFieldValue = this.onUpdatedFieldValue.bind(this);
 
@@ -170,6 +175,7 @@ class AAlgorithmEdit extends Component {
       mode: algo_modes.main,        // The current display mode
       current_field_values: {},     // Current values for fields
       current_return_variables,     // The return variables
+      test_results: null,           // The current set of test results
       code_ok: true,                // Code quality flag
     };
   }
@@ -239,8 +245,8 @@ class AAlgorithmEdit extends Component {
 
     this.makeCodeServerCall('check', 
           'python',
-          (success) => {this.code_check = null; this.handleCodeQualityResult(success); this.checkCodeChangedDuringCheck();},
-          (error) => {this.code_check = null; this.checkCodeChangedDuringCheck();}
+          (success) => {this.handleCodeQualityResult(success); this.checkCodeChangedDuringCheck();},
+          (error) => {this.checkCodeChangedDuringCheck();}
     );
   }
 
@@ -424,10 +430,12 @@ class AAlgorithmEdit extends Component {
    */
   generateCodeIndicators() {
     const code_indicator_extra_class = this.state.code_ok ? ' algorithm-edit_code-error-indicator-ok' : ' algorithm-edit_code-error-indicator-error';
+    const code_test_button_extra_class = this.state.code_ok ? '' : ' algorithm-edit_code-error-indicator-test-disabled';
+    const code_test_button_click_handler = this.state.code_ok ? this.onTestCode : null;
 
     return (
       <div id="algorithm_edit_code_indicator_wrapper" className="algorithm-edit-code-indicator-wrapper">
-        <div id="algorithm_edit_code_test_button" className="algorithm-edit_code-error-indicator-test" onClick={this.onTestCode}>Test</div>
+        <div id="algorithm_edit_code_test_button" className={'algorithm-edit_code-error-indicator-test' + code_test_button_extra_class} onClick={code_test_button_click_handler}>Test</div>
         <div className="algorithm-edit-code-indicator-separator"></div>
         <div id="algorithm_edit_code_error_indicator" className={'algorithm-edit_code-error-indicator-button' + code_indicator_extra_class}></div>
       </div>
@@ -464,6 +472,44 @@ class AAlgorithmEdit extends Component {
           Click here to save changes and resume editing
           </div>
         </div>
+      </div>
+    );
+  }
+
+  /**
+   * Returns the UI for the footer
+   */
+  generateFooter() {
+    return (
+      <div id="algorithm_edit_footer" className="algorithm-edit-footer">
+        {(this.state.mode !== algo_modes.test_code && this.state.test_results) && 
+              <div id="algorithm_edit_display_results_wrapper" className="algorithm-edit-display-results-wrapper">
+                <div id="algorithm_edit_display_results_button" className="algorithm-edit-display-results-button" onClick={this.onTestResultsShow}>
+                <svg version="1.1"
+                     baseProfile="full"
+                     width="16" height="16"
+                     xmlns="http://www.w3.org/2000/svg">
+                  <line x1="6" y1="4" x2="7" y2="6" stroke="lightgreen" strokeLinecap="round" strokeWidth="2"/>
+                  <line x1="7" y1="6" x2="10" y2="2" stroke="lightgreen" strokeLinecap="round" strokeWidth="2"/>
+                  <polygon points="4 9 12 9 8 13 4 9" stroke="rgb(190, 190, 190)" fill="lightgrey" strokeWidth="1"/>
+                </svg>
+                </div>
+              </div>
+        }
+        {(this.state.mode === algo_modes.test_code && this.state.test_results) && 
+              <div id="algorithm_edit_display_results_wrapper" className="algorithm-edit-display-results-wrapper">
+                <div id="algorithm_edit_display_results_button" className="algorithm-edit-display-results-button" onClick={this.onTestResultsHide}>
+                <svg version="1.1"
+                     baseProfile="full"
+                     width="16" height="16"
+                     xmlns="http://www.w3.org/2000/svg">
+                  <line x1="6" y1="4" x2="7" y2="6" stroke="rgb(170, 230, 170, 0.5)" strokeLinecap="round" strokeWidth="2"/>
+                  <line x1="7" y1="6" x2="10" y2="2" stroke="rgb(170, 230, 170, 0.5)" strokeLinecap="round" strokeWidth="2"/>
+                  <polygon points="4 13 12 13 8 9 4 13" stroke="rgb(190, 190, 190)" fill="lightgrey" strokeWidth="1"/>
+                </svg>
+                </div>
+              </div>
+        }
       </div>
     );
   }
@@ -590,6 +636,31 @@ class AAlgorithmEdit extends Component {
   }
 
   /**
+   * Generates the UI for test test
+   */
+  generateTestResults() {
+    const tr_even = 'algorithm-edit-test-results-even-row';
+    const tr_odd = 'algorithm-edit-test-results-odd-row';
+
+    return (
+      <div id="algorithm_edit_test_results_wrapper" className="algorithm-edit-test-results-wrapper">
+        <table id="algorithm_edit_test_results_table" className="algorithm-edit-test-results-table">
+          <thead>
+            <tr className="algorithm-edit-test-results-header-row">
+              {this.state.test_results[0].split(',').map((item) => <td key={item} className="algorithm-edit-test-results-header-cell">{item}</td>)}
+            </tr>
+          </thead>
+          <tbody>
+            {this.state.test_results.slice(1).map((item, idx) => <tr key={'result' + idx} className={(idx & 0x01) ? tr_odd : tr_even}>
+                    {item.split(',').map((value, value_idx) => <td key={'result_value' + idx + '_' +  value_idx}>{value}</td>)}</tr>)
+            }
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  /**
    * Fetches the starting code template for the language and algorithm type
    * @param {string} lang - the programming language of the template
    * @param {int|string} algo - the algorithm type of the template
@@ -690,7 +761,14 @@ class AAlgorithmEdit extends Component {
    * @param {Object} success - the result returned by the server
    */
   handleTestSuccess(success) {
+    if (Array.isArray(success)) {
+      if (!this.editor_cursor_position) {
+        this.editor_cursor_position = this.editor.getCursorPosition();
+        this.editor_selection_range = this.editor.getSelectionRange();
+      }
 
+      this.setState({mode: algo_modes.test_code, test_results: success});
+    }
   }
 
   /**
@@ -715,8 +793,21 @@ class AAlgorithmEdit extends Component {
    * @param {AAlgorithmEdit~CodeSuccessCallback} success_cb - the callback function for when the call succeeds
    * @param {AAlgorithmEdit~CodeErrorCallback} error_cb - the callback function for when the server returns an error
    * @param {AAlgorithmEdit~CodeExceptionCallback} [exception_cb] - optional callback function for when an exception is thrown
+   * @param {string} [method] - override default POST method with another method
+   * @param {string} [uri_params] - string to append to the URI beginning with a '?' (these parameters will be encoded)
    */
-  makeCodeServerCall(type, language, success_cb, error_cb, exception_cb) {
+  makeCodeServerCall(type, language, success_cb, error_cb, exception_cb, method, uri_params) {
+    // Validate and encode the uri_params parameter
+    let cur_uri_params = ''
+    if (uri_params) {
+      cur_uri_params += uri_params;
+      if (cur_uri_params[0] !== '?') {
+        console.log('Invalid URI parameter specified');
+        return;
+      }
+      let uri_parts = cur_uri_params.substring(1).split('&');
+      cur_uri_params = '?' + uri_parts.map((part) => encodeURI(part)).join('&');
+    }
 
     // Prepare the parameters
     const code = this.editor.getValue();
@@ -741,26 +832,28 @@ class AAlgorithmEdit extends Component {
     form_data.append('variables', JSON.stringify(variables));
     
     // Make the call
-    const uri = Utils.getHostOrigin().concat(encodeURI(`/code/${type}/${language}`));
+    const uri = Utils.getHostOrigin().concat(encodeURI(`/code/${type}/${language}`), cur_uri_params);
     try {
       this.code_check = window.setTimeout(() => {
         fetch(uri, {
-          method: 'GET',
+          method: method ? method.toupper() : 'POST',
           body: form_data,
           credentials: 'include',
           }
         )
-        .then(response => { if (response.ok)
+        .then(response => { this.code_check = null;
+                            if (response.ok)
                               // Check if we've had an error on the server side indicated by non-200 status
-                              if (response.status === 200)
+                              if (response.status === 200) {
                                 return response.json();
-                              else
-                                return []
+                              } else {
+                                return []   // TODO: figure out what to do with OK but not 200 status'
+                              }
                             else
                               throw response.statusText
                           })
-        .then(success => {console.log("SUCCESS:",success); success_cb(success);})
-        .catch(error => {console.log("ERROR",error); error_cb(error);});
+        .then(success => {success_cb(success);})
+        .catch(error => {console.log("ERROR",error); this.code_check = null;error_cb(error);});
       }, 1);
     } catch (err) {
       console.log(`Code server call (${type} ${language}) exception:`, err);
@@ -783,10 +876,31 @@ class AAlgorithmEdit extends Component {
 
     this.makeCodeServerCall('test',
             'rgb_plot/python',
-            (success) => {this.handleTestSuccess();},
-            (error) => {/*TODO:*/}
+            (success) => {this.handleTestSuccess(success);},
+            (error) => {this.setState({test_results: null});/*TODO: Error*/}
     );
+  }
 
+  /**
+   * Handles the user wanting to hide test results
+   */
+  onTestResultsHide() {
+    if (this.state.test_results) {
+      this.editor.focus()
+    }
+  }
+
+  /**
+   * Handles the user wanting to see test results
+   */
+  onTestResultsShow() {
+    if (this.state.test_results) {
+      if (!this.editor_cursor_position) {
+        this.editor_cursor_position = this.editor.getCursorPosition();
+        this.editor_selection_range = this.editor.getSelectionRange();
+      }
+      this.setState({mode: algo_modes.test_code});
+    }
   }
 
   /**
@@ -836,7 +950,11 @@ class AAlgorithmEdit extends Component {
           {this.generateCodeIndicators()}
           <div id="algorithm_edit_editor" className="algorithm-edit-editor"></div>
         </div>
-        {this.state.mode !== algo_modes.main && this.generateEditorDisabled()}
+        {(this.state.mode !== algo_modes.main && this.state.mode !== algo_modes.test_code) && this.generateEditorDisabled()}
+        {(this.state.mode === algo_modes.test_code && this.state.test_results) && this.generateTestResults()}
+        <div id="algorithm_edit_footer" className="algorithm-edit-footer">
+          {this.generateFooter()}
+        </div>
       </div>
     );
   }

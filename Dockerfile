@@ -57,8 +57,8 @@ COPY ./*.py ./*.sh ./
 COPY ./test_data ./test_data
 
 # TODO: Get the pylint resource file
-# TODO: install testing environment
-# TODO: install test images:https://data.cyverse.org/dav-anon/iplant/projects/aes/cct/diag/sample-data/sample_plot_images.zip
+# TODO: install testing environment (plot-base-rgb: 1.9)
+# TODO: install test images:https://data.cyverse.org/dav-anon/iplant/projects/aes/cct/diag/sample-data/sample_plot_images.zip and place in separate folders
 
 EXPOSE ${PORT_NUMBER}
 

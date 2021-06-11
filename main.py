@@ -12,6 +12,7 @@ import uuid
 import tempfile
 import traceback
 import subprocess
+import sys
 from typing import Union
 from irods.session import iRODSSession
 from irods.data_object import chunks
@@ -19,6 +20,8 @@ import irods.exception
 from flask import Flask, make_response, render_template, request, send_file, session
 from flask_cors import CORS, cross_origin
 from werkzeug.utils import secure_filename
+from pylint import lint
+from pylint.reporters.text import TextReporter
 
 from workflow_definitions import WORKFLOW_DEFINITIONS
 
@@ -227,7 +230,7 @@ def _write_python_file(filepath: str, code: str, variables: dict = None) ->  tup
         end_index = _get_python_preamble(code_lines, line_index)
         while line_index <= end_index:
             out_file.write(code_lines[line_index].rstrip() + '\n')
-            line_index += 1;
+            line_index += 1
 
         # Write variables
         variable_start_line = line_index + 1
@@ -249,20 +252,17 @@ def _write_python_file(filepath: str, code: str, variables: dict = None) ->  tup
 
 def _lint_python_file(filepath: str) -> list:
     """Lints the specified python file and returns the findings"""
-    import sys
-    try:
-        from io import StringIO
-    except:
-        from StringIO import StringIO
-    from pylint import lint
-    from pylint.reporters.text import TextReporter
 
-    class WritableObject(object):
+    class WritableObject():
+        """Class to assist in getting pylint output"""
         def __init__(self):
+            """Initialize the instance"""
             self.content = []
-        def write(self, st):
-            self.content.append(st)
+        def write(self, message):
+            """Saves the message to be retrieved later"""
+            self.content.append(message)
         def read(self):
+            """Returns the stored messagees """
             return self.content
 
     pylint_output = WritableObject()
@@ -272,7 +272,7 @@ def _lint_python_file(filepath: str) -> list:
     return pylint_output.read()
 
 
-def _test_python_file(algo_type: str, lang: str, filepath: str, test_folder: str):
+def _test_python_file(algo_type: str, lang: str, filepath: str, test_folder: str) -> Union[tuple, dict]:
     """Tests the python file
     Arguments:
         algo_type: the type of algorithm to test
@@ -284,8 +284,10 @@ def _test_python_file(algo_type: str, lang: str, filepath: str, test_folder: str
     Exceptions:
         Raises RuntimeError if the environment is not properly configured
     """
+    print("HACK: _test_python_file", algo_type, lang, filepath, test_folder)
     # Copy over needed files from the template
     template_folder = os.path.join(CODE_TEMPLATE_PATH, algo_type, lang)
+    print("HACK: _test_python_file", "template folder", template_folder)
     if not os.path.exists(template_folder) or not os.path.isdir(template_folder):
         raise RuntimeError('Expected template folder "%s" is not found' % os.path.join('/', algo_type, lang))
 
@@ -295,19 +297,49 @@ def _test_python_file(algo_type: str, lang: str, filepath: str, test_folder: str
         if os.path.isfile(src_name):
             if src_name.endswith('.py'):
                 shutil.copyfile(src_name, os.path.join(test_folder, one_file))
+                print("HACK: _test_python_file", "template copy", one_file)
 
-    # Copy test images over
+    # Copy test images and folders over
+    test_images = []
     images_folder = os.path.join(CODE_TEMPLATE_PATH, algo_type, 'images')
     dest_folder = os.path.join(test_folder, 'images')
     if not os.path.exists(dest_folder):
         os.makedirs(dest_folder)
-    for one_file in os.listdir(images_folder):
-        src_name = os.path.join(images_folder,  one_file)
-        if os.path.isfile(src_name):
-            shutil.copyfile(src_name, os.path.join(dest_folder, one_file))
+    source_folders = [images_folder]
+    for one_folder in source_folders:
+        # Make sure we're putting the folders and files in the right place
+        if one_folder == images_folder:
+            cur_dest_folder = dest_folder
+        else:
+            cur_dest_folder = dest_folder + one_folder[len(images_folder):]
+
+        # Copy this folder's contents
+        for one_file in os.listdir(one_folder):
+            src_name = os.path.join(one_folder, one_file)
+            dest_name = os.path.join(cur_dest_folder, one_file)
+            if os.path.isfile(src_name):
+                shutil.copyfile(src_name, dest_name)
+                test_images.append(dest_name)
+            elif os.path.isdir(src_name):
+                os.makedirs(dest_name, exist_ok=True)
+                source_folders.append(src_name)
 
     # Run the test
-    
+    cmd = [sys.executable, os.path.join(test_folder, filepath), '--working_space', test_folder] + test_images
+    proc = subprocess.run(cmd, capture_output=True)
+
+    print("PROC: ", cmd, proc.returncode, proc.stdout, proc.stderr)
+
+    # Look for the result file
+    csv_filepath = os.path.join(test_folder, 'rgb_plot.csv')
+    if os.path.exists(csv_filepath):
+        with open(csv_filepath, 'r') as in_file:
+            res_data = in_file.read().split('\n')
+    else:
+        print("Testing run failed")
+        res_data = {'error': 'Testing run was not successful'}
+
+    return res_data
 
 
 def normalize_path(path: str) -> str:
@@ -1342,7 +1374,8 @@ def template_file(lang: str, algorithm: str):
     response.headers.set('Content-Type', 'text')
     return response
 
-@app.route('/code/check/<lang>', methods=['GET'])
+
+@app.route('/code/check/<lang>', methods=['POST'])
 @cross_origin(origin='127.0.0.1:3000')
 def check_python_code(lang: str):
     """Performs a check on the python code"""
@@ -1399,16 +1432,16 @@ def check_python_code(lang: str):
 
     return json.dumps(results)
 
-@app.route('/code/test/<algo_type>/<lang>', methods=['GET'])
+@app.route('/code/test/<algo_type>/<lang>', methods=['POST'])
 @cross_origin(origin='127.0.0.1:3000')
-def check_python_code(algo_type: str, lang: str):
+def test_python_code(algo_type: str, lang: str):
     """Performs a check on the python code
     Arguments:
         algo_type: the transformer type this code represents
         lang: the language of thee code to test
     """
     print("TEST PYTHON CODE", algo_type, lang)
-    if algo_type.lower() != rgb_plot:
+    if algo_type.lower() != 'rgb_plot':
         return 'Unsupported algorithm type', 404
     if lang.lower() != 'python':
         return 'Unsupported language', 404
@@ -1423,11 +1456,18 @@ def check_python_code(algo_type: str, lang: str):
     code = request.form['code']
     variables = json.loads(request.form['variables'])
     with tempfile.TemporaryDirectory(dir=CODE_TESTING_PATH) as test_folder:
-        code_file_name = os.path.join(test_folder, 'rgb_algorithm.py')
+        code_file_name = os.path.join(test_folder, 'algorithm_rgb.py')
+        print("CODE TEST FILE",code_file_name,test_folder, 'Exists'  if os.path.exists(test_folder) else 'Missing')
         try:
             _, _ = _write_python_file(code_file_name, code, variables)
 
             test_results = _test_python_file(algo_type, lang, 'transformer.py', test_folder)
+
+            if isinstance(test_results, dict):
+                # We have an error result
+                return 409, test_results['error']       # Conflict, we expected success but failure conflicts with that
+
+            results = test_results
 
         except Exception as ex:
             msg = 'Exception caught while trying to check python code "%s"' % code
