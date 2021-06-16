@@ -29,10 +29,11 @@ var workflow_titles = [
  * Different workflow modes (states)
  */
 var workflow_modes = {
-  main: 0,      // List of workflows
-  run: 1,       // Run a workflow
-  details: 2,   // Details for running workflows
-  details_finished: 3,   // Details for running workflows when the workflow has completed
+  main: 0,              // List of workflows
+  run: 1,               // Run a workflow
+  details: 2,           // Details for running workflows
+  details_finished: 3,  // Details for running workflows when the workflow has completed
+  new_workflow: 4,      // User creating a new workflow
 };
 
 /**
@@ -98,7 +99,6 @@ class AWorkflow extends Component {
   constructor(props) {
     super(props);
 
-    this.addItem = this.addItem.bind(this); // Handles the sstart of creating a new workflow to run
     this.browseFiles = this.browseFiles.bind(this);
     this.browseUploadFiles = this.browseUploadFiles.bind(this);
     this.dismissMessage = this.dismissMessage.bind(this); // Handles dismissing popup messages
@@ -115,6 +115,7 @@ class AWorkflow extends Component {
     this.generateDetailsPendingUI = this.generateDetailsPendingUI.bind(this);
     this.generateDownloadUI = this.generateDownloadUI.bind();
     this.generateMessages = this.generateMessages.bind(this); // Returns the UI for displaying workflow messages
+    this.generateNewWorkflowUI = this.generateNewWorkflowUI.bind(this);
     this.generateStepUI = this.generateStepUI.bind(this);
     this.generateTitleRightUI = this.generateTitleRightUI.bind(this);
     this.generateWorkflowUI = this.generateWorkflowUI.bind(this);
@@ -123,6 +124,7 @@ class AWorkflow extends Component {
     this.handleWorkflowStatus = this.handleWorkflowStatus.bind(this);
     this.haveRequiredWorkflowParameters = this.haveRequiredWorkflowParameters.bind(this);
     this.newIdAdded = this.newIdAdded.bind(this); //Called when UI elements are generated
+    this.newWorkflow = this.newWorkflow.bind(this);
     this.onBack = this.onBack.bind(this);
     this.onCancelBrowse = this.onCancelBrowse.bind(this);
     this.onDeleteItem = this.onDeleteItem.bind(this);
@@ -133,15 +135,17 @@ class AWorkflow extends Component {
     this.prepareWorkflowStatus = this.prepareWorkflowStatus.bind(this);
     this.refreshWorkflowMessages = this.refreshWorkflowMessages.bind(this);
     this.runWorkflow = this.runWorkflow.bind(this);
+    this.setupRunWorkflow = this.setupRunWorkflow.bind(this); // Handles running a workflow
     this.showDownloadOptions = this.showDownloadOptions.bind(this);
-    this.updateNewType = this.updateNewType.bind(this);
+    this.updateNewWorkflowType = this.updateNewWorkflowType.bind(this);
+    this.updateWorkflowType = this.updateWorkflowType.bind(this);
     this.workflowDetailsStatus = this.workflowDetailsStatus.bind(this);
     this.workflowStatus = this.workflowStatus.bind(this);
 
     // Define class variable fields
     this.generated_ids = [];           // IDs of all elements we generated
     this.mandatory_ids = [];           // IDs of mandatory elements we generated
-    this.new_workflow_idx = null;      // The index of a new workflow to specify (index into our state.workflow_defs)
+    this.run_workflow_idx = null;      // The index of a workflow to run (index into our state.workflow_defs)
     this.workflow_configs = {};        // The configurations for workflows (values associated with different workflow defs)
     this.workflow_status_timer = null; // The timer id for workflow status fetches
     this.workflow_details_timer = null;// The timer id when fetching workflow details
@@ -190,6 +194,7 @@ class AWorkflow extends Component {
       job_errors: null,             // The current list of errors
       cur_messages: null,           // The types of messages to display
       pending_request: false,       // Flag indicaating there's a pending request - can be used when generating a UI
+      new_workflow_idx: null,       // The index of a new workflow to specify (index into our state.workflow_defs)
       errors: null,                 // Error information
     };
   }
@@ -222,45 +227,6 @@ class AWorkflow extends Component {
                                   }
                                  }
                   );
-  }
-
-  /**
-   * Starts adding a new workflow to be run
-   */
-  addItem() {
-    // If there isn't a workflow type selected, set the focus to that control
-    if (this.new_workflow_idx == null) {
-      let el = document.getElementById('workflow_types');
-      el.focus();
-      return;
-    }
-
-    //  Gather the data for configuring the workflow
-    const cur_index = this.new_workflow_idx;
-    const cur_template = this.state.workflow_defs[cur_index];
-    let cur_name = cur_template.name;
-    const title_name = cur_name;
-    const cur_item_name = this.workflow_configs[cur_template.id].cur_item_name;
-    if (cur_item_name !== null && cur_item_name !== undefined) {
-      cur_name = cur_item_name;
-    }
-
-    // Reset some class variables
-    this.generated_ids = [];
-    this.mandatory_ids = [];
-    this.prepared_messages = null;
-    this.prepared_errors = null;
-
-    // Set the state to show the workflow configuration UI
-    this.setState({mode: workflow_modes.run,
-                   cur_item_index: cur_index,
-                   cur_item_name: cur_name, 
-                   cur_item_title: 'New ' +  title_name,
-                   edit_add: true,
-                   edit_item: null,
-                   met_requirements: this.haveRequiredWorkflowParameters(),
-                   errors: null,
-                   cur_messages: null});
   }
 
   /**
@@ -609,6 +575,51 @@ class AWorkflow extends Component {
   }
 
   /**
+   * Returns the UI for creating a new workflow
+   */
+  generateNewWorkflowUI() {
+    // If there isn't a workflow type selected, set the focus to that control
+    if (this.state.new_workflow_idx == null) {
+      let el = document.getElementById('workflow_new_types');
+      if (el) {
+        el.focus();
+      }
+      return;
+    }
+
+    //  Gather the data for configuring the workflow
+    const cur_index = this.state.new_workflow_idx;
+    const cur_template = this.state.workflow_defs[cur_index];
+
+    return cur_template.steps.map((item) => 
+      <div id={'workflow_new_step_' + item.name + '_wrapper'} key={item.name} className="workflow-new-step-wrapper">
+        <div className="workflow-new-step-details-wrapper">
+          <div id={'workflow_new_' + item.name + '_name_wrapper'} className="workflow-new-step-name-wrapper">
+            <div id={'workflow_new_' + item.name + '_name_prompt'} className="workflow-new-step-name-prompt">Name</div>
+            <div id={'workflow_new_' + item.name + '_name'} className="workflow-new-step-name">{item.name}</div>
+          </div>
+          <div id={'workflow_new_' + item.name + '_description_wrapper'} className="workflow-new-step-description-wrapper">
+            <div id={'workflow_new_' + item.name + '_description_prompt'} className="workflow-new-step-description-prompt">Description</div>
+            <div id={'workflow_new_' + item.name + '_description'} className="workflow-new-step-description">{item.description}</div>
+          </div>
+        </div>
+        {item.fields.map((field) => 
+          <div key={item.name + '_' + field.name}>
+            <div id={'workflow_new_' + item.name + '_' + field.name + '_name_wrapper'} className="workflow-new-field-name-wrapper">
+              <div id={'workflow_new_' + item.name + '_' + field.name + '_name_prompt'} className="workflow-new-field-name-prompt">Name</div>
+              <div id={'workflow_new_' + item.name + '_' + field.name + '_name'} className="workflow-new-field-name">{field.name}</div>
+            </div>
+            <div id={'workflow_new_' + item.name + '_' + field.name + '_type_wrapper'} className="workflow-new-field-type-wrapper">
+              <div id={'workflow_new_' + item.name + '_' + field.name + '_type_prompt'} className="workflow-new-field-type-prompt">Type</div>
+              <div id={'workflow_new_' + item.name + '_' + field.name + '_type'} className="workflow-new-type-prompt">{field.type}</div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  /**
    * Returns the UI for each step of a workflow
    * @param {Object} parent - the step to generate the UI for
    * @param {int|string} idx - the index associated with the current step
@@ -675,8 +686,11 @@ class AWorkflow extends Component {
           <input type="file" id="workflow_types_file_find" accept="application/json"
                  className="workflow-types-upload-file-pick" onChange={this.fileBrowsed}></input>
         </div>
+        <div id="workflow_new_button_wrapper" className="workflow-new-button-wrapper">
+          <span id="new_button" className="workflow-new-button" onClick={this.newWorkflow}>New</span>
+        </div>
         <div id="workflow_types_list_wrapper" className="workflow-types-list-wrapper">
-          <select name="workflow_types" id="workflow_types" onChange={this.updateNewType}>
+          <select name="workflow_types" id="workflow_types" onChange={this.updateWorkflowType}>
             <option value="" className="workflow-types-option workflow-type-option-item">--Please select--</option>
             {this.state.workflow_defs.map((item, idx) => {return (
                 <option value={item.name + '_' + idx} key={item.name + '_' + idx} className="workflow-types-option workflow-type-option-item">{item.name}</option>
@@ -684,8 +698,8 @@ class AWorkflow extends Component {
             )}
           </select>
         </div>
-        <div id="workflow_add_new_button_wrapper" className="workflow-add-new-button-wrapper">
-          <span id="add_new_button" className="workflow-add-new-button" onClick={this.addItem}>New</span>
+        <div id="workflow_run_button_wrapper" className="workflow-run-button-wrapper">
+          <span id="run_button" className="workflow-run-button" onClick={this.setupRunWorkflow}>Run</span>
         </div>
       </>
     );
@@ -802,6 +816,26 @@ class AWorkflow extends Component {
           </div>
         );
       }
+
+      case workflow_modes.new_workflow:
+      return (
+        <div id="workflow_new_wrapper" className="workflow-new-wrapper">
+          <select name="workflow_new_types" id="workflow_new_types" onChange={this.updateNewWorkflowType}>
+            <option value="" className="workflow-types-option workflow-type-option-item">--Please select--</option>
+            {this.state.workflow_defs.map((item, idx) => {return (
+                <option value={item.name + '_new_' + idx} key={item.name + '_' + idx} className="workflow-new-types-option workflow-new-type-option-item">{item.name}</option>
+              );}
+            )}
+          </select>
+          {this.state.new_workflow_idx !== null &&
+            <div id="workflow_new_name_wrapper" className="workflow-new-name-wrapper">
+              <div id="workflow_new_name_prompt" className="workflow-new-name-prompt">Name</div>
+              <input type="text" id="workflow_new_name" className="workflow-new-name"></input>
+            </div>
+          }
+          {this.generateNewWorkflowUI()}
+        </div>
+      );
     }
   }
 
@@ -943,6 +977,13 @@ class AWorkflow extends Component {
       this.mandatory_ids.push(new_id);
     }
     item._ui_id = new_id;
+  }
+
+  /**
+   * Called when thee user wants to create a new workflow
+   */
+  newWorkflow() {
+    this.setState({mode: workflow_modes.new_workflow});
   }
 
   /**
@@ -1135,7 +1176,7 @@ class AWorkflow extends Component {
    * @param {Object} ev - the triggering event
    */
   onNameChange(ev) {
-    let cur_id = this.state.workflow_defs[this.new_workflow_idx].id;
+    let cur_id = this.state.workflow_defs[this.run_workflow_idx].id;
     this.workflow_configs[cur_id].cur_item_name = ev.target.value;
 
     this.setState({cur_item_name: ev.target.value});
@@ -1368,6 +1409,45 @@ class AWorkflow extends Component {
   }
 
   /**
+   * Run a workflow
+   */
+  setupRunWorkflow() {
+    // If there isn't a workflow type selected, set the focus to that control
+    if (this.run_workflow_idx == null) {
+      let el = document.getElementById('workflow_types');
+      el.focus();
+      return;
+    }
+
+    //  Gather the data for configuring the workflow
+    const cur_index = this.run_workflow_idx;
+    const cur_template = this.state.workflow_defs[cur_index];
+    let cur_name = cur_template.name;
+    const title_name = cur_name;
+    const cur_item_name = this.workflow_configs[cur_template.id].cur_item_name;
+    if (cur_item_name !== null && cur_item_name !== undefined) {
+      cur_name = cur_item_name;
+    }
+
+    // Reset some class variables
+    this.generated_ids = [];
+    this.mandatory_ids = [];
+    this.prepared_messages = null;
+    this.prepared_errors = null;
+
+    // Set the state to show the workflow configuration UI
+    this.setState({mode: workflow_modes.run,
+                   cur_item_index: cur_index,
+                   cur_item_name: cur_name, 
+                   cur_item_title: 'New ' +  title_name,
+                   edit_add: true,
+                   edit_item: null,
+                   met_requirements: this.haveRequiredWorkflowParameters(),
+                   errors: null,
+                   cur_messages: null});
+  }
+
+  /**
    * Enables the displaying of download options
    * @param {Object} ev - the triggering event
    * @param {string} workflow_id -the workflow ID associated with the download event
@@ -1377,19 +1457,46 @@ class AWorkflow extends Component {
   }
 
   /**
-   * Updates the state when a new workflow type is selected
+   * Updates the state when a new workflow type is selected to configure
    * @param {Object} ev - the triggering event
    */
-  updateNewType(ev) {
+  updateNewWorkflowType(ev) {
     const target_val = ev.target.value;
 
     if (!target_val || (target_val.length <= 0)) {
-      this.new_workflow_idx = null;
+      if (this.state.new_workflow_idx !== null) {
+        this.setState({new_workflow_idx: null});
+      }
+      return;
+    }
+
+    let new_workflow_idx = null;
+    if (target_val !== 'new') {
+      let found_idx = this.state.workflow_defs.findIndex((item, idx) => item.name + '_new_' + idx === target_val);
+      new_workflow_idx = found_idx >= 0 ? found_idx : null;
+    } else {
+      new_workflow_idx = -1;
+    }
+
+    if (new_workflow_idx !== this.state.new_workflow_idx) {
+      this.setState({new_workflow_idx});
+    }
+  }
+
+  /**
+   * Updates the state when a workflow type is selected to run
+   * @param {Object} ev - the triggering event
+   */
+  updateWorkflowType(ev) {
+    const target_val = ev.target.value;
+
+    if (!target_val || (target_val.length <= 0)) {
+      this.run_workflow_idx = null;
       return;
     }
 
     let found_idx = this.state.workflow_defs.findIndex((item, idx) => item.name + '_' + idx === target_val);
-    this.new_workflow_idx = found_idx >= 0 ? found_idx : null;
+    this.run_workflow_idx = found_idx >= 0 ? found_idx : null;
   }
 
   /**
@@ -1540,7 +1647,7 @@ class AWorkflow extends Component {
    */
   render() {
     const viewing_details = (this.state.mode === workflow_modes.details) || (this.state.mode === workflow_modes.details_finished);
-    const title_right_generator = !viewing_details ? this.generateTitleRightUI : null;
+    const title_right_generator = !viewing_details && (this.state.mode !==  workflow_modes.new_workflow) ? this.generateTitleRightUI : null;
     const have_errors = this.state.errors !== null;
 
     return (

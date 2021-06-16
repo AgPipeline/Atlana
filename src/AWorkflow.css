@@ -226,17 +226,11 @@
     color: black;
 }
 
-.workflow-add-new-button-wrapper {
+.workflow-new-button-wrapper {
     align-self: end;
 }
 
-.workflow-types-option {
-}
-
-.workflow-type-option-item {
-}
-
-.workflow-add-new-button {
+.workflow-new-button {
     margin: 5px;
     padding: 5px;
     border: 1px solid black;
@@ -246,7 +240,31 @@
     cursor: pointer;
 }
 
-.workflow-add-new-button:hover {
+.workflow-new-button:hover {
+    box-shadow: 2px 2px 2px grey;
+}
+
+.workflow-run-button-wrapper {
+    align-self: end;
+}
+
+.workflow-types-option {
+}
+
+.workflow-type-option-item {
+}
+
+.workflow-run-button {
+    margin: 5px;
+    padding: 5px;
+    border: 1px solid black;
+    border-radius: 5px;
+    background-color: rgb(220, 255, 220);
+    font-weight: normal !important;
+    cursor: pointer;
+}
+
+.workflow-run-button:hover {
     box-shadow: 2px 2px 2px grey;
 }
 
