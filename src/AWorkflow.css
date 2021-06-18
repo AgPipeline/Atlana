@@ -34,8 +34,19 @@
 
 .workflow-new-wrapper {
     width: 100%;
-    background-color: #e5e5e5;
     min-height: 20%;
+}
+
+.workflow-new-types-wrapper {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-content: center;
+    align-items: stretch;
+}
+
+.workflow-new-types-prompt {
+    margin-right: 10px;
 }
 
 .workflow-new-title {
@@ -358,4 +369,209 @@
 
 .workflow-details-download-spacer {
     flex: 20;
+}
+
+.workflow-new-name-wrapper {
+    margin-bottom: 5px;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-content: flex-start;
+    align-items: stretch;
+}
+
+.workflow-new-name-prompt {
+    margin-right: 10px;
+}
+
+.workflow-new-step-wrapper {
+    width: fit-content;
+    min-width: 40%;
+    margin-bottom: 5px;
+    padding: 3px;
+    border: 1px solid black;
+    border-radius: 3px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-content: flex-start;
+    align-items: stretch;
+}
+
+.workflow-new-step-wrapper-algorithm {
+    border-color: lightgreen;
+    border-width: 2px;
+}
+
+.workflow-new-step-item-wrapper {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-content: flex-start;
+    align-items: stretch;
+}
+
+.workflow-new-step-row-padding {
+    flex: 20;
+}
+
+.workflow-new-replace-algorithm-button {
+    border: 1px solid black;
+    border-radius: 5px;
+    padding-right: 3px;
+    padding-left: 3px;
+    font-size: small;
+    background-color: rgb(220, 220, 255);
+    cursor: pointer;
+}
+
+.workflow-new-step-name-wrapper {
+}
+
+.workflow-new-step-description {
+    padding-top: 2px;
+    font-size: smaller;
+    font-style: italic;
+}
+
+.workflow-new-fields-table {
+    padding: 0px 5px 5px 5px;
+    width: 100%;
+    font-size: small;
+    margin-top: 10px;
+}
+
+.workflow-new-fields-table-header {
+    text-align: left;
+}
+
+.workflow-new-field-name {
+    padding-left: 15px;
+    text-align: left;
+}
+
+.workflow-new-field-type {
+    text-align: right;
+}
+
+.workflow-new-replace-algo-background {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    width:  100vw;
+    height:  100vh;
+    background-color: rgb(128, 128, 128, .25);
+}
+
+.workflow-new-replace-algo-wrapper {
+    height: 100vh;
+    min-width: 30%;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-content: center;
+    align-items: center;
+}
+
+.workflow-new-replace-algo-frame {
+    border: 1px solid black;
+    border-radius: 10px;
+    background-color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-content: flex-start;
+    align-items: stretch;
+}
+
+.workflow-new-replace-algo-titlebar {
+    background-color: lightgrey;
+    border-radius: 10px 10px 0 0 ;
+    border-bottom: 1px solid grey;
+    color: black;
+    font-size: large;
+    text-align: center;
+    min-height: 1.5em;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+}
+
+.workflow-new-replace-algo-titlebar-left {
+    flex: 1;
+}
+
+.workflow-new-replace-algo-titlebar-center {
+    flex: 20;
+    white-space: nowrap;
+}
+
+.workflow-new-replace-algo-titlebar-right {
+    flex: 1;
+    padding-right: 10px;
+    text-align: center;
+    align-self: center;
+}
+
+.workflow-new-replace-algo-titlebar-close {
+    cursor: pointer;
+    margin-top: 2px;
+    margin-left: 10px;
+    padding: 1px;
+}
+
+.workflow-new-replace-algo-titlebar-close:hover {
+    padding: 0px;
+    border: 1px solid black;
+    border-radius: 5px;
+}
+
+.workflow-new-replace-algo-body {
+    padding: 5px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-content: flex-start;
+    align-items: stretch;
+}
+
+.workflow-new-replace-algo-footer {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.workflow-new-replace-algo-footer-spacer {
+    flex: 20;
+}
+
+.workflow-new-replace-algo-button {
+    min-width: 20px;
+    height: 20px;
+    border: 1px solid grey;
+    padding-right: 5px;
+    padding-left: 5px;
+    border-radius: 5px;
+}
+
+.workflow-new-replace-algo-ok {
+    background-color: #d8ffd8;
+    margin-left: 20px;
+    cursor: pointer;
+}
+
+.workflow-new-replace-algo-ok-disabled {
+    color: grey;
+    border-color: grey;
+    background-color: #f0f0f0;
+    cursor: default;
+}
+
+.workflow-new-replace-algo-cancel {
+    background-color: #e0e0e0;
+    margin-right: 20px;
+    cursor: pointer;
 }

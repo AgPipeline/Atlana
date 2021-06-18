@@ -34,6 +34,7 @@ var workflow_modes = {
   details: 2,           // Details for running workflows
   details_finished: 3,  // Details for running workflows when the workflow has completed
   new_workflow: 4,      // User creating a new workflow
+  replace_algorithm: 5, // An algorithm is getting replacecs
 };
 
 /**
@@ -48,6 +49,34 @@ var name_ui_def =  {
   minlength: '1',
   maxlength: '100',
 };
+
+/**
+  * UI Entries for Algorithm selection
+  */
+var algo_sel_ui_def = [
+{
+  name: 'repo_url',
+  prompt: 'Repository URL',
+  description: 'The URL of the repository to access',
+  default: '',
+  type: 'plain'
+}, {
+  name: 'username',
+  prompt: 'Username',
+  description: 'Name of user',
+  type: 'plain'
+}, {
+  name: 'password',
+  prompt: 'Password',
+  description: 'The password or token associated with the user',
+  type: 'password'
+}, {
+  name: 'algo_file',
+  prompt: 'Algorithm file',
+  description: 'Python file containing the algorithm',
+  type: 'file',
+}
+];
 
 /**
  * Used to keep track of what user want's to see
@@ -100,6 +129,7 @@ class AWorkflow extends Component {
     super(props);
 
     this.browseFiles = this.browseFiles.bind(this);
+    this.browseGit = this.browseGit.bind(this);
     this.browseUploadFiles = this.browseUploadFiles.bind(this);
     this.dismissMessage = this.dismissMessage.bind(this); // Handles dismissing popup messages
     this.displayWorkflowDetailsStatus = this.displayWorkflowDetailsStatus.bind(this);
@@ -131,6 +161,9 @@ class AWorkflow extends Component {
     this.onDownloadItem = this.onDownloadItem.bind(this);
     this.onItemCheck= this.onItemCheck.bind(this);
     this.onNameChange= this.onNameChange.bind(this);
+    this.onReplaceAlgorithm = this.onReplaceAlgorithm.bind(this);
+    this.onReplaceAlgoCancel = this.onReplaceAlgoCancel.bind(this);
+    this.onReplaceAlgoOK = this.onReplaceAlgoOK.bind(this);
     this.onViewDetails =  this.onViewDetails.bind(this);
     this.prepareWorkflowStatus = this.prepareWorkflowStatus.bind(this);
     this.refreshWorkflowMessages = this.refreshWorkflowMessages.bind(this);
@@ -180,6 +213,7 @@ class AWorkflow extends Component {
     this.state = {
       mode: workflow_modes.main,    // The current display mode
       browse_files: null,           // Flag used to browse files, folders, or no-browse(=null)
+      cur_algo_type: null,          // The current algorithm type that's getting replaced
       cur_item_index: null,         // The index of the new item to edit
       cur_item_name: null,          // The name of the new item
       cur_item_title: null,         // The title to display for the new item window
@@ -237,6 +271,13 @@ class AWorkflow extends Component {
    */
   browseFiles(ev, element_id, item) {
     this.setState({browse_files: true, browse_cb: (path, folder_type) => {this.finishBrowse(path, element_id, item, folder_type)}});
+  }
+
+  /**
+   * Called to browse Git repository
+   */
+  browseGit() {
+
   }
 
   /**
@@ -462,6 +503,59 @@ class AWorkflow extends Component {
   }
 
   /**
+   * Generates the UI for selecting algorithms to replace an existing one
+   */
+  generateAlgorithmSelectionUI() {
+    const have_algo_requirements = false;
+    const algo_ok_button_classes = 'workflow-new-replace-algo-button workflow-new-replace-algo-ok' + (have_algo_requirements ? '' : ' workflow-new-replace-algo-ok-disabled');
+    const algo_ok_button_cb = have_algo_requirements ? this.onReplaceAlgoOK : null;
+
+    return (
+      <div id="workflow_new_replace_algo_background" className="workflow-new-replace-algo-background">
+        <div id="workflow_new_replace_algo_wrapper" className="workflow-new-replace-algo-wrapper">
+          <div id="workflow_new_replace_algo_frame" className="workflow-new-replace-algo-frame">
+            <div id="workflow_new_replace_algo_titlebar" className="workflow-new-replace-algo-titlebar">
+              <div id="workflow_new_replace_algo_titlebar_left" className="workflow-new-replace-algo-titlebar-left"></div>
+              <div id="workflow_new_replace_algo_titlebar_center" className="workflow-new-replace-algo-titlebar-center">Replace Algorithm ({this.state.cur_algo_type})</div>
+              <div id="workflow_new_replace_algo_titlebar_right" className="workflow-new-replace-algo-titlebar-right">
+                <div id="workflow_new_replace_algo_titlebar_cancel" className="workflow-new-replace-algo-titlebar-close" onClick={this.onReplaceAlgoCancel} >x</div>
+              </div>
+            </div>
+            <div id="workflow_new_replace_algo_body" className="workflow-new-replace-algo-body">
+              <table>
+                <tbody>
+                  {algo_sel_ui_def.map((item) => {
+                    let props = {};
+                    let item_save_name = item.name;
+
+                    if (item.type === 'file') {
+                      props.browse = this.browseGit;
+                      if (item.default === undefined) {
+                        item.default = {location: 'rgb_algorithm.py', id: item_save_name, auth: null, data_type: 'git', path_is_file: true, name: 'rgb_algorithm.py'}
+                      }
+                    }
+                    return (
+                      <tr key={item.name}>
+                        <TemplateUIElement template={item} id={item_save_name} id_prefix="workflow_new_replace_algo_" {...props} />
+                      </tr>
+                    );
+                  }
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div id="workflow_new_replace_algo_footer" className="workflow-new-replace-algo-footer">
+              <div id="workflow_new_replace_algo_ok" className={algo_ok_button_classes} onClick={algo_ok_button_cb}>OK</div>
+              <div className="workflow-new-replace-algo-footer-spacer"></div>
+              <div id="workflow_new_replace_algo_cancel" className="workflow-new-replace-algo-button workflow-new-replace-algo-cancel" onClick={this.onReplaceAlgoCancel}>Cancel</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /**
    * Returns the pending UI when refeshing the message details for a workflow
    * @param {bool} force - when truthiness is true, will force the display of the UI regardless of whether there's messages, or not.
    */
@@ -591,31 +685,46 @@ class AWorkflow extends Component {
     const cur_index = this.state.new_workflow_idx;
     const cur_template = this.state.workflow_defs[cur_index];
 
-    return cur_template.steps.map((item) => 
-      <div id={'workflow_new_step_' + item.name + '_wrapper'} key={item.name} className="workflow-new-step-wrapper">
-        <div className="workflow-new-step-details-wrapper">
-          <div id={'workflow_new_' + item.name + '_name_wrapper'} className="workflow-new-step-name-wrapper">
-            <div id={'workflow_new_' + item.name + '_name_prompt'} className="workflow-new-step-name-prompt">Name</div>
-            <div id={'workflow_new_' + item.name + '_name'} className="workflow-new-step-name">{item.name}</div>
+    return cur_template.steps.map((item) => {
+      const supported_algorithm = item.algorithm === 'RGBA Plot';
+      const new_step_wrapper_classes = 'workflow-new-step-wrapper' + (supported_algorithm ? ' workflow-new-step-wrapper-algorithm' : '');
+      return (
+        <div id={'workflow_new_step_' + item.name + '_wrapper'} key={item.name} className={new_step_wrapper_classes}>
+          <div className="workflow-new-step-details-wrapper">
+            <div id={'workflow_new_' + item.name + '_name_wrapper'} className="workflow-new-step-item-wrapper workflow-new-step-name-wrapper">
+              <div className="workflow-new-step-row-padding"></div>
+              <div id={'workflow_new_' + item.name + '_name'} className="workflow-new-step-name">{item.name}</div>
+              <div className="workflow-new-step-row-padding"></div>
+              {supported_algorithm && <div id="workflow_new_replace_algorithm_button" className="workflow-new-replace-algorithm-button" onClick={() => {this.onReplaceAlgorithm(item.algorithm);}}>Replace</div>}
+            </div>
+            <div id={'workflow_new_' + item.name + '_description_wrapper'} className="workflow-new-step-item-wrapper workflow-new-step-description-wrapper">
+              <div id={'workflow_new_' + item.name + '_description'} className="workflow-new-step-description">{item.description}</div>
+            </div>
           </div>
-          <div id={'workflow_new_' + item.name + '_description_wrapper'} className="workflow-new-step-description-wrapper">
-            <div id={'workflow_new_' + item.name + '_description_prompt'} className="workflow-new-step-description-prompt">Description</div>
-            <div id={'workflow_new_' + item.name + '_description'} className="workflow-new-step-description">{item.description}</div>
-          </div>
+          <table className="workflow-new-fields-table">
+            <thead>
+              <tr>
+                <th className="workflow-new-fields-table-header">Input fields</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {item.fields.map((field) => {
+                if (field.prev_command_path) {
+                  return  null;
+                }
+
+                return (
+                  <tr key={item.name}>
+                    <td id={'workflow_new_' + item.name + '_' + field.name + '_name'} className="workflow-new-field-name">{field.description}</td>
+                    <td id={'workflow_new_' + item.name + '_' + field.name + '_type'} className="workflow-new-field-type">{field.type}</td>
+                  </tr>
+                );}
+              )}
+            </tbody>
+          </table>
         </div>
-        {item.fields.map((field) => 
-          <div key={item.name + '_' + field.name}>
-            <div id={'workflow_new_' + item.name + '_' + field.name + '_name_wrapper'} className="workflow-new-field-name-wrapper">
-              <div id={'workflow_new_' + item.name + '_' + field.name + '_name_prompt'} className="workflow-new-field-name-prompt">Name</div>
-              <div id={'workflow_new_' + item.name + '_' + field.name + '_name'} className="workflow-new-field-name">{field.name}</div>
-            </div>
-            <div id={'workflow_new_' + item.name + '_' + field.name + '_type_wrapper'} className="workflow-new-field-type-wrapper">
-              <div id={'workflow_new_' + item.name + '_' + field.name + '_type_prompt'} className="workflow-new-field-type-prompt">Type</div>
-              <div id={'workflow_new_' + item.name + '_' + field.name + '_type'} className="workflow-new-type-prompt">{field.type}</div>
-            </div>
-          </div>
-        )}
-      </div>
+      );}
     );
   }
 
@@ -818,15 +927,19 @@ class AWorkflow extends Component {
       }
 
       case workflow_modes.new_workflow:
+      case workflow_modes.replace_algorithm:
       return (
         <div id="workflow_new_wrapper" className="workflow-new-wrapper">
-          <select name="workflow_new_types" id="workflow_new_types" onChange={this.updateNewWorkflowType}>
-            <option value="" className="workflow-types-option workflow-type-option-item">--Please select--</option>
-            {this.state.workflow_defs.map((item, idx) => {return (
-                <option value={item.name + '_new_' + idx} key={item.name + '_' + idx} className="workflow-new-types-option workflow-new-type-option-item">{item.name}</option>
-              );}
-            )}
-          </select>
+          <div id="workflow_new_types_wrapper" className="workflow-new-types-wrapper">
+            <div id="workflow_new_types_prompt" className="workflow-new-types-prompt">Starting configuration</div>
+            <select name="workflow_new_types" id="workflow_new_types" onChange={this.updateNewWorkflowType}>
+              <option value="" className="workflow-types-option workflow-type-option-item">--Please select--</option>
+              {this.state.workflow_defs.map((item, idx) => {return (
+                  <option value={item.name + '_new_' + idx} key={item.name + '_' + idx} className="workflow-new-types-option workflow-new-type-option-item">{item.name}</option>
+                );}
+              )}
+            </select>
+          </div>
           {this.state.new_workflow_idx !== null &&
             <div id="workflow_new_name_wrapper" className="workflow-new-name-wrapper">
               <div id="workflow_new_name_prompt" className="workflow-new-name-prompt">Name</div>
@@ -834,6 +947,7 @@ class AWorkflow extends Component {
             </div>
           }
           {this.generateNewWorkflowUI()}
+          {this.state.mode === workflow_modes.replace_algorithm && this.generateAlgorithmSelectionUI()}
         </div>
       );
     }
@@ -1180,6 +1294,28 @@ class AWorkflow extends Component {
     this.workflow_configs[cur_id].cur_item_name = ev.target.value;
 
     this.setState({cur_item_name: ev.target.value});
+  }
+
+  /**
+   * Called when the user wants to replace an algorithm
+   * @param {string} type - the algorithm type to replace
+   */
+  onReplaceAlgorithm(type) {
+    this.setState({mode: workflow_modes.replace_algorithm, cur_algo_type: type});
+  }
+
+  /**
+   * Handles the user cancelling algorithm replacement
+   */
+  onReplaceAlgoCancel() {
+    this.setState({mode: workflow_modes.new_workflow, cur_algo_type: null});
+  }
+
+  /**
+   * Handles the user accepting the algorithm replacement
+   */
+  onReplaceAlgoOK() {
+
   }
 
   /**
