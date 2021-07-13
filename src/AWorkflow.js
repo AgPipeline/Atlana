@@ -60,21 +60,6 @@ var algo_sel_ui_def = [
   description: 'The URL of the repository to access',
   default: '',
   type: 'plain'
-}, {
-  name: 'username',
-  prompt: 'Username',
-  description: 'Name of user',
-  type: 'plain'
-}, {
-  name: 'password',
-  prompt: 'Password',
-  description: 'The password or token associated with the user',
-  type: 'password'
-}, {
-  name: 'algo_file',
-  prompt: 'Algorithm file',
-  description: 'Python file containing the algorithm',
-  type: 'file',
 }
 ];
 
@@ -155,6 +140,9 @@ class AWorkflow extends Component {
     this.haveRequiredWorkflowParameters = this.haveRequiredWorkflowParameters.bind(this);
     this.newIdAdded = this.newIdAdded.bind(this); //Called when UI elements are generated
     this.newWorkflow = this.newWorkflow.bind(this);
+    this.onAlgoChange = this.onAlgoChange.bind(this);
+    this.onAlgoCheckRepo = this.onAlgoCheckRepo.bind(this);
+    this.onAlgoNewId = this.onAlgoNewId.bind(this);
     this.onBack = this.onBack.bind(this);
     this.onCancelBrowse = this.onCancelBrowse.bind(this);
     this.onDeleteItem = this.onDeleteItem.bind(this);
@@ -176,16 +164,17 @@ class AWorkflow extends Component {
     this.workflowStatus = this.workflowStatus.bind(this);
 
     // Define class variable fields
-    this.generated_ids = [];           // IDs of all elements we generated
-    this.mandatory_ids = [];           // IDs of mandatory elements we generated
-    this.run_workflow_idx = null;      // The index of a workflow to run (index into our state.workflow_defs)
-    this.workflow_configs = {};        // The configurations for workflows (values associated with different workflow defs)
-    this.workflow_status_timer = null; // The timer id for workflow status fetches
-    this.workflow_details_timer = null;// The timer id when fetching workflow details
+    this.generated_ids = [];            // IDs of all elements we generated
+    this.mandatory_ids = [];            // IDs of mandatory elements we generated
+    this.run_workflow_idx = null;       // The index of a workflow to run (index into our state.workflow_defs)
+    this.workflow_configs = {};         // The configurations for workflows (values associated with different workflow defs)
+    this.workflow_status_timer = null;  // The timer id for workflow status fetches
+    this.workflow_details_timer = null; // The timer id when fetching workflow details
     this.workflow_details_status_timer = null; // The timer id when fetching workflow status while viewing details
-    this.prepared_messages = null;     // Prepared messages for display
-    this.prepared_errors = null;       // Prepared errors for display
-    this.prepare_lines_timer = null;   // Timer id for preparing message/error lines for display
+    this.prepared_messages = null;      // Prepared messages for display
+    this.prepared_errors = null;        // Prepared errors for display
+    this.prepare_lines_timer = null;    // Timer id for preparing message/error lines for display
+    this.algo_repo_conn_id_map = {};    // Contains the ID  map for algorithm repository connection information
 
     // Make a copy of the workflow definitions so we can manupulate them without affecting the originals
     const workflow_defs = [...workflowDefinitions];
@@ -230,6 +219,9 @@ class AWorkflow extends Component {
       pending_request: false,       // Flag indicaating there's a pending request - can be used when generating a UI
       new_workflow_idx: null,       // The index of a new workflow to specify (index into our state.workflow_defs)
       errors: null,                 // Error information
+      algo_repo_branches: [],       // Information on the algorithm repo's branches and tags
+      algo_repo_id: null,           // The server ID associated with the algorithm repo
+      replace_algo_checked: false,  // Indicates the algorithm was checked
     };
   }
 
@@ -261,6 +253,41 @@ class AWorkflow extends Component {
                                   }
                                  }
                   );
+  }
+
+  /**
+   * Called to confirm that we have everything needed to define a new algorithm
+   * @returns {bool} true if everything has been defined
+   */
+  algoHaveRepoBranch() {
+    if (!this.algoHaveRepoInfo() || !this.state.replace_algo_checked) {
+      return false;
+    }
+
+    let branch_el = document.querySelector('input[name=algo_repo_branch]:checked');
+    if (!branch_el) {
+      return this.state.algo_repo_branches.length > 0;
+    }
+
+    return true;
+  }
+
+  /**
+   * Called to confirm that we have the repository connection information for an algorithm
+   * @returns {bool} true if IDs have been defined and each of their elements contains a value
+   */
+  algoHaveRepoInfo() {
+    const algo_ids = Object.values(this.algo_repo_conn_id_map);
+
+    if (algo_ids.length <= 0) {
+      return false;
+    }
+    const have_all_info = algo_ids.every((id) => {
+      const el = document.getElementById(id);
+      return el && el.value.trim().length > 0;
+    });
+
+    return have_all_info;
   }
 
   /**
@@ -503,12 +530,64 @@ class AWorkflow extends Component {
   }
 
   /**
+   * Generates the UI for selection an algorithm repository branch
+   * Note: assumes it's an entire row in a table
+   */
+  generateAlgorithmBranchUI() {
+    // Generate the UI only if we have something to show
+    if (!this.state.algo_repo_branches || (this.state.algo_repo_branches.length <= 0)) {
+      return null;
+    }
+
+    // Return the list of branches with a radio button for each
+    let default_branch_name = this.state.algo_repo_branches[0];
+    if (this.state.algo_repo_branches.length > 1) {
+      const main_branch = this.state.algo_repo_branches.find(branch_name => branch_name === 'master' || branch_name === 'main');
+      if (main_branch) {
+        default_branch_name = main_branch;
+      }
+    }
+
+    return (
+      <tr>
+        <td>
+          <div id="workflow_new_fields_branch_wrapper" className="workflow-new-fields-branch-wrapper">
+            <span>Select branch</span>
+            <div id="workflow_new_fields_branch_names_wrapper" className="workflow-new-fields-branch-names-wrapper">
+              {this.state.algo_repo_branches.map((branch_name) => {
+                let props = {}
+                if (branch_name === default_branch_name) {
+                  props['defaultChecked'] = true;
+                }
+                return (
+                  <div>
+                    <input type="radio" id={'workflow_new_fields_branch_' + branch_name} name="algo_repo_branch" value={branch_name} {...props}></input>
+                    <label for={'workflow_new_fields_branch_' + branch_name}>{branch_name}</label>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </td>
+      </tr>
+    );
+  }
+
+  /**
    * Generates the UI for selecting algorithms to replace an existing one
    */
   generateAlgorithmSelectionUI() {
-    const have_algo_requirements = false;
-    const algo_ok_button_classes = 'workflow-new-replace-algo-button workflow-new-replace-algo-ok' + (have_algo_requirements ? '' : ' workflow-new-replace-algo-ok-disabled');
-    const algo_ok_button_cb = have_algo_requirements ? this.onReplaceAlgoOK : null;
+    const have_algo_repo_info = this.algoHaveRepoInfo();
+    const have_algo_requirements = this.state.replace_algo_checked && this.algoHaveRepoBranch();
+    const algo_ok_button_text = this.state.replace_algo_checked ? 'OK' : 'Check';
+    const algo_ok_button_cb = have_algo_requirements ? this.onReplaceAlgoOK : (have_algo_repo_info ? this.onAlgoCheckRepo : null);
+    let algo_ok_button_classes = 'workflow-new-replace-algo-button workflow-new-replace-algo-ok';
+
+    if (!have_algo_repo_info && !this.state.replace_algo_checked) {
+      algo_ok_button_classes += ' workflow-new-replace-algo-ok-disabled';
+    } else if (!have_algo_requirements && this.state.replace_algo_checked) {
+      algo_ok_button_classes += ' workflow-new-replace-algo-ok-disabled';
+    }
 
     return (
       <div id="workflow_new_replace_algo_background" className="workflow-new-replace-algo-background">
@@ -536,16 +615,19 @@ class AWorkflow extends Component {
                     }
                     return (
                       <tr key={item.name}>
-                        <TemplateUIElement template={item} id={item_save_name} id_prefix="workflow_new_replace_algo_" {...props} />
+                        <td>
+                          <TemplateUIElement template={item} id={item_save_name} id_prefix="workflow_new_replace_algo_" new_id={this.onAlgoNewId} change={this.onAlgoChange} {...props} />
+                        </td>
                       </tr>
                     );
                   }
                   )}
+                  {this.generateAlgorithmBranchUI()}
                 </tbody>
               </table>
             </div>
             <div id="workflow_new_replace_algo_footer" className="workflow-new-replace-algo-footer">
-              <div id="workflow_new_replace_algo_ok" className={algo_ok_button_classes} onClick={algo_ok_button_cb}>OK</div>
+              <div id="workflow_new_replace_algo_ok" className={algo_ok_button_classes} onClick={algo_ok_button_cb}>{algo_ok_button_text}</div>
               <div className="workflow-new-replace-algo-footer-spacer"></div>
               <div id="workflow_new_replace_algo_cancel" className="workflow-new-replace-algo-button workflow-new-replace-algo-cancel" onClick={this.onReplaceAlgoCancel}>Cancel</div>
             </div>
@@ -1101,6 +1183,44 @@ class AWorkflow extends Component {
   }
 
   /**
+   * Called when Algorithm replacement fields are changed
+   */
+  onAlgoChange(ev) {
+    this.setState({replace_algo_checked: false});
+  }
+
+  /**
+   * Handles checking that we can access the repository for an algorithm
+   */
+  onAlgoCheckRepo() {
+    const form_data = new FormData();
+    algo_sel_ui_def.forEach((item) => {
+      const el = document.getElementById(this.algo_repo_conn_id_map[item.name]);
+      form_data.append(item.name, el.value);
+    });
+
+    const uri = Utils.getHostOrigin().concat('/algorithm/gitcheck');
+    try {
+      fetch(uri, {
+        method: 'POST',
+        credentials: 'include',
+        body: form_data
+        }
+      )
+      .then(response => {if (response.status >= 200 && response.status < 300) return response.json(); else throw response.statusText;})
+      .then(result => {this.setState({algo_repo_branches: result.branches.concat(result.tags).sort(), replace_algo_checked: true, algo_repo_id: result.id});})
+      .catch(error => console.log("ERROR", error));
+    } catch (err) {
+      console.log("Run workflow exception", err);
+      throw err;
+    }
+  }
+
+  onAlgoNewId(item, new_id) {
+    this.algo_repo_conn_id_map[item.name] = new_id;
+  }
+
+  /**
    * Called when the user clicks the "back" button
    * @param {Object} ev - the triggering event
    */
@@ -1301,7 +1421,8 @@ class AWorkflow extends Component {
    * @param {string} type - the algorithm type to replace
    */
   onReplaceAlgorithm(type) {
-    this.setState({mode: workflow_modes.replace_algorithm, cur_algo_type: type});
+    this.algo_repo_conn_id_map = {};
+    this.setState({mode: workflow_modes.replace_algorithm, cur_algo_type: type, algo_repo_branches: [], replace_algo_checked: false, algo_repo_id: null});
   }
 
   /**
@@ -1315,7 +1436,7 @@ class AWorkflow extends Component {
    * Handles the user accepting the algorithm replacement
    */
   onReplaceAlgoOK() {
-
+    console.log("OK");
   }
 
   /**

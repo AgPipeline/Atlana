@@ -82,6 +82,13 @@ if CODE_TEMPLATE_PATH is None:
 if not os.path.exists(CODE_TEMPLATE_PATH):
     os.makedirs(CODE_TEMPLATE_PATH)
 
+# Starting point for repositories
+CODE_REPOSITORY_PATH = os.getenv('CODE_REPOSITORY_FOLDER')
+if CODE_REPOSITORY_PATH is None:
+    CODE_REPOSITORY_PATH = os.path.join(OUR_LOCAL_PATH, 'repos')
+if not os.path.exists(CODE_REPOSITORY_PATH):
+    os.makedirs(CODE_REPOSITORY_PATH)
+
 # Status codes for checking on processes
 STATUS_NOT_STARTED = 0
 STATUS_RUNNNG = 1
@@ -406,7 +413,8 @@ def irod_md5_checksum(file_path: str) -> str:
     Return:
         The checksum as a string
     """
-    return hashlib.md5(open(file_path, 'rb').read()).hexdigest()
+    with open(file_path, 'rb') as in_file:
+        return hashlib.md5(in_file.read()).hexdigest()
 
 
 def get_irods_file(auth: dict, source_path: str, dest_path: str) -> bool:
@@ -1477,6 +1485,92 @@ def test_python_code(algo_type: str, lang: str):
 
     return json.dumps(results)
 
+@app.route('/algorithm/gitcheck', methods=['POST'])
+@cross_origin(origin='127.0.0.1:3000')
+def algo_git_check():
+    """Performs an access check against a git repo
+    Arguments:
+        repo_url: the URL of the repo to check
+        username: the name of the user used to access the repo
+        password: the password associated with the user
+    """
+    print("CHECK GIT REPO")
+    # Get the values from the form
+    have_error = False
+    repo_url = None
+    try:
+        repo_url = request.form.get('repo_url')
+    except ValueError as ex:
+        print("A value exception was caught while fetching form data:", ex)
+        have_error = True
+
+    if have_error:
+        print ("Missing or bad git repository value: URL:", str(repo_url))
+        return 'Repository fields are missing or invalid', 400
+
+    # Get the list of branches and tags
+    local_repo_id = uuid.uuid4().hex
+    local_repo_dir = os.path.join(CODE_REPOSITORY_PATH, local_repo_id)
+    cur_dir = os.getcwd()
+    os.makedirs(local_repo_dir)
+    os.chdir(local_repo_dir)
+    results = {'id': local_repo_id, 'branches': [], 'tags': []}
+
+    try:
+        cmd = ['git', 'init']
+        res = subprocess.run(cmd, stdout=subprocess.DEVNULL)
+        if res.returncode != 0:
+            print("Unable to initialize git repository at", local_repo_dir)
+            return "Internal error", 500
+
+        cmd = ['git', 'remote', 'add', 'origin', repo_url]
+        res = subprocess.run(cmd, stdout=subprocess.DEVNULL)
+        if res.returncode != 0:
+            print("Unable to configure git repository at", local_repo_dir)
+            return "Configuration error", 400
+
+        cmd = ['git', 'fetch']
+        res = subprocess.run(cmd, stdout=subprocess.DEVNULL)
+        if res.returncode != 0:
+            print("Unable to fetch git repository at", local_repo_dir)
+            return "Update error", 400
+
+        cmd = ['git', 'branch', '-r']
+        res = subprocess.run(cmd, stdout=subprocess.PIPE)
+        if res.returncode != 0:
+            print("Unable to list branches for git repository at", local_repo_dir)
+            return "Branch listing error", 400
+        branches = res.stdout.decode("utf-8").split('\n')
+        for one_branch in branches:
+            cur_branch = one_branch.strip()
+            if cur_branch:
+                if cur_branch.startswith('origin/'):
+                    cur_branch = cur_branch[len('origin/'):]
+                results['branches'].append(cur_branch)
+
+        cmd = ['git', 'tag', '-l']
+        res = subprocess.run(cmd, stdout=subprocess.PIPE)
+        if res.returncode != 0:
+            print("Unable to list tags for git repository at", local_repo_dir)
+            return "Tags listing error", 400
+        tags = res.stdout.decode("utf-8").split('\n')
+        for one_tag in tags:
+            cur_tag = one_tag.strip()
+            if cur_tag:
+                results['tags'].append(cur_tag)
+    finally:
+        print("CHANGING BACK TO FOLDER", cur_dir)
+        os.chdir(cur_dir)
+
+    repo_info = {'id': local_repo_id, 'url': repo_url}
+    if 'repos' not in session or session['repos'] is None:
+        session['repos'] = [repo_info]
+    else:
+        cur_repos = session['repos']
+        cur_repos.append(repo_info)
+        session['repos'] = cur_repos
+
+    return json.dumps(results)
 
 if __name__ == '__main__':
     app.run(debug=False)
