@@ -1572,5 +1572,30 @@ def algo_git_check():
 
     return json.dumps(results)
 
+@app.route('/algorithm/gitclear/<string:repo_id>', methods=['PUT'])
+@cross_origin(origin='127.0.0.1:3000')
+def algo_git_clear(repo_id: str):
+    """Removes references to a git repo
+    Arguments:
+        repo_id: the ID of the git repo to clean up
+    """
+    print("CLEAN GIT REPO")
+    found_idx = None
+    cur_repos = session['repos']
+
+    for idx, one_repo in enumerate(cur_repos):
+        if one_repo['id'] == repo_id:
+            found_idx = idx
+            break
+
+    if found_idx is not None:
+        local_repo_dir = os.path.join(CODE_REPOSITORY_PATH, repo_id)
+        if os.path.exists(local_repo_dir):
+            shutil.rmtree(local_repo_dir)
+
+        session['repos'] = [one_repo for one_repo in cur_repos if one_repo['id'] != repo_id]
+
+    return json.dumps({'id': repo_id})
+
 if __name__ == '__main__':
     app.run(debug=False)

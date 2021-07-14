@@ -577,14 +577,16 @@
 }
 
 .workflow-new-fields-branch-wrapper {
+    margin-top: 5px;
     max-height: 250px;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-content: space-between;
     align-items: flex-start;
 }
 
 .workflow-new-fields-branch-names-wrapper {
+    margin-left: 10px;
     min-width: 100px;
     border: 1px solid black;
     padding-right: 5px;
@@ -595,3 +597,15 @@
     align-content: space-between;
     align-items: flex-start;
 }
+
+.workflow-new-name-git-indicator {
+    margin-right: 10px;
+    padding: 0px 2px 0px 2px;
+    font-size: xx-small;
+    max-height: 1.3em;
+    border: 1px solid #E0E0E0;
+    border-radius: 5px;
+    background-color: #E0E0E0;
+}
+
+
