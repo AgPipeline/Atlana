@@ -166,6 +166,8 @@ class AWorkflow extends Component {
     this.onDownloadItem = this.onDownloadItem.bind(this);
     this.onItemCheck= this.onItemCheck.bind(this);
     this.onNameChange= this.onNameChange.bind(this);
+    this.onNewWorkflowName = this.onNewWorkflowName.bind(this);
+    this.onNewWorkflowSave = this.onNewWorkflowSave.bind(this);
     this.onReplaceAlgorithm = this.onReplaceAlgorithm.bind(this);
     this.onReplaceAlgoCancel = this.onReplaceAlgoCancel.bind(this);
     this.onReplaceAlgoOK = this.onReplaceAlgoOK.bind(this);
@@ -237,6 +239,7 @@ class AWorkflow extends Component {
       new_workflow_idx: null,       // The index of a new workflow to specify (index into our state.workflow_defs)
       new_workflows: [],            // Contains information on new workflows
       errors: null,                 // Error information
+      algo_new_name: null,          // The name of a new algorithm
       algo_repo_branches: [],       // Information on the algorithm repo's branches and tags
       algo_repo_id: null,           // The server ID associated with the algorithm repo
       algo_step_idx: null,      // The index of the step the algorithm is getting changed
@@ -1046,28 +1049,41 @@ class AWorkflow extends Component {
 
       case workflow_modes.new_workflow:
       case workflow_modes.replace_algorithm:
-      return (
-        <div id="workflow_new_wrapper" className="workflow-new-wrapper">
-          <div id="workflow_new_types_wrapper" className="workflow-new-types-wrapper">
-            <div id="workflow_new_types_prompt" className="workflow-new-types-prompt">Starting configuration</div>
-            <select name="workflow_new_types" id="workflow_new_types" onChange={this.updateNewWorkflowType}>
-              <option value="" className="workflow-types-option workflow-type-option-item">--Please select--</option>
-              {this.state.workflow_defs.map((item, idx) => {return (
-                  <option value={item.name + '_new_' + idx} key={item.name + '_' + idx} className="workflow-new-types-option workflow-new-type-option-item">{item.name}</option>
-                );}
-              )}
-            </select>
-          </div>
-          {this.state.new_workflow_idx !== null &&
-            <div id="workflow_new_name_wrapper" className="workflow-new-name-wrapper">
-              <div id="workflow_new_name_prompt" className="workflow-new-name-prompt">Name</div>
-              <input type="text" id="workflow_new_name" className="workflow-new-name"></input>
+      {
+        let save_button_classes = 'workflow-new-footer-save-button';
+        let save_button_cb = this.state.algo_new_name ? this.onNewWorkflowSave : null;
+        if (!this.state.algo_new_name) {
+          save_button_classes += ' workflow-new-footer-save-button-disabled';
+        }
+
+        return (
+          <div id="workflow_new_wrapper" className="workflow-new-wrapper">
+            <div id="workflow_new_types_wrapper" className="workflow-new-types-wrapper">
+              <div id="workflow_new_types_prompt" className="workflow-new-types-prompt">Starting configuration</div>
+              <select name="workflow_new_types" id="workflow_new_types" onChange={this.updateNewWorkflowType}>
+                <option value="" className="workflow-types-option workflow-type-option-item">--Please select--</option>
+                {this.state.workflow_defs.map((item, idx) => {return (
+                    <option value={item.name + '_new_' + idx} key={item.name + '_' + idx} className="workflow-new-types-option workflow-new-type-option-item">{item.name}</option>
+                  );}
+                )}
+              </select>
             </div>
-          }
-          {this.generateNewWorkflowUI()}
-          {this.state.mode === workflow_modes.replace_algorithm && this.generateAlgorithmSelectionUI()}
-        </div>
-      );
+            {this.state.new_workflow_idx !== null &&
+              <div id="workflow_new_name_wrapper" className="workflow-new-name-wrapper">
+                <div id="workflow_new_name_prompt" className="workflow-new-name-prompt">Name</div>
+                <input type="text" id="workflow_new_name" className="workflow-new-name" onChange={this.onNewWorkflowName}></input>
+              </div>
+            }
+            {this.generateNewWorkflowUI()}
+            {this.state.mode === workflow_modes.replace_algorithm && this.generateAlgorithmSelectionUI()}
+            {this.state.new_workflow_idx !== null &&
+              <div id="workflow_new_footer_wrapper" className="workflow-new-footer-wrapper">
+                <div id="workflow_new_footer_save_button" className={save_button_classes} onClick={save_button_cb}>Save</div>
+              </div>
+            }
+          </div>
+        );
+      }
     }
   }
 
@@ -1215,7 +1231,7 @@ class AWorkflow extends Component {
    * Called when thee user wants to create a new workflow
    */
   newWorkflow() {
-    this.setState({mode: workflow_modes.new_workflow});
+    this.setState({mode: workflow_modes.new_workflow, new_workflow_idx:null, algo_new_name: null});
   }
 
   /**
@@ -1472,7 +1488,69 @@ class AWorkflow extends Component {
     let cur_id = this.state.workflow_defs[this.run_workflow_idx].id;
     this.workflow_configs[cur_id].cur_item_name = ev.target.value;
 
-    this.setState({cur_item_name: ev.target.value});
+    const cur_name = ev.target.value;
+    if (cur_name !== this.state.cur_item_name) {
+      this.setState({cur_item_name: cur_name});
+    }
+  }
+
+  /**
+   * Called when the user changes the name of a new workflow
+   * @param {Object} ev - the triggering event
+   */
+  onNewWorkflowName(ev) {
+    const cur_name = ev.target.value;
+    if (cur_name !== this.state.algo_new_name) {
+      this.setState({algo_new_name: cur_name});
+    }
+  }
+
+  /**
+   * Called to save a new workflow
+   */
+  onNewWorkflowSave() {
+    // Check for a duplicate name
+    const found_match = this.state.workflow_defs.find((item) => item.name === this.state.algo_new_name);
+    if (found_match !== undefined) {
+      this.setState({errors: 'Duplicate algorithm name. Please correct and try again'});
+      const el = document.getElementById('workflow_new_name');
+      if (el) {
+        el.focus();
+      }
+      return;
+    }
+
+    const cur_index = this.state.new_workflow_idx;
+    const cur_template = this.state.new_workflows[cur_index];
+
+    cur_template.id = Utils.getUuid();
+    cur_template.name = this.state.algo_new_name;
+
+    let workflow_defs = this.state.workflow_defs;
+    workflow_defs.push(cur_template);
+
+    this.workflow_configs[cur_template.id] = {};
+
+    window.setTimeout(() => {
+      let form_data = new FormData();
+      form_data.append('workflow', JSON.stringify(cur_template));
+
+      const uri = Utils.getHostOrigin().concat('/workflow/new');
+      try {
+        fetch(uri, {
+          method: 'POST',
+          credentials: 'include',
+          body: form_data,
+          }
+        )
+        .then(response => {console.log("onNewWorkflowSave:",response);if (response.status >= 300) throw response.statusText;})
+        .then(result => {console.log(result);this.setState({mode: workflow_modes.main, workflow_defs});/* TODO: display success message*/})
+        .catch(error => console.log('ERROR: onNewWorkflowSave:', error));
+      } catch (err) {
+        console.log("Run workflow exception", err);
+        throw err;
+      }
+    }, 100);
   }
 
   /**

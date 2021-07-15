@@ -727,8 +727,14 @@ def workflow_start(workflow_id: str, workflow_template: dict, data: list, file_h
                         print("Unable to find parameter for step ", one_step['name'], ' field ', one_field['name'])
                         raise RuntimeError("Missing mandatory value for %s on workflow step %s" % (one_field['name'], one_step['name']))
 
-        workflow.append({'step': one_step['name'], 'command': one_step['command'], 'parameters': parameters,
-                         'working_folder': working_folder})
+        cur_step = {'step': one_step['name'], 'command': one_step['command'], 'parameters': parameters, 'working_folder': working_folder}
+        print("HACK: CHECKING GIT", one_step)
+        if 'git_repo' in one_step:
+            print("HACK: FOUND GIT")
+            cur_step['git_repo'] = one_step['git_repo']
+            if 'git_branch' in one_step:
+                cur_step['git_branch'] = one_step['git_branch']
+        workflow.append(cur_step)
 
     process_info = queue_start(workflow_id, working_folder, recover)
     print("FINAL WORKFLOW: ",workflow)
@@ -1347,6 +1353,30 @@ def workflow_upload_file():
         session['workflow_files'] = {}.update(session['workflow_files']).update(loaded_file_info)
 
     return json.dumps({'workflows': return_workflows, 'messages': return_messages})
+
+
+@app.route('/workflow/new', methods=['POST'])
+@cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
+def workflow_new():
+    """Upload workflow files"""
+    print("WORKFLOW NEW")
+    # Get the values from the form
+    have_error = False
+    new_workflow = None
+    try:
+        new_workflow = json.loads(request.form.get('workflow'))
+    except ValueError as ex:
+        print("A value exception was caught while fetching form data:", ex)
+        have_error = True
+
+    if have_error:
+        print ("Missing or bad workflow:", str(new_workflow))
+        return 'Repository fields are missing or invalid', 400
+
+    # Get our additional parameters
+    WORKFLOW_DEFINITIONS.append(new_workflow)
+
+    return json.dumps({'id': new_workflow['id']})
 
 
 

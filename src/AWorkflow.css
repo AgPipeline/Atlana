@@ -608,4 +608,19 @@
     background-color: #E0E0E0;
 }
 
+.workflow-new-footer-save-button {
+    margin: 5px;
+    padding: 5px;
+    border: 1px solid black;
+    border-radius: 5px;
+    background-color: rgb(220, 255, 220);
+    font-weight: normal !important;
+    cursor: pointer;
+}
 
+.workflow-new-footer-save-button-disabled {
+    color: grey;
+    border-color: grey;
+    background-color: #f0f0f0;
+    cursor: default;
+}
