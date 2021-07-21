@@ -48,7 +48,7 @@
 .sidemenu-wrapper {
   min-width: 200px;
   max-width: 200px;
-  height: calc(100vh  - 100px);
+  min-height: calc(100vh  - 100px);
   background-color: white;
   display: flex;
   flex-direction: column;
@@ -71,5 +71,5 @@
 
 .main-area {
   width: calc(100vw - 200px);
-  height: calc(100vh - 100px);
+  min-height: calc(100vh - 100px);
 }

@@ -34,7 +34,8 @@ var workflow_modes = {
   details: 2,           // Details for running workflows
   details_finished: 3,  // Details for running workflows when the workflow has completed
   new_workflow: 4,      // User creating a new workflow
-  replace_algorithm: 5, // An algorithm is getting replacecs
+  replace_algorithm: 5, // An algorithm is getting replacecd
+  edit_step_result: 6,  // The result of a step in a new workflow is getting edited
 };
 
 /**
@@ -76,8 +77,45 @@ var algo_new_ui_def = [
   default: '',
   type: 'plain'
 }
-
 ];
+
+/**
+ * Used to indicate which result fields are editable
+ */
+var result_field_edit_names = ['name', 'description', 'filename'];
+
+/**
+ * Templates used when editing result fields (see: result_field_edit_names)
+ */
+var result_field_edit_ui_template = {
+  'name': {
+            name: 'result_name',
+            prompt: 'Name',
+            description: 'The name of the result',
+            default: '',
+            type: 'plain',
+            minlength: '1',
+            maxlength: '100',
+           },
+  'description': {
+            name: 'result_description',
+            prompt: 'Description',
+            description: 'The description of the result',
+            default: '',
+            type: 'plain',
+            minlength: '1',
+            maxlength: '100',
+           },
+  'filename': {
+            name: 'result_filename',
+            prompt: 'Filename',
+            description: 'The resulting file name',
+            default: '',
+            type: 'plain',
+            minlength: '1',
+            maxlength: '100',
+           }
+};
 
 /**
  * Used to keep track of what user want's to see
@@ -100,6 +138,11 @@ var job_status = {
  * Prefix to use for the ID of generated items
  */
 var id_prefix = 'workflow_new_item_';
+
+/**
+ * Timeout period between checks on workflow status
+ */
+var timeout_workflow_status = 10000;
 
 /**
  * The number of times we try to find a workflow in our list
@@ -146,7 +189,7 @@ class AWorkflow extends Component {
     this.generateDetailsPendingUI = this.generateDetailsPendingUI.bind(this);
     this.generateDownloadUI = this.generateDownloadUI.bind();
     this.generateMessages = this.generateMessages.bind(this); // Returns the UI for displaying workflow messages
-    this.generateNewWorkflowUI = this.generateNewWorkflowUI.bind(this);
+    this.generateResultEditUI = this.generateResultEditUI.bind(this);
     this.generateStepUI = this.generateStepUI.bind(this);
     this.generateTitleRightUI = this.generateTitleRightUI.bind(this);
     this.generateWorkflowUI = this.generateWorkflowUI.bind(this);
@@ -164,6 +207,7 @@ class AWorkflow extends Component {
     this.onCancelBrowse = this.onCancelBrowse.bind(this);
     this.onDeleteItem = this.onDeleteItem.bind(this);
     this.onDownloadItem = this.onDownloadItem.bind(this);
+    this.onEditResult = this.onEditResult.bind(this);
     this.onItemCheck= this.onItemCheck.bind(this);
     this.onNameChange= this.onNameChange.bind(this);
     this.onNewWorkflowName = this.onNewWorkflowName.bind(this);
@@ -171,6 +215,8 @@ class AWorkflow extends Component {
     this.onReplaceAlgorithm = this.onReplaceAlgorithm.bind(this);
     this.onReplaceAlgoCancel = this.onReplaceAlgoCancel.bind(this);
     this.onReplaceAlgoOK = this.onReplaceAlgoOK.bind(this);
+    this.onReplaceResultCancel = this.onReplaceResultCancel.bind(this);
+    this.onReplaceResultOK = this.onReplaceResultOK.bind(this);
     this.onViewDetails =  this.onViewDetails.bind(this);
     this.prepareWorkflowStatus = this.prepareWorkflowStatus.bind(this);
     this.refreshWorkflowMessages = this.refreshWorkflowMessages.bind(this);
@@ -242,8 +288,10 @@ class AWorkflow extends Component {
       algo_new_name: null,          // The name of a new algorithm
       algo_repo_branches: [],       // Information on the algorithm repo's branches and tags
       algo_repo_id: null,           // The server ID associated with the algorithm repo
-      algo_step_idx: null,      // The index of the step the algorithm is getting changed
+      algo_step_idx: null,          // The index of the step the algorithm is getting changed
       replace_algo_checked: false,  // Indicates the algorithm was checked
+      edit_result_step_name: null,  // Name of the step that has its result getting edited
+      edit_result_result_name: null, // Name of the result within the step that's getting edited
     };
   }
 
@@ -807,6 +855,7 @@ class AWorkflow extends Component {
     return cur_template.steps.map((item, step_index) => {
       const supported_algorithm = item.algorithm === 'RGBA Plot';
       const new_step_wrapper_classes = 'workflow-new-step-wrapper' + (supported_algorithm ? ' workflow-new-step-wrapper-algorithm' : '');
+      const has_non_restricted_results = item.results.find((result) => result.restricted === false);
 
       return (
         <div id={'workflow_new_step_' + item.name + '_wrapper'} key={item.name} className={new_step_wrapper_classes}>
@@ -832,7 +881,7 @@ class AWorkflow extends Component {
             <tbody>
               {item.fields.map((field) => {
                 if (field.prev_command_path) {
-                  return  null;
+                  return null;
                 }
 
                 return (
@@ -844,8 +893,109 @@ class AWorkflow extends Component {
               )}
             </tbody>
           </table>
+          <table className="workflow-new-results-table">
+            <thead>
+              <tr>
+                <th className="workflow-new-results-table-header">Result fields</th>
+                <th></th>
+                <th></th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {item.results.map((result, result_index) => {
+                if (result.restricted === undefined || result.restricted) {
+                  return null
+                }
+
+                const col_id = result.description !== undefined ? result.description : result.name;
+                const col_detail = result.type === 'file' && result.filename !== undefined ? result.filename : '';
+
+                return (
+                  <tr key={item.name}>
+                    <td id={'workflow_new_' + result.name + '_result_name'} className="workflow-new-return-field-name">{col_id}</td>
+                    <td id={'workflow_new_' + result.name + '_result_detail'} className="workflow-new-return-field-detail">{col_detail}</td>
+                    <td id={'workflow_new_' + result.name + '_result_type'} className="workflow-new-return-field-type">{result.type}</td>
+                    {has_non_restricted_results && 
+                      <td>
+                        <div id={'workflow_new_' + result.name + '_result_edit'} className="workflow-new-return-field-edit"
+                             onClick={(ev) => this.onEditResult(ev, item.name, result.name)}>
+                          ...
+                        </div>
+                      </td>
+                    }
+                    {!has_non_restricted_results && <td></td>}
+                  </tr>
+                );}
+              )}
+            </tbody>
+          </table>
         </div>
       );}
+    );
+  }
+
+  /**
+   * Returns the UI for editing the current step result
+   */
+  generateResultEditUI() {
+    const cur_index = this.state.new_workflow_idx;
+    const cur_template = this.state.new_workflows[cur_index];
+    const cur_step = cur_template.steps.find((item) => item.name === this.state.edit_result_step_name);
+    if (!cur_step) {
+      return;
+    }
+
+    const cur_result = cur_step.results.find((item) => item.name === this.state.edit_result_result_name);
+    if (!cur_result) {
+      return;
+    }
+
+    let result_ok_button_classes = 'workflow-new-replace-result-button workflow-new-replace-result-ok';
+    const body_el = document.body;
+    const document_el = document.documentElement;
+    const background_height =  Math.max(body_el.scrollHeight, body_el.offsetHeight, document_el.clientHeight, document_el.scrollHeight, document_el.offsetHeight, window.innerHeight);
+
+    return (
+      <div id="workflow_new_replace_result_background" className="workflow-new-replace-result-background" style={{'height': background_height}}>
+        <div id="workflow_new_replace_result_wrapper" className="workflow-new-replace-result-wrapper">
+          <div id="workflow_new_replace_result_frame" className="workflow-new-replace-result-frame">
+            <div id="workflow_new_replace_result_titlebar" className="workflow-new-replace-result-titlebar">
+              <div id="workflow_new_replace_result_titlebar_left" className="workflow-new-replace-result-titlebar-left"></div>
+              <div id="workflow_new_replace_result_titlebar_center" className="workflow-new-replace-result-titlebar-center">{'Replace Result (' + cur_step.name + ')'}</div>
+              <div id="workflow_new_replace_result_titlebar_right" className="workflow-new-replace-result-titlebar-right">
+                <div id="workflow_new_replace_result_titlebar_cancel" className="workflow-new-replace-result-titlebar-close" onClick={this.onReplaceResultCancel} >x</div>
+              </div>
+            </div>
+            <div id="workflow_new_replace_result_body" className="workflow-new-replace-result-body">
+              <table>
+                <tbody>
+                {result_field_edit_names.map((name) => {
+                    if (cur_result[name] === undefined) {
+                      return null;
+                    }
+
+                    const item_template = Object.assign({}, result_field_edit_ui_template[name]);
+                    item_template.default = cur_result[name];
+
+                    return (
+                      <tr key={name}>
+                        <TemplateUIElement template={item_template} id_prefix="workflow_new_replace_result_" />
+                      </tr>
+                    );
+                  })
+                }
+                </tbody>
+              </table>
+            </div>
+            <div id="workflow_new_replace_result_footer" className="workflow-new-replace-result-footer">
+              <div id="workflow_new_replace_result_ok" className={result_ok_button_classes} onClick={this.onReplaceResultOK}>OK</div>
+              <div className="workflow-new-replace-result-footer-spacer"></div>
+              <div id="workflow_new_replace_result_cancel" className="workflow-new-replace-result-button workflow-new-replace-result-cancel" onClick={this.onReplaceResultCancel}>Cancel</div>
+            </div>
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -1049,6 +1199,7 @@ class AWorkflow extends Component {
 
       case workflow_modes.new_workflow:
       case workflow_modes.replace_algorithm:
+      case workflow_modes.edit_step_result:
       {
         let save_button_classes = 'workflow-new-footer-save-button';
         let save_button_cb = this.state.algo_new_name ? this.onNewWorkflowSave : null;
@@ -1076,6 +1227,7 @@ class AWorkflow extends Component {
             }
             {this.generateNewWorkflowUI()}
             {this.state.mode === workflow_modes.replace_algorithm && this.generateAlgorithmSelectionUI()}
+            {this.state.mode === workflow_modes.edit_step_result && this.generateResultEditUI()}
             {this.state.new_workflow_idx !== null &&
               <div id="workflow_new_footer_wrapper" className="workflow-new-footer-wrapper">
                 <div id="workflow_new_footer_save_button" className={save_button_classes} onClick={save_button_cb}>Save</div>
@@ -1459,6 +1611,16 @@ class AWorkflow extends Component {
   }
 
   /**
+   * Handles editing a result
+   * @param {Object} ev - the triggering event
+   * @param {string} step_name - the name of the step containing the result to edit
+   * @param {string} result_name - the name of the result to edit
+   */
+  onEditResult(ev, step_name, result_name) {
+    this.setState({mode: workflow_modes.edit_step_result, edit_result_step_name: step_name, edit_result_result_name: result_name});
+  }
+
+  /**
    * Handles changed UI items when configuring a workflow
    * @param {Object} ev - the triggering event
    * @param {string|Object} item_save_name - identifying value passed to the UI element generator (TemplateUIElement)
@@ -1543,8 +1705,8 @@ class AWorkflow extends Component {
           body: form_data,
           }
         )
-        .then(response => {console.log("onNewWorkflowSave:",response);if (response.status >= 300) throw response.statusText;})
-        .then(result => {console.log(result);this.setState({mode: workflow_modes.main, workflow_defs});/* TODO: display success message*/})
+        .then(response => {if (response.status >= 300) throw response.statusText; else return 'Success'})
+        .then(result => {this.setState({mode: workflow_modes.main, workflow_defs});/* TODO: display success message*/})
         .catch(error => console.log('ERROR: onNewWorkflowSave:', error));
       } catch (err) {
         console.log("Run workflow exception", err);
@@ -1630,8 +1792,54 @@ class AWorkflow extends Component {
 
     let branch_el = document.querySelector('input[name=algo_repo_branch]:checked');
     cur_step.git_branch = branch_el.value;
+    cur_step.command = 'git';
 
     this.setState({mode: workflow_modes.new_workflow});
+  }
+
+  /**
+   * Handles the user cancelling result replacement
+   */
+  onReplaceResultCancel() {
+    this.setState({mode: workflow_modes.new_workflow, edit_result_step_name: null, edit_result_result_name: null});
+  }
+
+  /**
+   * Handles the user accepting the result replacement
+   */
+  onReplaceResultOK() {
+    const cur_index = this.state.new_workflow_idx;
+    const cur_template = this.state.new_workflows[cur_index];
+    const cur_step = cur_template.steps.find((item) => item.name === this.state.edit_result_step_name);
+    const cur_result = cur_step.results.find((item) => item.name === this.state.edit_result_result_name);
+    const el_prefix = "workflow_new_replace_result_result_";
+    let have_errors = false;
+
+    result_field_edit_names.forEach((name) => {
+      if (cur_result[name] === undefined) {
+        return;
+      }
+
+      const el = document.getElementById(el_prefix + name);
+      if (!el) {
+        return;
+      }
+
+      const cur_val = el.value;
+      if (!cur_val || cur_val.trim().length <= 0) {
+        if (!have_errors) {
+          have_errors = true;
+          el.focus();
+        }
+        return;
+      }
+
+      cur_result[name] = cur_val;
+    })
+
+    if (!have_errors) {
+      this.setState({mode: workflow_modes.new_workflow, edit_result_step_name: null, edit_result_result_name: null});
+    }
   }
 
   /**
@@ -2077,7 +2285,7 @@ class AWorkflow extends Component {
                   this.workflow_details_status_timer = window.setTimeout(() => {
                                                             this.workflow_details_status_timer = null;
                                                             this.workflowDetailsStatus(job_id);
-                                                          }, 5000);
+                                                          }, timeout_workflow_status);
                 }
               });
   }
@@ -2096,7 +2304,7 @@ class AWorkflow extends Component {
                   this.workflow_status_timer = window.setTimeout(() => {
                     this.workflow_status_timer = null;
                     this.workflowStatus(job_id, el_id);
-                  }, 5000);
+                  }, timeout_workflow_status);
                 }
               });
   }

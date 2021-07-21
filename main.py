@@ -702,7 +702,7 @@ def workflow_start(workflow_id: str, workflow_template: dict, data: list, file_h
                 cur_parameter = {}
                 if 'visibility' in one_field and one_field['visibility'] == 'server':
                     print("SERVER SIDE", one_field)
-                    cur_parameter = {'command': cur_command, 'field_name': one_field['name'], 'type': one_field['type'],
+                    cur_parameter = {'command': one_field['name'], 'field_name': one_field['name'], 'type': one_field['type'],
                                      'prev_command_path': one_field['prev_command_path'], 'visibility': one_field['visibility']}
                 else:
                     for one_data in data:
@@ -711,6 +711,7 @@ def workflow_start(workflow_id: str, workflow_template: dict, data: list, file_h
                             if 'data_type' in one_data:
                                 if one_data['data_type'] in file_handlers:
                                     cur_parameter = {**one_data, **(file_handlers[one_data['data_type']])}
+                                    cur_parameter['command'] = one_field['name']
                                     cur_parameter['type'] = one_field['type']
                                     break
                             else:
@@ -721,8 +722,10 @@ def workflow_start(workflow_id: str, workflow_template: dict, data: list, file_h
 
 
                 if cur_parameter:
+                    print("HACK: ADDING PARAMETER FOR FIELD", cur_parameter, one_field)
                     parameters.append(cur_parameter)
                 else:
+                    print("HACK: SKIPPING PARAMETER FOR FIELD", one_field)
                     if not 'mandatory' in one_field or one_field ['mandatory']:
                         print("Unable to find parameter for step ", one_step['name'], ' field ', one_field['name'])
                         raise RuntimeError("Missing mandatory value for %s on workflow step %s" % (one_field['name'], one_step['name']))
@@ -734,6 +737,7 @@ def workflow_start(workflow_id: str, workflow_template: dict, data: list, file_h
             cur_step['git_repo'] = one_step['git_repo']
             if 'git_branch' in one_step:
                 cur_step['git_branch'] = one_step['git_branch']
+        print("HACK: CUR STEP",cur_step)
         workflow.append(cur_step)
 
     process_info = queue_start(workflow_id, working_folder, recover)

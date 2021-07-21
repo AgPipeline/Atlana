@@ -174,7 +174,7 @@ def _write_command_json(json_file_path: str, json_args: object):
 
 
 def _run_command(command: str, input_folder: str, output_folder: str, json_file_path: str, msg_func: Callable, err_func: Callable,
-                 additional_copy: tuple = None):
+                 additional_copy: tuple=None):
     """Handles the details of executing the docker image command
     Arguments:
         command: the command string to run
@@ -183,8 +183,8 @@ def _run_command(command: str, input_folder: str, output_folder: str, json_file_
         json_file_path: the JSON file to pass to the command
         msg_func: function to write messages to
         err_func: function to write errors to
-        additional_copy: an optional tuple containing source and destination file path as one or more 2-tuple's; source files are
-                         copied to the destination before the command is run and folders are created as needed
+        additional_copy: optional tuple of additional mount commands for the docker command; one or more [source_path, mount_point] pairs; source files are
+                         copied before the command is run and folders are created as needed
     """
     # pylint: disable=unused-argument
     logging.debug('Copying file "%s" to "%s"', json_file_path, '/scif/apps/src/jx-args.json')
@@ -631,7 +631,7 @@ def handle_canopycover(parameters: tuple, input_folder: str, working_folder: str
         A dictionary of addittional parameters to pass to the next command or None
     """
     json_filename, experiment_file, search_folder, options = _find_parameter_values(parameters,
-                                                    ('found_json_file', 'experimentdata', 'results_search_folder', 'options'))
+                                                        ('found_json_file', 'experimentdata', 'results_search_folder', 'options'))
 
     # Ensure we have our mandatory parameters
     _handle_missing_parameters('canopycover', (json_filename,), ('found_json_file',))
@@ -678,7 +678,7 @@ def handle_canopycover(parameters: tuple, input_folder: str, working_folder: str
 
 def handle_greenness_indices(parameters: tuple, input_folder: str, working_folder: str, msg_func: Callable, err_func: Callable) -> \
                                 Optional[dict]:
-    """Handle running the greenenss algorithm
+    """Handle running the greenness algorithm
     Arguments:
         parameters: the specified parameters for the algorithm
         input_folder: the base folder where input files are located
@@ -722,8 +722,8 @@ def handle_greenness_indices(parameters: tuple, input_folder: str, working_folde
     logging.debug("Command JSON: %s", str(json_args))
 
     # Run the command
-    ret_value = _run_command('canopycover', input_folder, working_folder, json_file_path, msg_func, err_func,
-                             [[new_json_filename,'/scif/apps/src/greenness_indices_files.json']])
+    ret_value = _run_command('greenness-indices', input_folder, working_folder, json_file_path, msg_func, err_func,
+                             [[new_json_filename,'/scif/apps/src/greenness-indices_files.json']])
 
     command_results = None
     if ret_value == 0:

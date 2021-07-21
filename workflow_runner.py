@@ -321,7 +321,9 @@ def run_workflow():
         parameters = prepare_prev_results(one_command['parameters'], res)
         logging.info('Running command %s', str(command_name))
         write_status(status_filename, STATUS_RUNNING, {'message': 'Running ' + command_name})
-        if command_name in command_map:
+        if 'git' in command_map and 'git_repo' in one_command and 'git_branch' in one_command:
+            res = command_map['git'](one_command['git_repo'], one_command['git_branch'], parameters, working_folder, command_working_folder, message_func, error_func)
+        elif command_name in command_map:
             res = command_map[command_name](parameters, working_folder, command_working_folder, message_func, error_func)
         else:
             msg = 'Unknown command found "%s"' % command_name
