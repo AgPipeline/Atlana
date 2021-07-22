@@ -6,7 +6,6 @@ import {Component} from 'react';
 import WorkspaceTitlebar from './WorkspaceTitlebar.js';
 import TemplateUIElement from './TemplateUIElement.js';
 import BrowseFolders  from './BrowseFolders.js';
-import workflowDefinitions from './WorkflowDefinitions.js';
 import Message from './Message.js';
 import Utils from './Utils.js';
 import './AWorkflow.css';
@@ -194,6 +193,7 @@ class AWorkflow extends Component {
     this.generateTitleRightUI = this.generateTitleRightUI.bind(this);
     this.generateWorkflowUI = this.generateWorkflowUI.bind(this);
     this.getTitle = this.getTitle.bind(this);
+    this.getWorkflowDefs = this.getWorkflowDefs.bind(this);
     this.handleSuccessJobStart = this.handleSuccessJobStart.bind(this);
     this.handleWorkflowStatus = this.handleWorkflowStatus.bind(this);
     this.haveRequiredWorkflowParameters = this.haveRequiredWorkflowParameters.bind(this);
@@ -241,9 +241,6 @@ class AWorkflow extends Component {
     this.prepare_lines_timer = null;    // Timer id for preparing message/error lines for display
     this.algo_repo_conn_id_map = {};    // Contains the ID  map for algorithm repository connection information
 
-    // Make a copy of the workflow definitions so we can manupulate them without affecting the originals
-    const workflow_defs = [...workflowDefinitions];
-
     // Setup for files and folders
     let all_files = this.props.files();
     if (!all_files) {
@@ -251,11 +248,6 @@ class AWorkflow extends Component {
     }
     this.files = all_files.filter((item) => item.path_is_file === true);
     this.folders = all_files.filter((item) => item.path_is_file !== true);
-
-    // Setup for user entered workflow data
-    for (let ii = 0; ii < workflow_defs.length; ii++) {
-      this.workflow_configs[workflow_defs[ii].id] = {};
-    }
 
     // The current list of run/running workflows
     let workflow_list = this.props.workflows();
@@ -274,7 +266,7 @@ class AWorkflow extends Component {
       edit_add: true,               // Flag used to determine if we're adding or editing an item
       edit_item: null,              // The item we're editing when we edit
       workflow_list,                // The list of defined workflows
-      workflow_defs,                // The workflow definitions
+      workflow_defs: null,          // The workflow definitions
       browse_cb: null,              // The callback to handle the users file choices
       met_requirements: false,      // Flag indicating requirements have been met
       details_job_id: null,         // The job id for when we're displaying details
@@ -299,6 +291,8 @@ class AWorkflow extends Component {
    * React component mounted event handler
    */
   componentDidMount() {
+    window.setTimeout(this.getWorkflowDefs, 1);
+
     const have_met_requirements = this.haveRequiredWorkflowParameters();
     if (this.state.met_requirements !== have_met_requirements) {
       this.setState({met_requirements: have_met_requirements});
@@ -885,7 +879,7 @@ class AWorkflow extends Component {
                 }
 
                 return (
-                  <tr key={item.name}>
+                  <tr key={item.name + '_' +  field.name}>
                     <td id={'workflow_new_' + item.name + '_' + field.name + '_name'} className="workflow-new-field-name">{field.description}</td>
                     <td id={'workflow_new_' + item.name + '_' + field.name + '_type'} className="workflow-new-field-type">{field.type}</td>
                   </tr>
@@ -1051,6 +1045,11 @@ class AWorkflow extends Component {
    * Returns the UI for the right side of the title bar
    */
   generateTitleRightUI() {
+    // Only render when we're ready
+    if (!this.state.workflow_defs) {
+      return null;
+    }
+
     return (
       <>
         <div id="workflow_types_upload_wrapper" className="workflow-types-upload-wrapper" onClick={this.browseUploadFiles}
@@ -1236,6 +1235,31 @@ class AWorkflow extends Component {
           </div>
         );
       }
+    }
+  }
+
+  getWorkflowDefs() {
+    const uri = Utils.getHostOrigin().concat('/workflow/definitions');
+
+    try {
+      fetch(uri, {
+        method: 'GET',
+        credentials: 'include',
+        }
+      )
+      .then(response => {if (response.ok) return response.json(); else throw response.statusText})
+      .then(success => {
+          console.log("STATE",this.state);
+          // Setup for user entered workflow data
+          for (let ii = 0; ii < success.length; ii++) {
+            this.workflow_configs[success[ii].id] = {};
+          }
+          this.setState({workflow_defs: success});
+        })
+      .catch(error => {console.log("ERROR",error);});
+    } catch (err) {
+      console.log("Fetch workflow details exception", err);
+      throw err;
     }
   }
 

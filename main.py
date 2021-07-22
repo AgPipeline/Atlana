@@ -1008,6 +1008,16 @@ def handle_irods_files() -> tuple:
     return json.dumps(return_names)
 
 
+@app.route('/workflow/definitions', methods=['GET'])
+@cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
+def handle_workflow_definitions() -> tuple:
+    """Handles returning the workflows as JSON
+    """
+    print("Workflow definitions")
+
+    return json.dumps(WORKFLOW_DEFINITIONS)
+
+
 @app.route('/workflow/start', methods=['POST'])
 @cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
 def handle_workflow_start() -> tuple:
