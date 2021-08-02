@@ -61,6 +61,11 @@ if WORKFLOW_FILE_START_PATH is None:
 if not os.path.exists(WORKFLOW_FILE_START_PATH):
     os.makedirs(WORKFLOW_FILE_START_PATH)
 
+# Running workflow path
+WORKFLOW_RUN_PATH = os.path.join(tempfile.gettempdir(), 'atlana')
+if not os.path.exists(WORKFLOW_RUN_PATH):
+    os.makedirs(WORKFLOW_RUN_PATH)
+
 # Starting point for code checking files
 CODE_CHECKING_PATH = os.getenv('CODE_CHECK_FOLDER')
 if CODE_CHECKING_PATH is None:
@@ -1060,37 +1065,78 @@ def handle_workflow_start() -> tuple:
 
     # Start the process of getting the files
     workflow_id = uuid.uuid4().hex
-    working_dir = os.path.join(tempfile.gettempdir(), 'atlana', workflow_id)
+    working_dir = os.path.join(WORKFLOW_RUN_PATH, workflow_id)
     os.makedirs(working_dir, exist_ok=True)
 
     workflow_start(workflow_id, cur_workflow, workflow_data['params'], FILE_HANDLERS, working_dir)
 
+    workflow_save_path = os.path.join(working_dir, '_workflow')
+    with open(workflow_save_path, 'w') as out_file:
+        json.dump(cur_workflow, out_file)
+
+    params_save_path = os.path.join(working_dir, '_params')
+    with open(params_save_path, 'w') as out_file:
+        json.dump(workflow_data['params'], out_file)
+
     # Keep workflow IDs in longer term storage
     if 'workflows' not in session or session['workflows'] is None:
         session['workflows'] = [workflow_id,]
+        session[workflow_id] = cur_workflow
     else:
-        cur_workflows = session['workflows']
-        cur_workflows.append(workflow_id)
-        session['workflows'] = cur_workflows
+        updated_workflows = session['workflows']
+        updated_workflows.append(workflow_id)
+        session['workflows'] = updated_workflows
+        session[workflow_id] = cur_workflow
 
     return json.dumps({'id': workflow_id, 'start_ts': datetime.datetime.now().isoformat().split('.')[0]})
 
 
-#@app.route('/workflow/recover', methods=['GET'])
-#@cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
-#def handle_workflow_recover() -> tuple:
-#    """Attempts to recover workflows
-#    """
-#    cur_workflows = session['workflows']
-#    found_workflow_ids = []
-#    if cur_workflows:
-#        for one_workflow_id in cur_workflows:
-#            working_dir = os.path.join(tempfile.gettempdir(), 'atlana', one_workflow_id)
-#            workflow_info = os.path.join(working_dir, 'queue')
-#            if os.path.exists(working_dir) and os.path.isdir(working_dir) and
-#               os.path.exists(workflow_info) and os.path.isfile(workflow_info):
-#                # Recover the workflow
-#                found_workflows.append(one_workflow_dir)
+@app.route('/workflow/recover', methods=['GET'])
+@cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
+def handle_workflow_recover() -> tuple:
+    """Attempts to recover workflows
+    """
+    known_workflows = session['workflows']
+    found_workflow_ids = []
+    if known_workflows:
+        for one_workflow_id in known_workflows:
+            working_dir = os.path.join(WORKFLOW_RUN_PATH, one_workflow_id)
+            workflow_params = os.path.join(working_dir, '_params')
+            workflow_file = os.path.join(working_dir, '_workflow')
+            if os.path.exists(working_dir) and os.path.isdir(working_dir) and os.path.exists(workflow_params) \
+               and os.path.isfile(workflow_params) and os.path.exists(workflow_file) and os.path.isfile(workflow_file):
+                # Recover the workflow
+                found_workflow_ids.append(one_workflow_id)
+
+    # We now have a list of workflow IDs that are valid
+    missing_workflows = list(set(known_workflows) - set(found_workflow_ids))
+
+    # Fix up the session information
+    session['workflows'] = found_workflow_ids
+    for one_missing_id in missing_workflows:
+        if one_missing_id in session:
+            session.pop(one_missing_id)
+
+    # If we have workflows
+    all_workflows = []
+    for one_workflow_id in found_workflow_ids:
+        working_dir = os.path.join(WORKFLOW_RUN_PATH, one_workflow_id)
+        workflow_params = os.path.join(working_dir, '_params')
+        workflow_file = os.path.join(working_dir, '_workflow')
+        with open(workflow_params, 'r') as in_file:
+            workflow_params = json.load(in_file)
+        with open(workflow_file, 'r') as in_file:
+            found_workflow = json.load(in_file)
+
+        workflow_data = {
+            'id': one_workflow_id,
+            'params': workflow_params,
+            'workflow': found_workflow
+            }
+
+        all_workflows.append(workflow_data)
+
+    return json.dumps(all_workflows)
 
 
 @app.route('/workflow/delete/<string:workflow_id>', methods=['PUT'])
@@ -1108,9 +1154,8 @@ def handle_workflow_delete(workflow_id: str) -> tuple:
             print(msg)
             return msg, 400     # Bad request
 
-        start_dir = os.path.join(tempfile.gettempdir(), 'atlana')
-        working_dir = os.path.abspath(os.path.join(start_dir, workflow_id))
-        if not working_dir.startswith(start_dir):
+        working_dir = os.path.abspath(os.path.join(WORKFLOW_RUN_PATH, workflow_id))
+        if not working_dir.startswith(WORKFLOW_RUN_PATH):
             print('Invalid workflow requested: "%s"' % workflow_id, flush=True)
             return 'Resource not found', 404
 
@@ -1145,9 +1190,8 @@ def handle_workflow_status(workflow_id: str) -> tuple:
             print(msg)
             return msg, 400     # Bad request
 
-        start_dir = os.path.join(tempfile.gettempdir(), 'atlana')
-        working_dir = os.path.abspath(os.path.join(start_dir, workflow_id))
-        if not working_dir.startswith(start_dir):
+        working_dir = os.path.abspath(os.path.join(WORKFLOW_RUN_PATH, workflow_id))
+        if not working_dir.startswith(WORKFLOW_RUN_PATH):
             print('Invalid workflow requested: "%s"' % workflow_id, flush=True)
             return 'Resource not found', 404
 
@@ -1178,9 +1222,8 @@ def get_workflow_messages(workflow_id: str) -> tuple:
             print(msg)
             return msg, 400     # Bad request
 
-        start_dir = os.path.join(tempfile.gettempdir(), 'atlana')
-        working_dir = os.path.abspath(os.path.join(start_dir, workflow_id))
-        if not working_dir.startswith(start_dir):
+        working_dir = os.path.abspath(os.path.join(WORKFLOW_RUN_PATH, workflow_id))
+        if not working_dir.startswith(WORKFLOW_RUN_PATH):
             print('Invalid workflow requested: "%s"' % workflow_id, flush=True)
             return 'Resource not found', 404
 
@@ -1254,9 +1297,8 @@ def return_workflow_artifact() -> tuple:
         print(msg)
         return msg, 400     # Bad request
 
-    start_dir = os.path.join(tempfile.gettempdir(), 'atlana')
-    working_dir = os.path.abspath(os.path.join(start_dir, workflow_id))
-    if not working_dir.startswith(start_dir):
+    working_dir = os.path.abspath(os.path.join(WORKFLOW_RUN_PATH, workflow_id))
+    if not working_dir.startswith(WORKFLOW_RUN_PATH):
         print('Invalid workflow artifact requested: "%s"' % workflow_id, flush=True)
         return 'Resource not found', 404
 

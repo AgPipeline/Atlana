@@ -171,6 +171,7 @@ class AWorkflow extends Component {
   constructor(props) {
     super(props);
 
+    this.aTest = this.aTest.bind(this);
     this.browseFiles = this.browseFiles.bind(this);
     this.browseGit = this.browseGit.bind(this);
     this.browseUploadFiles = this.browseUploadFiles.bind(this);
@@ -317,6 +318,58 @@ class AWorkflow extends Component {
                                   }
                                  }
                   );
+  }
+
+  /**
+   * Function for testing things
+   */
+  aTest() {
+    const uri = Utils.getHostOrigin().concat('/workflow/recover');
+
+    try {
+      fetch(uri, {
+        method: 'GET',
+        credentials: 'include',
+        }
+      )
+      .then(response => {if (response.ok) return response.json(); else throw response.statusText})
+      .then(success => {
+          const current_workflows = this.props.workflows();
+          let added_workflows = false;
+          for (let i = 0; i < success.length; i++) {
+            const cur_workflow = success[i];
+
+            if (current_workflows.find((item) => item.job_id === cur_workflow.id) !== undefined) {
+              continue;
+            }
+
+            const workflow_name_item = cur_workflow.params.find((item) => item.workflow_name !== undefined);
+            const workflow_name = workflow_name_item !== undefined ? workflow_name_item.workflow_name : 'Recovered workflow';
+            let workflow_info = {id: Utils.getUuid(),
+                                 name: workflow_name,
+                                 workflow_type: cur_workflow.workflow.id,
+                                 job_id: cur_workflow.id
+                                }
+
+            workflow_info.workflow_data = cur_workflow.params;
+            workflow_info.start_ts = null;
+
+            // Add the job if we don't know about it yet
+            this.props.onAdd(workflow_info);
+            added_workflows = true;
+          }
+
+          // Update the list of workflows
+          if (added_workflows === true) {
+            this.setState({mode: workflow_modes.main, cur_item_index: null, cur_item_name: null, cur_item_title: null,
+                           edit_item: null, workflow_list: this.props.workflows()});
+          }
+        })
+      .catch(error => {console.log("ERROR",error);});
+    } catch (err) {
+      console.log("Fetch workflow details exception", err);
+      throw err;
+    }
   }
 
   /**
@@ -1052,6 +1105,7 @@ class AWorkflow extends Component {
 
     return (
       <>
+        <div style={{'border': '1px black solid', 'padding': '0px 5px 0px 5px', 'cursor': 'pointer'}} onClick={this.aTest}>Test</div>
         <div id="workflow_types_upload_wrapper" className="workflow-types-upload-wrapper" onClick={this.browseUploadFiles}
              draggable="true" onDragEnter={this.dragStart} onDrop={this.dragDrop} onDragOver={this.dragOver} onDragLeave={this.dragEnd}>
           <div id="workflow_types_upload_border" className="workflow-types-upload-border-base workflow-types-upload-border" >
@@ -1249,7 +1303,6 @@ class AWorkflow extends Component {
       )
       .then(response => {if (response.ok) return response.json(); else throw response.statusText})
       .then(success => {
-          console.log("STATE",this.state);
           // Setup for user entered workflow data
           for (let ii = 0; ii < success.length; ii++) {
             this.workflow_configs[success[ii].id] = {};
@@ -1286,7 +1339,6 @@ class AWorkflow extends Component {
    * @param {Object} workflow_data - the data that was used to start the workflow
    */ 
   handleSuccessJobStart(results, workflow_info, workflow_data) {
-    console.log(results, workflow_info, workflow_data);
     workflow_info.job_id = results.id;
     workflow_info.workflow_data = workflow_data;
     workflow_info.start_ts = results.start_ts;
@@ -1297,7 +1349,7 @@ class AWorkflow extends Component {
     // Reset the user entered data
     this.workflow_configs[workflow_info.workflow_type] = {};
 
-    this.workflow_status_timer =  window.setTimeout(() => {this.prepareWorkflowStatus(workflow_info.id)}, 500);
+    this.workflow_status_timer = window.setTimeout(() => {this.prepareWorkflowStatus(workflow_info.id)}, 500);
 
     // Update the list of workflows
     this.setState({mode: workflow_modes.main, cur_item_index: null, cur_item_name: null, cur_item_title: null,
