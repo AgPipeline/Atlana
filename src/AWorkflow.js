@@ -220,6 +220,7 @@ class AWorkflow extends Component {
     this.onReplaceResultOK = this.onReplaceResultOK.bind(this);
     this.onViewDetails =  this.onViewDetails.bind(this);
     this.prepareWorkflowStatus = this.prepareWorkflowStatus.bind(this);
+    this.recoverWorkflows = this.recoverWorkflows.bind(this);
     this.refreshWorkflowMessages = this.refreshWorkflowMessages.bind(this);
     this.runWorkflow = this.runWorkflow.bind(this);
     this.setupRunWorkflow = this.setupRunWorkflow.bind(this); // Handles running a workflow
@@ -298,6 +299,8 @@ class AWorkflow extends Component {
     if (this.state.met_requirements !== have_met_requirements) {
       this.setState({met_requirements: have_met_requirements});
     }
+
+    window.setTimeout(this.recoverWorkflows, 1);
   }
 
   componentDidUpdate(prev_props) {
@@ -324,52 +327,7 @@ class AWorkflow extends Component {
    * Function for testing things
    */
   aTest() {
-    const uri = Utils.getHostOrigin().concat('/workflow/recover');
-
-    try {
-      fetch(uri, {
-        method: 'GET',
-        credentials: 'include',
-        }
-      )
-      .then(response => {if (response.ok) return response.json(); else throw response.statusText})
-      .then(success => {
-          const current_workflows = this.props.workflows();
-          let added_workflows = false;
-          for (let i = 0; i < success.length; i++) {
-            const cur_workflow = success[i];
-
-            if (current_workflows.find((item) => item.job_id === cur_workflow.id) !== undefined) {
-              continue;
-            }
-
-            const workflow_name_item = cur_workflow.params.find((item) => item.workflow_name !== undefined);
-            const workflow_name = workflow_name_item !== undefined ? workflow_name_item.workflow_name : 'Recovered workflow';
-            let workflow_info = {id: Utils.getUuid(),
-                                 name: workflow_name,
-                                 workflow_type: cur_workflow.workflow.id,
-                                 job_id: cur_workflow.id
-                                }
-
-            workflow_info.workflow_data = cur_workflow.params;
-            workflow_info.start_ts = null;
-
-            // Add the job if we don't know about it yet
-            this.props.onAdd(workflow_info);
-            added_workflows = true;
-          }
-
-          // Update the list of workflows
-          if (added_workflows === true) {
-            this.setState({mode: workflow_modes.main, cur_item_index: null, cur_item_name: null, cur_item_title: null,
-                           edit_item: null, workflow_list: this.props.workflows()});
-          }
-        })
-      .catch(error => {console.log("ERROR",error);});
-    } catch (err) {
-      console.log("Fetch workflow details exception", err);
-      throw err;
-    }
+    // Nothing at this time (search for "aTest" to see initiating control)
   }
 
   /**
@@ -1105,7 +1063,7 @@ class AWorkflow extends Component {
 
     return (
       <>
-        <div style={{'border': '1px black solid', 'padding': '0px 5px 0px 5px', 'cursor': 'pointer'}} onClick={this.aTest}>Test</div>
+        <div style={{'border': '1px black solid', 'padding': '0px 5px 0px 5px', 'cursor': 'pointer', 'display': 'none'}} onClick={this.aTest}>Test</div>
         <div id="workflow_types_upload_wrapper" className="workflow-types-upload-wrapper" onClick={this.browseUploadFiles}
              draggable="true" onDragEnter={this.dragStart} onDrop={this.dragDrop} onDragOver={this.dragOver} onDragLeave={this.dragEnd}>
           <div id="workflow_types_upload_border" className="workflow-types-upload-border-base workflow-types-upload-border" >
@@ -2037,6 +1995,58 @@ class AWorkflow extends Component {
     }
 
     return clean_workflow;
+  }
+
+  /**
+   * Attempts to recover workflows from the server for this user
+   */
+  recoverWorkflows() {
+    const uri = Utils.getHostOrigin().concat('/workflow/recover');
+
+    try {
+      fetch(uri, {
+        method: 'GET',
+        credentials: 'include',
+        }
+      )
+      .then(response => {if (response.ok) return response.json(); else throw response.statusText})
+      .then(success => {
+          const current_workflows = this.props.workflows();
+          let added_workflows = false;
+          for (let i = 0; i < success.length; i++) {
+            const cur_workflow = success[i];
+
+            if (current_workflows.find((item) => item.job_id === cur_workflow.id) !== undefined) {
+              continue;
+            }
+
+            const workflow_name_item = cur_workflow.params.find((item) => item.workflow_name !== undefined);
+            const workflow_name = workflow_name_item !== undefined ? workflow_name_item.workflow_name : 'Recovered workflow';
+            let workflow_info = {id: Utils.getUuid(),
+                                 name: workflow_name,
+                                 workflow_type: cur_workflow.workflow.id,
+                                 job_id: cur_workflow.id
+                                }
+
+            workflow_info.workflow_data = cur_workflow.params;
+            workflow_info.start_ts = null;
+
+            // Add the job if we don't know about it yet
+            this.props.onAdd(workflow_info);
+            added_workflows = true;
+          }
+
+          // Update the list of workflows
+          if (added_workflows === true) {
+            this.setState({mode: workflow_modes.main, cur_item_index: null, cur_item_name: null, cur_item_title: null,
+                           edit_item: null, workflow_list: this.props.workflows()});
+          }
+        })
+      .catch(error => {console.log("ERROR",error);});
+    } catch (err) {
+      console.log("Recover workflow details exception", err);
+      throw err;
+    }
   }
 
   /**
