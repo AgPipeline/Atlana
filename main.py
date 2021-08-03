@@ -117,8 +117,17 @@ FILE_PROCESS_QUEUE_MESSAGE_TIMEOUTS = [0.1, 0.2, 0.1, 0.2, 0.4]
 # The current version of the workflow save file
 CURRENT_WORKFLOW_SAVE_VERSION = '1.0'
 
-# List of workflow save file versions we understand and can handle
+# List of workflow save file versions we understand
 WORKFLOW_SAVE_VERSIONS_SUPPORTED = [CURRENT_WORKFLOW_SAVE_VERSION]
+
+# The current version of the workflow definition save file
+CURRENT_WORKFLOW_DEFINITION_SAVE_VERSION = '1.0'
+
+# Type of workflow saved - workflow definitions
+WORKFLOW_DEFINITION_SAVE_TYPE = 'workflow definition'
+
+# List of workflow definition save files we understand
+WORKFLOW_DEFINITION_SAVE_VERSIONS_SUPPORTED = [CURRENT_WORKFLOW_DEFINITION_SAVE_VERSION]
 
 # Maximum code length acccepted
 MAX_CODE_LENGTH = 30 * 1024
@@ -1131,7 +1140,8 @@ def handle_workflow_recover() -> tuple:
         workflow_data = {
             'id': one_workflow_id,
             'params': workflow_params,
-            'workflow': found_workflow
+            'workflow': found_workflow,
+            'status': workflow_status(one_workflow_id, working_dir)
             }
 
         all_workflows.append(workflow_data)
@@ -1274,6 +1284,34 @@ def return_workflow_download() -> tuple:
     return response
 
 
+@app.route('/workflow/download_all', methods=['POST'])
+@cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
+def return_workflow_download_all() -> tuple:
+    """Handles returning a workflow for downloading"""
+    # Get the form contents
+    workflows = json.loads(request.form['workflows'])
+    if 'filename' in request.form:
+        save_filename = request.form['filename']
+    else:
+        save_filename = 'workflows_all.json'
+
+    # TODO: Handle authorization
+
+    # Build up the return information
+    return_workflows = {
+        'version': CURRENT_WORKFLOW_DEFINITION_SAVE_VERSION,
+        'type': WORKFLOW_DEFINITION_SAVE_TYPE,
+        'workflows': [{'name': one_workflow['name'], 'description': one_workflow['description'], 'id': one_workflow['id'], \
+                       'steps': one_workflow['steps']} for one_workflow in workflows]
+    }
+
+    response = make_response(json.dumps(return_workflows, indent=2))
+    response.headers.set('Content-Type', 'text')
+    response.headers.set('Content-Disposition', 'attachment', filename=save_filename)
+
+    return response
+
+
 @app.route('/workflow/artifact', methods=['POST'])
 @cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
 def return_workflow_artifact() -> tuple:
@@ -1389,22 +1427,44 @@ def workflow_upload_file():
             msg = 'ERROR: Version not found in workflow file "%s"' % os.path.basename(one_workflow)
             return_messages.append(msg)
             continue
-        if str(loaded_workflow['version']) not in WORKFLOW_SAVE_VERSIONS_SUPPORTED:
-            msg = 'ERROR: Unsupported version "%s" in workflow file "%s"' % (loaded_workflow['version'], os.path.basename(one_workflow))
-            print(msg, WORKFLOW_SAVE_VERSIONS_SUPPORTED,type(loaded_workflow['version']),type(WORKFLOW_SAVE_VERSIONS_SUPPORTED[0]))
-            return_messages.append(msg)
-            continue
 
-        loaded_file_id = uuid.uuid4().hex
-        loaded_file_info[loaded_file_id] = one_workflow
+        # Determine what type of file we're getting
+        if 'type' in loaded_workflow and loaded_workflow['type'] == WORKFLOW_DEFINITION_SAVE_TYPE:
+            # Workflow definition file
+            if str(loaded_workflow['version']) not in WORKFLOW_DEFINITION_SAVE_VERSIONS_SUPPORTED:
+                msg = 'ERROR: Unsupported version "%s" in workflow definition file "%s"' % (loaded_workflow['version'], os.path.basename(one_workflow))
+                print(msg, WORKFLOW_DEFINITION_SAVE_VERSIONS_SUPPORTED,type(loaded_workflow['version']),type(WORKFLOW_SAVE_VERSIONS_SUPPORTED[0]))
+                return_messages.append(msg)
+                continue
 
-        loaded_workflow['id'] = loaded_file_id
-        return_workflows.append(loaded_workflow)
+            for one_workflow_def in loaded_workflow['workflows']:
+                found = False
+                for one_workflow in WORKFLOW_DEFINITIONS:
+                    if one_workflow['id'] == one_workflow_def['id']:
+                        found = True
+                        break
+
+                if not found:
+                    WORKFLOW_DEFINITIONS.append(one_workflow_def)
+                    return_workflows.append(one_workflow_def)
+        else:
+            # Workflow "run" file
+            if str(loaded_workflow['version']) not in WORKFLOW_SAVE_VERSIONS_SUPPORTED:
+                msg = 'ERROR: Unsupported version "%s" in workflow file "%s"' % (loaded_workflow['version'], os.path.basename(one_workflow))
+                print(msg, WORKFLOW_SAVE_VERSIONS_SUPPORTED,type(loaded_workflow['version']),type(WORKFLOW_SAVE_VERSIONS_SUPPORTED[0]))
+                return_messages.append(msg)
+                continue
+
+            loaded_file_id = uuid.uuid4().hex
+            loaded_file_info[loaded_file_id] = one_workflow
+
+            loaded_workflow['id'] = loaded_file_id
+            return_workflows.append(loaded_workflow)
 
     if 'workflow_files' not in session or session['workflow_files'] is None:
         print("SESSION WORKFLOW FILES: ", str(loaded_file_info))
         session['workflow_files'] = loaded_file_info
-    else:
+    elif loaded_file_info:
         print("ADDING SESSION WORKFLOW FILES: ", str(loaded_file_info))
         session['workflow_files'] = {}.update(session['workflow_files']).update(loaded_file_info)
 
@@ -1433,7 +1493,6 @@ def workflow_new():
     WORKFLOW_DEFINITIONS.append(new_workflow)
 
     return json.dumps({'id': new_workflow['id']})
-
 
 
 @app.route('/template/<lang>/<algorithm>', methods=['GET'])

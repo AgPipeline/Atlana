@@ -4,7 +4,7 @@ WORKFLOW_DEFINITIONS = [
 {
   'name': 'Canopy Cover',
   'description': 'Plot level canopy cover calculation',
-  'id': 1,
+  'id': '0456a2ac701e4533a8d0bc7111af081d',
   'steps': [{
     'name': 'Mask Soil on Image',
     'description': 'Masks soil from a copy of an image',
@@ -124,7 +124,7 @@ WORKFLOW_DEFINITIONS = [
 }, {
   'name': 'Ratio Canopy Cover',
   'description':  'Plot level canopy cover calculation using a ratio-based soil mask',
-  'id': 2,
+  'id': '269321226c6240b49fc9b43273d2bd50',
   'steps': [{
     'name': 'Mask Soil on Image',
     'description': 'Masks soil from a copy of an image using a green-to-red ratio',
@@ -253,7 +253,7 @@ WORKFLOW_DEFINITIONS = [
 },{
   'name': 'Greenness Levels',
   'description': 'Plot level greenness level calculations',
-  'id': 3,
+  'id': '036ff3cdd785455f9b38098a842c9353',
   'steps': [{
     'name': 'Mask Soil on Image',
     'description': 'Masks soil from a copy of an image',
@@ -373,7 +373,7 @@ WORKFLOW_DEFINITIONS = [
 }, {
   'name': 'Ratio Greenness Levels',
   'description':  'Plot level greenness levels calculation using a ratio-based soil mask',
-  'id': 4,
+  'id': 'd8f7f2a1bd304f01ab584cafd0aaabf6',
   'steps': [{
     'name': 'Mask Soil on Image',
     'description': 'Masks soil from a copy of an image using a green-to-red ratio',

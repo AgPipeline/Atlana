@@ -19,7 +19,7 @@ var workflow_titles = [
   'Status',
   'Started',
   'ID',
-  ' ',
+  '_download',
   ' ',
   ' ',
 ];
@@ -208,6 +208,7 @@ class AWorkflow extends Component {
     this.onCancelBrowse = this.onCancelBrowse.bind(this);
     this.onDeleteItem = this.onDeleteItem.bind(this);
     this.onDownloadItem = this.onDownloadItem.bind(this);
+    this.onDownloadWorkflows = this.onDownloadWorkflows.bind(this);
     this.onEditResult = this.onEditResult.bind(this);
     this.onItemCheck= this.onItemCheck.bind(this);
     this.onNameChange= this.onNameChange.bind(this);
@@ -1286,6 +1287,21 @@ class AWorkflow extends Component {
       } else {
         return (<th id={"title_" + idx} key={title + '_' + idx}></th>);
       }
+    } else if (title[0] === '_') {
+      if (title === '_download') {
+        return (
+          <th id={"title_" + idx} key={title + '_' + idx}>
+            <div id="workflow_download_graphic_wrapper" className="workflow-download-graphic-wrapper" onClick={this.onDownloadWorkflows} >
+              <svg version="1.1"
+                   baseProfile="full"
+                   width="30" height="21"
+                   xmlns="http://www.w3.org/2000/svg">
+                <polygon points="15 21 25 12 20 12 20 3 10 3 10 12 5 12 15 21" stroke="lightgrey" fill="white" strokeWidth="1" />
+              </svg>
+            </div>
+          </th>
+        );
+      }
     }
     return null;
   }
@@ -1371,6 +1387,7 @@ class AWorkflow extends Component {
       el.innerHTML = cur_status;
     }
 
+    // Forcing a refresh when prev and current status are both "completed"
     if (status.result === job_status.completed && prev_status_code === job_status.completed) {
       // Refresh the whole UI
       this.setState({workflow_list: this.state.workflow_list});
@@ -1450,7 +1467,7 @@ class AWorkflow extends Component {
       .then(result => {this.setState({algo_repo_branches: result.branches.concat(result.tags).sort(), replace_algo_checked: true, algo_repo_id: result.id});})
       .catch(error => console.log("ERROR", error));
     } catch (err) {
-      console.log("Run workflow exception", err);
+      console.log("Algorithm repo checck exception", err);
       throw err;
     }
   }
@@ -1552,7 +1569,6 @@ class AWorkflow extends Component {
     }
 
     const workflow_def = this.state.workflow_defs.find((item) => item.id === found_item.workflow_type);
-    console.log("FOUND:", found_item, workflow_def);
     if (!workflow_def) {
       // TODO: Report problem
       return;
@@ -1593,7 +1609,7 @@ class AWorkflow extends Component {
       })
       .catch(error => console.log("ERROR",error));
     } catch (err) {
-      console.log("Run workflow exception", err);
+      console.log("Download workflow exception", err);
       throw err;
     }
 
@@ -1641,6 +1657,49 @@ class AWorkflow extends Component {
           throw err;
         }
       }
+    }
+  }
+
+  /**
+   * Handles downloading all workflow information
+   */
+  onDownloadWorkflows() {
+    const save_filename = 'all_workflows.json';
+    const form_data = new FormData();
+    form_data.append('workflows', JSON.stringify(this.state.workflow_defs.map((item) => this.prepareWorkflowForExport(item, ['id']))));
+    form_data.append('filename', save_filename);
+
+    const uri = Utils.getHostOrigin().concat('/workflow/download_all');
+    try {
+      fetch(uri, {
+        method: 'POST',
+        credentials: 'include',
+        body: form_data
+        }
+      )
+      .then(response => response.blob())
+      .then(blob => {
+        // Create a download object
+        const url = window.URL.createObjectURL(
+          new Blob([blob]),
+        );
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute(
+          'download',
+          save_filename,
+        );
+        // Append to html link element page
+        document.body.appendChild(link);
+        // Start download
+        link.click();
+        // Clean up and remove the link
+        link.parentNode.removeChild(link);
+      })
+      .catch(error => console.log("ERROR",error));
+    } catch (err) {
+      console.log("Download all workflows exception", err);
+      throw err;
     }
   }
 
@@ -1743,7 +1802,7 @@ class AWorkflow extends Component {
         .then(result => {this.setState({mode: workflow_modes.main, workflow_defs});/* TODO: display success message*/})
         .catch(error => console.log('ERROR: onNewWorkflowSave:', error));
       } catch (err) {
-        console.log("Run workflow exception", err);
+        console.log("Download workflow exception", err);
         throw err;
       }
     }, 100);
@@ -1771,7 +1830,7 @@ class AWorkflow extends Component {
           .then(response => {if (response.status >= 300) throw response.statusText;})
           .catch(error => console.log('ERROR: onAlgoChange:', error));
         } catch (err) {
-          console.log("Run workflow exception", err);
+          console.log("Algorithm replace exception", err);
           throw err;
         }
       }, 100);
@@ -1951,12 +2010,13 @@ class AWorkflow extends Component {
   /**
    * Prepares a copy of the the current workflow information for exporting (downloading)
    * @param {object} workflow - the workflow object to use for preparation
+   * @param {string[]} [include_override_keys] - array of keys to include that normally would be excluded
    */
-  prepareWorkflowForExport(workflow) {
+  prepareWorkflowForExport(workflow, include_overrides) {
     let clean_workflow = {};
 
     for (let one_item in workflow) {
-      if (one_item === 'id') {
+      if (one_item === 'id' && (!include_overrides || !include_overrides.find((one_key) => one_key === one_item))) {
         // Skip certain fields
       } else if (one_item !== 'steps') {
         clean_workflow[one_item] = workflow[one_item];
@@ -2025,7 +2085,8 @@ class AWorkflow extends Component {
             let workflow_info = {id: Utils.getUuid(),
                                  name: workflow_name,
                                  workflow_type: cur_workflow.workflow.id,
-                                 job_id: cur_workflow.id
+                                 job_id: cur_workflow.id,
+                                 //status: cur_workflow.status
                                 }
 
             workflow_info.workflow_data = cur_workflow.params;
@@ -2034,12 +2095,15 @@ class AWorkflow extends Component {
             // Add the job if we don't know about it yet
             this.props.onAdd(workflow_info);
             added_workflows = true;
+            this.prepareWorkflowStatus(workflow_info.id);
           }
 
           // Update the list of workflows
           if (added_workflows === true) {
             this.setState({mode: workflow_modes.main, cur_item_index: null, cur_item_name: null, cur_item_title: null,
                            edit_item: null, workflow_list: this.props.workflows()});
+
+            window.setTimeout(() => {this.setState({cur_item_index: this.state.cur_item_index});}, 500);
           }
         })
       .catch(error => {console.log("ERROR",error);});
@@ -2266,32 +2330,34 @@ class AWorkflow extends Component {
       const cur_workflow = results.workflows.shift();
       console.log("CUR WORKFLOW",cur_workflow);
 
-      // Setup our data fields
+      // Setup our data fields if we have them
       const cur_config = [];
-      for (let idx in cur_workflow.steps) {
-        const parent = cur_workflow.steps[idx];
-        const field_lookup_prefix = idx + '_' + parent.command + '_';
+      if (cur_workflow.parameters) {
+        for (let idx in cur_workflow.steps) {
+          const parent = cur_workflow.steps[idx];
+          const field_lookup_prefix = idx + '_' + parent.command + '_';
 
-        let found_fields = cur_workflow.parameters.map((item) => {
-                  if (item.command === parent.command) {
-                    return item;
+          let found_fields = cur_workflow.parameters.map((item) => {
+                    if (item.command === parent.command) {
+                      return item;
+                    }
+                    return null;
                   }
-                  return null;
-                }
-              );
+                );
 
-        found_fields.forEach((one_field) => {
-          if (one_field && (!one_field.visibility || one_field.visibility === 'ui')) {
-            const lookup_name = field_lookup_prefix + one_field.field_name
-            const parent_field = parent.fields.find((item) => item.name === one_field.field_name);
-            one_field.id = lookup_name;
-            if (parent_field.type === 'file' || parent_field.type === 'folder') {
-              one_field.path_is_file = parent_field.type === 'file';
-              one_field.location = one_field.value;
+          found_fields.forEach((one_field) => {
+            if (one_field && (!one_field.visibility || one_field.visibility === 'ui')) {
+              const lookup_name = field_lookup_prefix + one_field.field_name
+              const parent_field = parent.fields.find((item) => item.name === one_field.field_name);
+              one_field.id = lookup_name;
+              if (parent_field.type === 'file' || parent_field.type === 'folder') {
+                one_field.path_is_file = parent_field.type === 'file';
+                one_field.location = one_field.value;
+              }
+              cur_config[lookup_name] = one_field;
             }
-            cur_config[lookup_name] = one_field;
-          }
-        });
+          });
+        }
       }
       this.workflow_configs[cur_workflow.id] = cur_config;
 
@@ -2307,7 +2373,8 @@ class AWorkflow extends Component {
       this.prepared_errors = null;
 
       // Set the state to show the workflow configuration UI
-      this.setState({mode: workflow_modes.run,
+      const display_mode = cur_workflow.parameters ? workflow_modes.run : this.state.mode;
+      this.setState({mode: display_mode,
                      workflow_defs: updated_workflow_defs,
                      cur_item_index: cur_index,
                      cur_item_name: cur_workflow.name, 

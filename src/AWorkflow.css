@@ -28,6 +28,18 @@
     font-weight: bold;
 }
 
+.workflow-download-graphic-wrapper {
+    border: 1px solid black;
+    border-radius: 5px;
+    max-width: 30px;
+    max-height: 30px;
+    cursor: pointer;
+}
+
+.workflow-download-graphic-wrapper:hover {
+    background-color: lightgreen;
+}
+
 .workflow-types-list-wrapper {
     align-self: end;
 }
