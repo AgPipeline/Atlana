@@ -2,4 +2,5 @@ gunicorn
 python-irodsclient
 Flask
 Flask-Cors
-agpipeline
+agpypeline
+pylint

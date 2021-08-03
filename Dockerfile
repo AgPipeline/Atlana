@@ -46,6 +46,13 @@ RUN mkdir ${WORKFLOW_FOLDER} && chmod 777 ${WORKFLOW_FOLDER}
 # Copy the build
 COPY --from=build /app/react_frontend/build/* ./
 
+# Install additional packages
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends git && \
+    apt-get autoremove -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
 # Install requirements
 COPY ./requirements.txt ./
 RUN python3 -m pip install --upgrade --no-cache-dir pip

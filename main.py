@@ -52,47 +52,47 @@ FILE_START_PATH = os.getenv('WORKING_FOLDER')
 if FILE_START_PATH is None:
     FILE_START_PATH = os.path.join(OUR_LOCAL_PATH, 'upload')
 if not os.path.exists(FILE_START_PATH):
-    os.makedirs(FILE_START_PATH)
+    os.makedirs(FILE_START_PATH, exist_ok=True)
 
 # Starting point for uploaded workflow files
 WORKFLOW_FILE_START_PATH = os.getenv('WORKFLOW_FOLDER')
 if WORKFLOW_FILE_START_PATH is None:
     WORKFLOW_FILE_START_PATH = os.path.join(OUR_LOCAL_PATH, 'workflow')
 if not os.path.exists(WORKFLOW_FILE_START_PATH):
-    os.makedirs(WORKFLOW_FILE_START_PATH)
+    os.makedirs(WORKFLOW_FILE_START_PATH, exist_ok=True)
 
 # Running workflow path
 WORKFLOW_RUN_PATH = os.path.join(tempfile.gettempdir(), 'atlana')
 if not os.path.exists(WORKFLOW_RUN_PATH):
-    os.makedirs(WORKFLOW_RUN_PATH)
+    os.makedirs(WORKFLOW_RUN_PATH, exist_ok=True)
 
 # Starting point for code checking files
 CODE_CHECKING_PATH = os.getenv('CODE_CHECK_FOLDER')
 if CODE_CHECKING_PATH is None:
     CODE_CHECKING_PATH = os.path.join(OUR_LOCAL_PATH, 'code_temp')
 if not os.path.exists(CODE_CHECKING_PATH):
-    os.makedirs(CODE_CHECKING_PATH)
+    os.makedirs(CODE_CHECKING_PATH, exist_ok=True)
 
 # Starting point for testing code files
 CODE_TESTING_PATH = os.getenv('CODE_CHECK_FOLDER')
 if CODE_TESTING_PATH is None:
     CODE_TESTING_PATH = os.path.join(OUR_LOCAL_PATH, 'code_test')
 if not os.path.exists(CODE_TESTING_PATH):
-    os.makedirs(CODE_TESTING_PATH)
+    os.makedirs(CODE_TESTING_PATH, exist_ok=True)
 
 # Starting point for testing code files
 CODE_TEMPLATE_PATH = os.getenv('CODE_TEMPLATE_FOLDER')
 if CODE_TEMPLATE_PATH is None:
     CODE_TEMPLATE_PATH = os.path.join(OUR_LOCAL_PATH, 'test_template')
 if not os.path.exists(CODE_TEMPLATE_PATH):
-    os.makedirs(CODE_TEMPLATE_PATH)
+    os.makedirs(CODE_TEMPLATE_PATH, exist_ok=True)
 
 # Starting point for repositories
 CODE_REPOSITORY_PATH = os.getenv('CODE_REPOSITORY_FOLDER')
 if CODE_REPOSITORY_PATH is None:
     CODE_REPOSITORY_PATH = os.path.join(OUR_LOCAL_PATH, 'repos')
 if not os.path.exists(CODE_REPOSITORY_PATH):
-    os.makedirs(CODE_REPOSITORY_PATH)
+    os.makedirs(CODE_REPOSITORY_PATH, exist_ok=True)
 
 # Status codes for checking on processes
 STATUS_NOT_STARTED = 0
@@ -1046,6 +1046,7 @@ def handle_workflow_start() -> tuple:
 
     # Find the workflow
     for one_workflow in WORKFLOW_DEFINITIONS:
+        print("  WORKFLOW ID CHECK:", one_workflow['id'])
         if one_workflow['id'] == workflow_data['id']:
             cur_workflow = one_workflow
             break
@@ -1105,7 +1106,10 @@ def handle_workflow_start() -> tuple:
 def handle_workflow_recover() -> tuple:
     """Attempts to recover workflows
     """
-    known_workflows = session['workflows']
+    if 'workflows' in session:
+        known_workflows = session['workflows']
+    else:
+        known_workflows = []
     found_workflow_ids = []
     if known_workflows:
         for one_workflow_id in known_workflows:
@@ -1491,6 +1495,7 @@ def workflow_new():
 
     # Get our additional parameters
     WORKFLOW_DEFINITIONS.append(new_workflow)
+    print("NEW WORKFLOW ID", new_workflow['id'])
 
     return json.dumps({'id': new_workflow['id']})
 
