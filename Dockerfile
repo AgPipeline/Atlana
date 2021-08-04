@@ -1,6 +1,6 @@
 
 # Allow overrides of base version we build from
-ARG BASE_IMAGE_VERSION=1.1
+ARG BASE_IMAGE_VERSION=1.2
 ARG BASE_IMAGE=agdrone/drone-workflow:${BASE_IMAGE_VERSION}
 
 # Build our basic install
