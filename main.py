@@ -1067,6 +1067,10 @@ def handle_workflow_start() -> tuple:
                     msg = 'ERROR: An unknown exception was caught trying to run file "%s"' % os.path.basename(workflow_file_path)
                     print(msg, ex)
 
+    # See if we were sent the workflow
+    if cur_workflow is None and 'workflow' in workflow_data:
+        cur_workflow = workflow_data['workflow']
+
     # Make sure we can find the workflow
     if cur_workflow is None:
         msg = "Unable to find workflow associated with workflow ID %s" % (str(workflow_data['id']))
@@ -1495,7 +1499,6 @@ def workflow_new():
 
     # Get our additional parameters
     WORKFLOW_DEFINITIONS.append(new_workflow)
-    print("NEW WORKFLOW ID", new_workflow['id'])
 
     return json.dumps({'id': new_workflow['id']})
 

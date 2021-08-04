@@ -36,7 +36,8 @@ def get_command_map() -> dict:
         'find_files2json': current_module.handle_find_files2json,
         'canopycover': current_module.handle_canopycover,
         'greenness_indices': current_module.handle_greenness_indices,
-        'merge_csv': current_module.handle_merge_csv
+        'merge_csv': current_module.handle_merge_csv,
+        'git': current_module.handle_git_repo
     }
 
 
@@ -766,5 +767,65 @@ def handle_merge_csv(parameters: tuple, input_folder: str, working_folder: str, 
     command_results = None
     if ret_value == 0:
         command_results = _get_results_json(working_folder, err_func)
+
+    return command_results
+
+def handle_git_repo(git_repo: str, git_branch: str, parameters: tuple, input_folder: str, working_folder: str, msg_func: Callable, err_func: Callable) -> Optional[dict]:
+    """Handle running a git-based algorithm
+    Arguments:
+        git_repo: the URL of the repository to use
+        git_branch: the source branch to use
+        parameters: the specified parameters for the algorithm
+        input_folder: the base folder where input files are located
+        working_folder: the working folder for the algorithm
+        msg_func: function to write messages to
+        err_func: function to write errors to
+    Return:
+        A dictionary of addittional parameters to pass to the next command or None
+    """
+    json_filename, experiment_file, search_folder, options = _find_parameter_values(parameters,
+                                                        ('found_json_file', 'experimentdata', 'results_search_folder',  'options'))
+
+    # Ensure we have our mandatory parameters
+    process_name = 'git repo ' + os.path.basename(git_repo)
+    _handle_missing_parameters(process_name, (json_filename,), ('found_json_file',))
+    _handle_missing_files(process_name, (json_filename,), ('found_json_file',))
+
+    # Adjust the found files JSON to point to our output folder - making a best effort if search_folder is None
+    new_json_filename = _repoint_files_json_dir(json_filename, search_folder, working_folder, working_folder)
+    if new_json_filename is None:
+        new_json_filename = json_filename
+
+    # Default our options
+    if options is None:
+        options = ''
+
+    # Add in additional options
+    if experiment_file is not None:
+        if os.path.isfile(experiment_file):
+            options += ' --metadata ' + experiment_file
+        else:
+            msg = 'Warning: invalid experiment file specified for %s "%s"' % (git_process. experiment_file)
+            logging.warning(msg)
+            msg_func((msg,), True)
+
+    # Write the arguments
+    json_args = {
+        'GIT_RGB_PLOT_REPO': git_repo,
+        'GIT_RGB_PLOT_BRANCH': git_branch,
+        'GIT_RGB_PLOT_OPTIONS': options if options is not None else '',
+    }
+    json_file_path = os.path.join(working_folder, 'args.json')
+    _write_command_json(json_file_path, json_args)
+    logging.debug("Command JSON: %s", str(json_args))
+
+    # Run the command
+    ret_value = _run_command('git_rgb_plot', input_folder, working_folder, json_file_path, msg_func, err_func,
+                             [[new_json_filename, '/scif/apps/src/git_rgb_plot_files.json']])
+
+    command_results = None
+    if ret_value == 0:
+        command_results = {'results': _get_results_json(working_folder, err_func, True)}
+        command_results['top_path'] = working_folder
 
     return command_results

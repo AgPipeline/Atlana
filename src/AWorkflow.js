@@ -2180,6 +2180,7 @@ class AWorkflow extends Component {
     let workflow_data = {
       id: cur_template.id,
       params: [],
+      workflow: cur_template,
     };
     for (const param of values) {
       let param_info = {};
