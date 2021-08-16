@@ -397,8 +397,8 @@ def copy_server_file(auth: dict, source_path: str, dest_path: str) -> bool:
     working_path = normalize_path(source_path)
     if working_path[0] == '/':
         working_path = '.'  + working_path
-    cur_path = os.path.abspath(os.path.join(FILE_START_PATH, working_path))
-    if not cur_path.startswith(FILE_START_PATH):
+    cur_path = os.path.abspath(os.path.join(session['upload_folder'], working_path))
+    if not cur_path.startswith(session['upload_folder']):
         raise RuntimeError("Invalid source path for server side copy:", cur_path)
 
     shutil.copyfile (cur_path, dest_path)
@@ -873,10 +873,15 @@ def upload_file():
     if not os.path.exists(FILE_START_PATH):
         os.makedirs(FILE_START_PATH)
 
+    # Set the upload folder for this user if it hasn't been set yet
+    # pylint: disable=consider-using-with
+    if 'upload_folder' not in session or session['upload_folder'] is None or not os.path.isdir(session['upload_folder']):
+        session['upload_folder'] = tempfile.TemporaryDirectory(dir=FILE_START_PATH)
+
     loaded_filenames = []
     for file_id in request.files:
         one_file = request.files[file_id]
-        save_path = os.path.join(FILE_START_PATH, secure_filename(one_file.filename))
+        save_path = os.path.join(session['upload_folder'], secure_filename(one_file.filename))
         if os.path.exists(save_path):
             os.unlink(save_path)
         one_file.save(save_path)
@@ -907,8 +912,8 @@ def handle_files() -> tuple:
         working_path = normalize_path(path)
         if working_path[0] == '/':
             working_path = '.'  + working_path
-        cur_path = os.path.abspath(os.path.join(FILE_START_PATH, working_path))
-        if not cur_path.startswith(FILE_START_PATH):
+        cur_path = os.path.abspath(os.path.join(session['upload_folder'], working_path))
+        if not cur_path.startswith(session['upload_folder']):
             print('Invalid path requested: "%s"' % path, flush=True)
             return 'Resource not found', 400
     except FileNotFoundError as ex:
@@ -1076,6 +1081,11 @@ def handle_workflow_start() -> tuple:
         msg = "Unable to find workflow associated with workflow ID %s" % (str(workflow_data['id']))
         print(msg)
         return msg, 400     # Bad request
+
+    # Set the upload folder for this user if it hasn't been set yet
+    # pylint: disable=consider-using-with
+    if 'upload_folder' not in session or session['upload_folder'] is None or not os.path.isdir(session['upload_folder']):
+        session['upload_folder'] = tempfile.TemporaryDirectory(dir=FILE_START_PATH)
 
     # Start the process of getting the files
     workflow_id = uuid.uuid4().hex
@@ -1440,15 +1450,17 @@ def workflow_upload_file():
         if 'type' in loaded_workflow and loaded_workflow['type'] == WORKFLOW_DEFINITION_SAVE_TYPE:
             # Workflow definition file
             if str(loaded_workflow['version']) not in WORKFLOW_DEFINITION_SAVE_VERSIONS_SUPPORTED:
-                msg = 'ERROR: Unsupported version "%s" in workflow definition file "%s"' % (loaded_workflow['version'], os.path.basename(one_workflow))
-                print(msg, WORKFLOW_DEFINITION_SAVE_VERSIONS_SUPPORTED,type(loaded_workflow['version']),type(WORKFLOW_SAVE_VERSIONS_SUPPORTED[0]))
+                msg = 'ERROR: Unsupported version "%s" in workflow definition file "%s"' % (loaded_workflow['version'],
+                            os.path.basename(one_workflow))
+                print(msg, WORKFLOW_DEFINITION_SAVE_VERSIONS_SUPPORTED,type(loaded_workflow['version']),
+                            type(WORKFLOW_SAVE_VERSIONS_SUPPORTED[0]))
                 return_messages.append(msg)
                 continue
 
             for one_workflow_def in loaded_workflow['workflows']:
                 found = False
-                for one_workflow in WORKFLOW_DEFINITIONS:
-                    if one_workflow['id'] == one_workflow_def['id']:
+                for tmp_workflow in WORKFLOW_DEFINITIONS:
+                    if tmp_workflow['id'] == one_workflow_def['id']:
                         found = True
                         break
 
