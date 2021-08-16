@@ -876,7 +876,7 @@ def upload_file():
     # Set the upload folder for this user if it hasn't been set yet
     # pylint: disable=consider-using-with
     if 'upload_folder' not in session or session['upload_folder'] is None or not os.path.isdir(session['upload_folder']):
-        session['upload_folder'] = tempfile.TemporaryDirectory(dir=FILE_START_PATH)
+        session['upload_folder'] = tempfile.mkdtemp(dir=FILE_START_PATH)
 
     loaded_filenames = []
     for file_id in request.files:
@@ -907,6 +907,12 @@ def handle_files() -> tuple:
     if len(path) <= 0:
         print('Zero length path requested' % path, flush=True)
         return 'Resource not found', 404
+
+    # Set the upload folder for this user if it hasn't been set yet
+    # pylint: disable=consider-using-with
+    if 'upload_folder' not in session or session['upload_folder'] is None or not os.path.isdir(session['upload_folder']):
+        session['upload_folder'] = tempfile.mkdtemp(dir=FILE_START_PATH)
+    print("HACK: upload folder", session['upload_folder'])
 
     try:
         working_path = normalize_path(path)
@@ -1085,7 +1091,7 @@ def handle_workflow_start() -> tuple:
     # Set the upload folder for this user if it hasn't been set yet
     # pylint: disable=consider-using-with
     if 'upload_folder' not in session or session['upload_folder'] is None or not os.path.isdir(session['upload_folder']):
-        session['upload_folder'] = tempfile.TemporaryDirectory(dir=FILE_START_PATH)
+        session['upload_folder'] = tempfile.mkdtemp(dir=FILE_START_PATH)
 
     # Start the process of getting the files
     workflow_id = uuid.uuid4().hex
