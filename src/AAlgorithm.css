@@ -1,0 +1,104 @@
+
+.algorithm-wrapper {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-content: center;
+    align-items: stretch;
+    left: 0px;
+}
+
+.algorithm-types-list-wrapper {
+    align-self: end;
+}
+
+.algorithm-types-option {
+}
+
+.algorithm-type-option-item {
+}
+
+.algorithm-add-new-button-wrapper {
+    align-self: end;
+}
+
+.algorithm-add-new-button {
+    margin: 5px;
+    padding: 5px;
+    border: 1px solid black;
+    border-radius: 5px;
+    background-color: powderblue;
+    font-weight: normal !important;
+    cursor: pointer;
+}
+
+.algorithm-prop-item-wrapper {
+    display:  flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-content: flex-start;
+    align-items: flex-start;
+}
+
+.algorithm-prop-item-prompt {
+}
+
+.algorithm-prop-item-language-prompt {
+}
+
+.algorithm-prop-item-language {
+    margin-left: 10px;
+    font-style: italic;
+}
+
+.algorithm-table {
+    border-width: 1px 1px 1px 1px;
+    border-color: black;
+    border-style: solid;
+}
+
+.algorithm-table-titles {
+}
+
+.algorithm-detail-row {
+}
+
+.algorithm-detail-item {
+}
+
+.algorithm-detail-name {
+}
+
+.algorithm-detail-type {
+}
+
+.algorithm-detail-id {
+}
+
+.algorithm-detail-edit {
+    margin: 5px;
+    padding: 5px;
+    border: 1px solid black;
+    border-radius: 5px;
+    background-color: lightgreen;
+    cursor: pointer;
+}
+
+.algorithm-detail-remove {
+    margin: 5px;
+    padding: 5px;
+    border: 1px solid black;
+    border-radius: 5px;
+    background-color: mistyrose;
+    cursor: pointer;
+}
+
+.algorithm-title-text {
+    min-width: 3vw;
+    height: calc(1em + 20px);
+    background-color: lightgrey;
+    color: black;    
+    font-size: small;
+    font-weight: bold;
+}

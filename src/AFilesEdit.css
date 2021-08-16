@@ -1,0 +1,311 @@
+
+.file-edit-background {
+    background-color: rgb(128, 128, 128, .25);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+}
+
+.file-edit-wrapper {
+    position: absolute;
+    left: 10vw;
+    top: 10vh;
+    min-width: 80%;
+    max-width: 80%;
+    min-height: 20%;
+    max-height: 80%;
+    border: 1px solid black;
+    border-radius: 10px;
+    background-color: white;
+    display: flex;
+    flex-direction: column;
+    align-content: flex-start;
+    align-items: stretch;
+}
+
+.file-edit-titlebar {
+    background-color: lightgrey;
+    border-radius: 10px 10px 0 0 ;
+    border-bottom: 1px solid grey;
+    color: black;
+    font-size: large;
+    text-align: center;
+    min-height: 1.5em;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+}
+
+.file-edit-titlebar-left {
+    flex: 1;
+}
+
+.file-edit-titlebar-center {
+    flex: 20;
+}
+
+.file-edit-titlebar-right {
+    flex: 1;
+    padding-right: 10px;
+    text-align: center;
+    align-self: center;
+}
+
+.file-edit-titlebar-close {
+    cursor: pointer;
+    margin-top: 2px;
+}
+
+.file-edit-titlebar-close:hover {
+    border: 1px solid black;
+    border-radius: 5px;
+}
+
+.file-edit-name-wrapper {
+    display: flex;
+    flex-direction: row;
+    align-content: flex-start;
+    align-items: center;
+    padding: 10px;
+}
+
+.file-edit-name-prompt {
+}
+
+.file-edit-name-edit-wrapper {
+    padding-left: 10px;
+}
+
+.file-edit-name-edit {
+    min-width: 70%;
+}
+
+.file-edit-path-wrapper {
+    display: flex;
+    flex-direction: row;
+    align-content: flex-start;
+    align-items: space-around;
+    padding: 10px;
+}
+
+.file-edit-path-prompt {
+}
+
+.file-edit-path-edit-wrapper {
+    padding-left: 10px;
+}
+
+.file-edit-path-edit {
+    min-width: 70%;
+}
+
+.file-edit-path-edit-go {
+    min-width: 10px;
+    height: 20px;
+    margin-left: 10px;
+    padding-right: 5px;
+    padding-left: 5px;
+    background-color: #d8ffd8;
+    border: 1px solid black;
+    border-radius: 5px;
+    font-size: small;
+    cursor: pointer;
+}
+
+.file-edit-path-edit-go-disabled {
+    background-color: #f0f0f0;
+    border-color: #e0e0e0;
+    cursor: default;
+}
+
+.file-edit-path-display-wrapper {
+    margin: 0px 10px 10px 10px;
+    border: 1px solid black;
+}
+
+.file-edit-path-display {
+    height: 30vh;
+    width: 100%;
+}
+
+.file-edit-interface-wrapper {
+}
+
+.file-edit-interface-table {
+    width: 100%;
+    margin-right: 10px;
+    margin-left: 10px;
+}
+
+.file-detail-row {
+}
+
+.file-edit-interface-table-titles {
+}
+
+.file-edit-interface-table-value-wrapper {
+    display: flex;
+    flex-direction: row;
+    align-content: flex-start;
+    align-items: stretch;
+}
+
+.file-edit-interface-table-item {
+}
+
+.file-edit-interface-table-prompt {
+    white-space: nowrap;
+    text-align: left;
+}
+
+.file-edit-interface-table-value {
+    width: 90%;
+}
+
+.file-edit-interface-value-mandatory {
+    margin-left: 10px;
+    color: red;
+}
+
+.file-edit-path-display-overlay-wrapper {
+    position: absolute;
+    display: flex;
+    flex-direction: row;
+    align-content: space-around;
+    align-items: center;
+}
+
+.file-edit-path-display-disabled {
+    background-color: rgb(230, 230, 230, .7);
+}
+
+.file-edit-path-display-wait {
+    background-color: rgb(230, 230, 230, .7);
+}
+
+.file-edit-path-contents-table-wrapper {
+    width: 100%;
+    overflow-y: scroll;
+    height: 30vh;
+}
+
+.file-edit-path-contents-table-header {
+    position: -webkit-sticky;
+    position: sticky;
+    top: 0;
+    background-color: #e0e0e0;
+}
+
+.file-edit-path-contents-table-title-wrapper {
+    display: flex;
+    flex-direction: row;
+    align-content: space-between;
+    align-items: center;
+    cursor: pointer;
+}
+
+.file-edit-path-contents-table-title-text {
+    flex: 10;
+}
+
+.file-edit-path-contents-table-title-indicator {
+    flex: 1;
+    color: grey;
+}
+
+.file-edit-path-contents-table {
+    width: 100%;
+}
+
+.file-edit-path-item {
+    width: 40%;
+    height: 1.5em;
+    font-size: smaller;
+    white-space: nowrap;
+}
+
+.file-edit-path-display-title-item-wrapper {
+}
+
+.file-edit-path-display-item-row {
+}
+
+.file-edit-path-display-item {
+    padding-left: 5px;
+}
+.file-edit-path-display-file-wrapper {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-content: space-around;
+    align-items: flex-start;
+    cursor: pointer;
+}
+
+.file-edit-path-display-file {
+    font-style: italic;
+}
+
+.file-edit-path-display-file:hover {
+    background-color: #e0e0e0;
+}
+
+.file-edit-path-display-folder {
+    font-weight: bold;
+}
+
+.file-edit-path-display-folder:hover {
+    background-color: #e0e0e0;
+}
+
+.file-edit-path-display-size {
+}
+
+.file-edit-path-display-date {
+}
+
+.file-edit-footer {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.file-edit-footer-spacer {
+    flex: 80%;
+}
+
+.file-edit-button {
+    min-width: 20px;
+    height: 20px;
+    border: 1px solid grey;
+    padding-right: 5px;
+    padding-left: 5px;
+    border-radius: 5px;
+}
+
+.file-edit-button-disabled {
+    border-color: #e0e0e0;
+    color: grey;
+    cursor: default;
+}
+
+.file-edit-ok {
+    background-color: #d8ffd8;
+    margin-left: 20px;
+    cursor: pointer;
+}
+
+.file-edit-ok-disabled {
+    background-color: #f0f0f0;
+}
+
+.file-edit-cancel {
+    background-color: #e0e0e0;
+    margin-right: 20px;
+    cursor: pointer;
+}

@@ -1,0 +1,14 @@
+# Readthedocs configuration file https://docs.readthedocs.io/en/stable/config-file/v2.html
+
+# Version of YAML configuration
+version: 2
+
+mkdocs:
+	configuration: mkdocs.yml
+
+# Python version and installations needed to build the documentation
+python:
+	version: "3.8"
+	install:
+	- requirements: docs/requirements.txt
+

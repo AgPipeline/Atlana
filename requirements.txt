@@ -1,0 +1,6 @@
+gunicorn
+python-irodsclient
+Flask
+Flask-Cors
+agpypeline
+pylint

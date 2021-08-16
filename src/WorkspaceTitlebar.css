@@ -1,0 +1,44 @@
+
+.wt-header {
+    display: flex;
+    flex-direction: row;
+    align-content: space-between;
+    align-items:stretch;
+}
+
+.wt-header-back {
+    border: 1px solid darkgrey;
+    border-radius: 7px;
+    background-color: #e0e0e0;
+    text-align: center;
+    max-height: 1.3em;
+    padding-right: 3px;
+    padding-left: 3px;
+    font-size: small;
+    cursor: pointer;
+}
+
+.wt-header-back:hover {
+    border-color: black;
+    box-shadow: 2px 2px 2px grey;
+}
+
+.wt-header-text {
+    flex: 1;
+    min-height: 5vh;
+    padding-left:10px;
+    white-space: nowrap;
+}
+
+.wt-header-fill {
+    flex: 10;
+}
+
+.wt-customize-wrapper {
+    flex: 5;
+    display: flex;
+    flex-direction: row;
+    align-content: flex-end;
+    align-items:stretch;
+}
+

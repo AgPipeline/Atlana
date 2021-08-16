@@ -1,0 +1,345 @@
+
+.algorithm-edit-wrapper {
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-content: flex-start;
+    align-items: stretch;
+}
+
+.algorithm-edit-edit-wrapper {
+    margin-top: 20px;
+    height: 60vh;
+    max-width: 700px;
+    display: inline-block;
+    position: relative;
+}
+
+.algorithm-edit-edit-wrapper-minimized {
+    margin-top: 20px;
+    height: 20vh;
+    max-width: 700px;
+    display: inline-block;
+    position: relative;
+    border: 2px solid lightgrey;
+}
+
+.algorithm-edit-variables-wrapper {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-content: flex-start;
+    align-items: stretch;
+}
+
+.algorithm-edit-prop-wrapper {
+    border: 1px solid black;
+    border-radius: 3px;
+    padding: 5px;
+    font-size: small;
+}
+
+.algorithm-edit-prop-wrapper-list {
+    height: 5em;
+    overflow: scroll;
+}
+
+.algorithm-edit-prop-wrapper-edit {    
+}
+
+.algorithm-field-edit-wrapper {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    align-content: flex-start;
+    align-items: stretch;
+}
+
+.algorithm-field-edit-prompt {
+}
+
+.algorithm-field-edit-spacer {
+    flex: 20;
+}
+
+.algorithm-field-edit-button {
+    position: fixed;
+    padding: 1px 3px 1px 3px;
+    border: 1px solid black;
+    border-radius: 5px;
+    background-color: lightgreen;
+    cursor: pointer;
+}
+
+.algorithm-field-wrapper {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-content: flex-start;
+    align-items: stretch;
+    font-size: small;
+}
+
+.algorithm-field-prompt {
+    font-weight: bold;
+}
+
+.algorithm-field-value:before {
+    content: "\"";
+}
+
+.algorithm-field-value {
+    font-style: italic;
+}
+
+.algorithm-field-value:after {
+    content: "\"";
+}
+
+.algorithm-field-value-edit  {
+    margin-top: 3px;
+    margin-left: 10px;
+}
+
+.return-variables-wrapper {
+    margin-left: 20px;
+    border: 1px solid black;
+    border-radius: 3px;
+    padding: 5px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-content: flex-start;
+    align-items: stretch;
+}
+
+.return-variables-wrapper-list {
+    font-size: x-small;
+}
+
+.return-variables-wrapper-edit {
+    font-size: smaller;
+    max-height: 50vh;
+    overflow: scroll;
+}
+
+.return-variables-edit-instructions {
+    margin-bottom: 5px;
+}
+
+.return-variables-prompt-wrapper {
+    margin-bottom: 5px;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-content: flex-start;
+    align-items: stretch;
+    font-size: small;
+}
+
+.return-variables-spacer {
+    flex: 30;
+}
+
+.return-variables-edit-button {
+    align-self: end;
+    margin-left: 10px;
+    padding: 1px 3px 1px 3px;
+    border: 1px solid black;
+    border-radius: 5px;
+    background-color: lightgreen;
+    cursor: pointer;
+}
+
+.return-variables-definition-wrapper {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-content: flex-start;
+    align-items: stretch;
+}
+
+.return-variables-definition-prompt {
+    font-weight: bold;
+}
+
+.return-variables-definition-value:before {
+    content: "\"";
+}
+
+.return-variables-definition-value {
+    font-style: italic;
+}
+
+.return-variables-definition-value:after {
+    content: "\"";
+}
+
+.algorithm-edit-editor {
+    position: absolute;
+    top: 25px;
+    right: 0px;
+    bottom: 0px;
+    left: 0px;
+}
+
+.algorithm-edit-return-table {
+    border: 1px solid black;
+}
+
+.algorithm-edit-return-table-heading {
+    font-weight: bold;
+    background-color: #e0e0e0;
+}
+
+.algorithm_edit_return_cell {
+    padding: 2px 4px 2px 4px;
+    border: 1px solid lightgrey;
+    min-height: 0.75em;
+    min-width: 30px;
+}
+
+.algorithm-edit-return-edit-field {
+    position: absolute;
+}
+
+.algorithm_edit_return_name {
+    cursor: pointer;
+}
+
+.algorithm_edit_return_unit {
+    cursor: pointer;
+}
+
+.algorithm_edit_return_label {
+    cursor: pointer;
+}
+
+.algorithm_edit_return_name_new {
+    cursor: pointer;
+}
+
+.algorithm-edit-editor-disable-overlay {
+    position: absolute;
+    background-color: rgb(200, 200, 200, 0.8);
+    cursor: pointer;
+}
+
+.algorithm-edit-editor-disable-message-wrapper {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-content: center;
+    align-items: center;
+}
+
+.algorithm-edit-editor-disable-message {
+    width: max-content;
+    padding: 2px 5px 2px 5px;
+    background-color: white;
+    border: 1px solid black;
+    border-radius: 7px;
+}
+
+.algorithm-edit-code-indicator-wrapper {
+    flex: 20;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    align-content: flex-end;
+    align-items: flex-end;
+}
+
+.algorithm-edit-code-indicator-separator {
+    flex: 20;
+}
+
+.algorithm-edit_code-error-indicator-button {
+    width: 9px;
+    height: 9px;
+    border: 1px solid darkgrey;
+    border-radius: 5px;
+}
+
+.algorithm-edit_code-error-indicator-ok {
+    border-color: grey;
+    background-color: rgb(128, 256, 200, 0.5);
+}
+
+.algorithm-edit_code-error-indicator-error {
+    background-color: rgb(200, 20, 60, 0.5);
+}
+
+.algorithm-edit_code-error-indicator-test {
+    margin-left: 50px;
+    padding-right: 5px;
+    padding-left: 5px;
+    border: 1px solid black;
+    border-radius: 5px;
+    background-color: rgb(150, 150, 255, 0.5);
+    cursor: pointer;
+}
+
+.algorithm-edit_code-error-indicator-test-disabled {
+    border-color: lightgrey;
+    color: grey;
+    background-color: rgb(150, 150, 255, 0.1);
+    cursor: initial;
+}
+
+.algorithm-edit-test-results-wrapper {
+    font-size: small;
+    margin-top: 10px;
+    border: 1px solid black;
+    padding: 5px;
+    overflow: scroll;
+}
+
+.algorithm-edit-test-results-table {
+    border-spacing: 1px 2px;
+}
+
+.algorithm-edit-test-results-header-row {
+    background-color: lightgrey;
+    font-weight: bold;
+}
+
+.algorithm-edit-test-results-header-cell {
+    padding-right: 3px;
+    padding-left: 3px;
+}
+
+.algorithm-edit-test-results-even-row {
+    background-color: white;
+}
+
+.algorithm-edit-test-results-odd-row {
+    background-color: rgb(230, 230, 230);
+}
+
+.algorithm-edit-footer {
+    width:  100%;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-content: flex-start;
+    align-items: stretch;
+}
+
+.algorithm-edit-display-results-wrapper {
+    margin-top: 5px;
+    border: 1px solid darkgrey;
+    border-radius: 5px;
+}
+
+.algorithm-edit-display-results-wrapper:hover {
+    border-color: black;
+}
+
+.algorithm-edit-display-results-button  {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}

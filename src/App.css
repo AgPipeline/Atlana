@@ -5,8 +5,9 @@
 }
 
 .app-header {
-  background: linear-gradient(to right, #f4dfdc 0px 200px, #a41f3c 200px 100vw);
-  min-height: 7vh;
+  background: white;
+  min-height: 100px;
+  max-height: 100px;
 }
 
 .app-header-wrapper {
@@ -18,8 +19,7 @@
 }
 
 .app-header-item {
-  margin: 1vh;
-  padding: .5vh;
+  margin: 0px;
   border: 3px solid grey;
   border-radius: 15px;
   color: black;
@@ -30,13 +30,8 @@
 
 .app-title-text {
   position: absolute;
-  left: 0;
-  top: .2vh;
-  color: black;
-  font-family: 'EB Garamond', serif;
-  font-size: xx-large;
-  font-weight: bold;
-  margin-left: 20px;
+  left: 10px;
+  top: 20px;
 }
 
 .body-wrapper {
@@ -44,21 +39,26 @@
   flex-direction: row;
   justify-content: flex-start;
   border-top:  2px solid grey;
+  background-color: rgb(245, 245, 245);
   width: 100vw;
+  box-shadow: inset 0px 3px 5px rgb(128, 128, 128, .2);
 }
 
 
-.workflow-list-wrapper {
-  width: 232px !important;
-  height: 100vh;
-  background-color: #f4dfdc;
+.sidemenu-wrapper {
+  min-width: 200px;
+  max-width: 200px;
+  min-height: calc(100vh  - 100px);
+  background-color: white;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
+  border-right: solid 1px grey;
+  box-shadow: inset 0px 3px 5px rgb(128, 128, 128, .2);
 }
 
-.workflow_list_item {
+.sidemenu-item {
   color: black;
   margin-top: 2vh;
   margin-left: 2vw;
@@ -69,8 +69,7 @@
   min-height: 2vh;
 }
 
-.workspace-area {
-  width: 100vw;
-  height: 100vh;
-  background-color: 'rgb(180, 180, 180)';
+.main-area {
+  width: calc(100vw - 200px);
+  min-height: calc(100vh - 100px);
 }

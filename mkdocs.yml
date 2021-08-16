@@ -1,0 +1,11 @@
+site_name: Atlana
+
+nav:
+    - 'index.md'
+    - 'about.md'
+
+theme:
+  name: readthedocs
+  custom_dir: docs_theme_override
+
+copyright: All Rights Reserved  
