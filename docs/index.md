@@ -27,12 +27,15 @@ What we will  be doing:
 1. [Upload files and configure](#uploading-and-configuring-files) a server-side file storage definition
 2. Running the [Canopy Cover image-based workflow](#running-a-workflow)
 3. [Downloading the results](#downloading-the-results) to the local computer
+4. [Deleting](#delete-workflow-run) the workflow run
 
 Note that the geographic boundaries of the image don't need to match that of the plots.
 Only those plots that intersect the image will be processed.
 
 Additionally, the coordinate system of the image doesn't need to match that of the plots.
 Plot points are converted automatically to the image's geographic coordinate system.
+
+### Sample data
 
 We also provide an [archive of sample data](https://data.cyverse.org/dav-anon/iplant/projects/aes/cct/diag/sample-data/sample_website_data.tar.gz
 ) [![external link](img/external_link.png)](https://data.cyverse.org/dav-anon/iplant/projects/aes/cct/diag/sample-data/sample_website_data.tar.gz) that can be downloaded and used in this Tutorial.
@@ -51,17 +54,17 @@ tar -xzf sample_website_data.tar.gz
 On the main page of the site, click the `files` link under **Data Sources**.
 This will take you to the file storage definition page
 
-<img src="img/landing_click_files.png" width="450" alt="File storage definition link" aria-label="File storage definition link" title="Click on files"/>
+<img src="img/landing_click_files.png" width="450" alt="File storage definition link" aria-label="File storage definition link" title="Click on Files link"/>
 
 Next click the upload icon, select and upload the files to process.
 You may see an <img src="img/configure_files_uploading_files.png" width="90" alt="Uploading files" aria-label="Uploading files" title="Uploading files"/> message on the icon if it takes a few seconds to upload the files.
 You can also drag-and-drop files onto the upload location.
 
-<img src="img/configure_files_upload.png" width="450" alt="Click upload files icon" aria-label="Upload files link" title="Click or drag-and-drop to upload"/>
+<img src="img/configure_files_upload.png" width="450" alt="Click upload files icon" aria-label="Upload files link" title="Click or drag-and-drop to upload files"/>
 
 Next, select "Server Side" from the drop down on the upper right of the page, and click "New".
 
-<img src="img/configure_files_server_side.png" width="450" alt="Choose dropdown server-side then new" aria-label="Create new server-side definition" title="Create new server-side configuration"/>
+<img src="img/configure_files_server_side.png" width="450" alt="Choose dropdown server-side then new" aria-label="Create new server-side definition" title="Create new server-side file configuration"/>
 
 This will display a new window showing the uploaded files.
 Change the name of the configuration if you want to.
@@ -71,7 +74,7 @@ Select "OK" to complete the configuration and dismiss the window.
 
 The configured access is now available to workflows and shown on the page.
 
-<img src="img/configure_files_completed.png" width="450" alt="Configured file storage location" aria-label="Configured file storage location" title="Configured file storage location"/>
+<img src="img/configure_files_completed.png" width="450" alt="Configured file storage listing" aria-label="Configured file storage listing" title="Configured file storage listing"/>
 
 You can return to the main page by clicking the "back" button.
 
@@ -81,7 +84,7 @@ You can return to the main page by clicking the "back" button.
 
 On the main page of the site, click the `Image` link under **Workflows**.
 
-<img src="img/landing_page_image.png" width="450" alt="Image workflow definition link" aria-label="Image workflow definition link" title="Click on Image"/>
+<img src="img/landing_page_image.png" width="450" alt="Image workflow definition link" aria-label="Image workflow definition link" title="Click on Image link"/>
 
 Choose "Canopy Cover" from the drop down on the upper right of the page, and click "Run".
 
@@ -113,13 +116,17 @@ Next we are going to navigate to view the output of the running workflow.
 <img src="img/workflows_image_cc_listing.png" width="450" alt="Listing of workflows" aria-label="Listing of new workflow" title="Listing of workflows"/>
 
 To see how the workflow job is proceeding, click the "View" button next to the workflow we just created.
-This will display a page where the status of the job is display and you can access normal and error messages.
-To update the messages and errors, click the "Refresh" button.
+This will display a page where the status of the job is display and you can access normal and warning/error messages.
+To update the messages and warnings/errors, click the "Refresh" button.
 If there are many messages retrieved from the server, it may take a few seconds before the messages are displayed.
 
-<img src="img/workflows_image_cc_messages.png" width="450" alt="Workflow output listing" aria-label="Viewing output messages" title="Viewing output messages"/>
+The current count of regular and warning/error messages are updated after refreshing.
+Clicking on the counts will switch between the message types.
 
-Use the "back" button to return to the workflow listing page once the workflow status shows "Finished".
+<img src="img/workflows_image_cc_messages.png" width="450" alt="Workflow output listing refresh" aria-label="Viewing output messages" title="Refresh view of output messages"/>
+
+Use the "back" button to return to the workflow listing page.
+Click the "View" button again on the workflow listing page to re-display the messages.
 
 <img src="img/workflows_image_cc_messages_back.png" width="450" alt="Back button to view workflows" aria-label="Click back button for workflow listing" title="Click the back button"/>
 
@@ -129,3 +136,13 @@ On the workflow listing page, completed workflows have a download button to the 
 Clicking the download button will download the CSV file ccontaining the results and the JSON of the job definition.
 
 <img src="img/workflows_image_download_results.png" width="450" alt="Download finished workflow results" aria-label="Click download icon for workflow results" title="Click download icon to retrieve results"/>
+
+If you have downloaded our [sample data](#sample-data) for processing and used that for running the Canopy Cover workflow, you can compare the extracted CSV file against your results.
+
+### Delete workflow run
+
+Click "Delete" to the right of the workflow run name that you want to delete.
+This will remove all files and information associated with the workflow run.
+If you are happy with the results, be sure to [download the results](#downloading-the-results) before deleting the workflow run.
+
+<img src="img/workflow_image_cc_delete.png" width="450" alt="Delete workflow run" aria-label="Click delete to remove workflow run" title="Delete workflow run"/>
