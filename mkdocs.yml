@@ -9,3 +9,7 @@ theme:
   custom_dir: docs_theme_override
 
 copyright: All Rights Reserved  
+
+markdown_extensions:
+    - toc:
+        permalink: True
