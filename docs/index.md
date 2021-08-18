@@ -13,7 +13,7 @@ It also provide ways to:
  * re-run jobs you've created and jobs others have created
  * download and restore workflows you've created and workflows you've run
 
-The downloaded configurations of storage locations and worflows are in JSON format and can be shared with others.
+The downloaded configurations of storage locations and workflows are in JSON format and can be shared with others.
 
 ## Tutorial
 Items needed:
