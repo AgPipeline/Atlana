@@ -1,5 +1,7 @@
 site_name: Atlana
 
+docs_dir: docs
+
 nav:
     - 'index.md'
     - 'about.md'
