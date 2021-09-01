@@ -52,6 +52,7 @@ class Server extends IData {
     try {
       fetch(uri, {
         method: 'GET',
+        credentials: 'include',
         }
       )
       .then(response => {if (response.ok) return response.json(); else throw response.statusText;})
