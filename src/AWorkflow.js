@@ -1159,7 +1159,7 @@ class AWorkflow extends Component {
               </tbody>
             </table>
             <div id="workflow_new_footer_wrapper" className="workflow-new-footer-wrapper">
-              <div id="workflow_new_footer_run" className={workflow_run_classes} onClick={workflow_click_func}>Run</div>
+              <div id="workflow_new_footer_run" className={workflow_run_classes} onClick={workflow_click_func}>Start</div>
             </div>
           </div>
         );
