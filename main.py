@@ -551,8 +551,15 @@ def queue_one_process(workflow_id: str, cur_command: dict, working_folder: str, 
 
         # Handle downloading files
         if one_parameter['type'] == 'file':
+            # Check for missing optional files
+            if not one_parameter['value'] and 'mandatory' in one_parameter and one_parameter['mandatory'] == False:
+                print('    Skipping missing non-mandatory file', one_parameter)
+                continue
+
+            # Copy mandatory file
             dest_path = os.path.join(cur_command['working_folder'], os.path.basename(one_parameter['value']))
             print("Downloading file '", one_parameter['value'], "' to '", dest_path, "'")
+            print("    one_parameter: '", one_parameter)
             one_parameter['getFile'](one_parameter['auth'], one_parameter['value'], dest_path)
             one_parameter['value'] = dest_path
 
@@ -722,15 +729,17 @@ def workflow_start(workflow_id: str, workflow_template: dict, data: list, file_h
                     for one_data in data:
                         if 'command' in one_data and one_data['command'] == cur_command and one_data['field_name'] == one_field['name']:
                             print("WORKING ON", one_data, one_field)
+                            is_mandatory = not 'mandatory' in one_field or one_field ['mandatory']
                             if 'data_type' in one_data:
                                 if one_data['data_type'] in file_handlers:
                                     cur_parameter = {**one_data, **(file_handlers[one_data['data_type']])}
                                     cur_parameter['command'] = one_field['name']
                                     cur_parameter['type'] = one_field['type']
+                                    cur_parameter['mandatory'] = is_mandatory
                                     break
                             else:
                                 cur_parameter = {'field_name': one_data['field_name'], 'value': one_data[one_data['field_name']],
-                                                 'type': one_field['type']}
+                                                 'type': one_field['type'], 'mandatory': is_mandatory}
                                 print("   ", cur_parameter)
                                 break
 
@@ -869,7 +878,7 @@ def sendjs(filename: str):
 @cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
 def upload_file():
     """Upload files"""
-    print("UPLOADED FILES",  len(request.files))
+    print("UPLOADED FILES", len(request.files))
     if not os.path.exists(FILE_START_PATH):
         os.makedirs(FILE_START_PATH)
 
@@ -877,6 +886,7 @@ def upload_file():
     # pylint: disable=consider-using-with
     if 'upload_folder' not in session or session['upload_folder'] is None or not os.path.isdir(session['upload_folder']):
         session['upload_folder'] = tempfile.mkdtemp(dir=FILE_START_PATH)
+    print("HACK: upload folder", session['upload_folder'])
 
     loaded_filenames = []
     for file_id in request.files:
@@ -898,6 +908,7 @@ def handle_files() -> tuple:
         path: the relative path to list
         file_filter: the filter to apply to the returned names
     """
+    print("LIST FILES")
     return_names = []
     have_error = False
 
