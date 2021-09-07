@@ -1167,6 +1167,11 @@ def handle_workflow_start() -> tuple:
 
     workflow_data = request.get_json(force=True)
 
+    # Set the workflow folder for this user if it hasn't been set yet
+    # pylint: disable=consider-using-with
+    if 'workflow_folder' not in session or session['workflow_folder'] is None or not os.path.isdir(session['workflow_folder']):
+        session['workflow_folder'] = tempfile.mkdtemp(dir=WORKFLOW_FILE_START_PATH)
+
     # Find the workflow
     for one_workflow in WORKFLOW_DEFINITIONS:
         print("  WORKFLOW ID CHECK:", one_workflow['id'])
@@ -1177,7 +1182,7 @@ def handle_workflow_start() -> tuple:
     # If we can't find the workflow, check for uploaded workflows
     if cur_workflow is None and 'workflow_files' in session and session['workflow_files'] is not None:
         if workflow_data['id'] in session['workflow_files']:
-            workflow_file_path = os.path.join(WORKFLOW_FILE_START_PATH, session['workflow_files'][workflow_data['id']])
+            workflow_file_path = os.path.join(session['workflow_folder'], session['workflow_files'][workflow_data['id']])
             print("   workflow file", workflow_file_path)
             if os.path.exists(workflow_file_path):
                 try:
@@ -1545,11 +1550,16 @@ def workflow_upload_file():
     else:
         passcode = DEFAULT_PASSCODE
 
+    # Set the workflow folder for this user if it hasn't been set yet
+    # pylint: disable=consider-using-with
+    if 'workflow_folder' not in session or session['workflow_folder'] is None or not os.path.isdir(session['workflow_folder']):
+        session['workflow_folder'] = tempfile.mkdtemp(dir=WORKFLOW_FILE_START_PATH)
+
     # Copy the files to our save location
     loaded_filenames = []
     for file_id in request.files:
         one_file = request.files[file_id]
-        save_path = os.path.join(WORKFLOW_FILE_START_PATH, secure_filename(one_file.filename))
+        save_path = os.path.join(session['workflow_folder'], secure_filename(one_file.filename))
         if os.path.exists(save_path):
             os.unlink(save_path)
         one_file.save(save_path)
