@@ -228,7 +228,6 @@ class AWorkflow extends Component {
     this.runWorkflow = this.runWorkflow.bind(this);
     this.setupRunWorkflow = this.setupRunWorkflow.bind(this); // Handles running a workflow
     this.showDownloadOptions = this.showDownloadOptions.bind(this);
-    this.unsecureWorkflow = this.unsecureWorkflow.bind(this);
     this.updateNewWorkflowType = this.updateNewWorkflowType.bind(this);
     this.updateWorkflowType = this.updateWorkflowType.bind(this);
     this.workflowDetailsStatus = this.workflowDetailsStatus.bind(this);
@@ -2281,11 +2280,13 @@ class AWorkflow extends Component {
         param_info.command = cur_template.steps[param.step_idx].command;
         param_info.field_name = param.name;
       }
-      if (param.config !== undefined) {
+      // Check if we have a valid file configuration
+      if (param.config !== undefined && param.config.auth && param.config.data_type) {
         param_info.auth = param.config.auth;
         param_info.data_type = param.config.data_type;
         param_info.value = param.config.location;
       } else {
+        // Just assign the value
         param_info[param.name] = param.value;
       }
       workflow_data.params.push(param_info);
@@ -2361,62 +2362,6 @@ class AWorkflow extends Component {
   }
 
   /**
-   * @callback AWorkflow~WorkflowUnsecureSuccessCallback
-   * @param {Object} result - the result of the request
-   */
-
-  /**
-   * @callback AWorkflow~WorkflowUnsecureErrorCallback
-   * @param {Object} error - the error response
-   */
-
-  /**
-   * @callback AWorkflow~WorkflowUnsecureExceptionCallback
-   * @param {Object} except - the exception that was caught
-   */
-
-  /**
-   * Requests the server to unsecure a workflow
-   * @param {str} workflow_id - the ID of the workflow
-   * @param {str} passcode - the passcode to use to unsecure the workflow
-   * @param {AWorkflow~WorkflowUnsecureSuccessCallback} success_cb - the callback upon success
-   * @param {AWorkflow~WorkflowUnsecureErrorCallback} [error_cb] - called when there's an error returned
-   * @param {AWorkflow~WorkflowUnsecureExceptionCallback} [exception_cb] - called when an exception is caught while making the request
-   */
-  unsecureWorkflow(workflow_id, passcode, success_cb, error_cb, exception_cb) {
-    const form_data = new FormData();
-    form_data.append('passcode', passcode);
-
-    if (!error_cb) {
-      error_cb = (error) => {console.log('ERROR', error);};
-    }
-
-    const uri = Utils.getHostOrigin().concat('/workflow/unsecure/').concat(workflow_id);
-    try {
-      fetch(uri, {
-        method: 'POST',
-        credentials: 'include',
-        body: form_data
-        }
-      )
-      .then(response => {if (response.ok) return response.json(); else throw response.statusText})
-      .then(success => {
-                        // Get the new workflow
-                        const new_workflow = success;
-                        success_cb(new_workflow);
-                       })
-      .catch(error => {error_cb(error);});
-    } catch (err) {
-      if (exception_cb) {
-        exception_cb(err);
-      } else {
-        console.log("Fetch workflow security", err);
-        throw err;
-      }
-    }
-  }
-
-  /**
    * Updates the state when a new workflow type is selected to configure
    * @param {Object} ev - the triggering event
    */
@@ -2487,9 +2432,7 @@ class AWorkflow extends Component {
               // Display the passcode, make the call to decrypt the data, then handle the completed upload
               this.setState({enter_passcode: {success_cb: (passcode) =>
                                               {
-                                                this.unsecureWorkflow(cur_workflow.id, passcode,
-                                                  (updated_workflow) => {this.uploadCompletedProcess(updated_workflow);}
-                                                );
+                                                this.uploadCompletedProcess(cur_workflow, passcode);
                                                 this.setState({enter_passcode: null});
                                               },
                                               cancel_cb:  () => {this.setState({enter_passcode: null});}
@@ -2505,8 +2448,13 @@ class AWorkflow extends Component {
   /**
    * Handles the successful upload of a workflow file allowing the user to rerun a job
    * @param {Object} cur_workflow - the current workflow
+   * @param {str} [passcode] - optional passcode to attach to loaded parameters
    */
-  uploadCompletedProcess(cur_workflow) {
+  uploadCompletedProcess(cur_workflow, passcode) {
+    // Check if we need to store a passcode
+    if (passcode) {
+      cur_workflow.passcode = passcode;
+    }
     // Setup our data fields if we have them
     const cur_config = [];
     if (cur_workflow.parameters) {
@@ -2529,7 +2477,7 @@ class AWorkflow extends Component {
             one_field.id = lookup_name;
             if (parent_field.type === 'file' || parent_field.type === 'folder') {
               one_field.path_is_file = parent_field.type === 'file';
-              one_field.location = one_field.value;
+              one_field.location = one_field.value ? one_field.value : '';
             }
             cur_config[lookup_name] = one_field;
           }

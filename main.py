@@ -1210,7 +1210,15 @@ def handle_workflow_start() -> tuple:
     working_dir = os.path.join(WORKFLOW_RUN_PATH, workflow_id)
     os.makedirs(working_dir, exist_ok=True)
 
-    workflow_start(workflow_id, cur_workflow, workflow_data['params'], FILE_HANDLERS, working_dir)
+    # Check if we need to decrypt some data
+    print("HACK: cur_workflow", workflow_data)
+    if 'workflow' in workflow_data and 'passcode' in workflow_data['workflow']:
+        print("HACK: unsecuring parameters before starting workflow")
+        workflow_params = unsecure_workflow_parameters(workflow_data['params'], workflow_data['workflow']['passcode'])
+    else:
+        workflow_params = workflow_data['params']
+
+    workflow_start(workflow_id, cur_workflow, workflow_params, FILE_HANDLERS, working_dir)
 
     workflow_save_path = os.path.join(working_dir, '_workflow')
     with open(workflow_save_path, 'w', encoding='utf8') as out_file:
@@ -1663,73 +1671,6 @@ def workflow_secure() -> tuple:
     except Exception as  ex:
         traceback.print_exc()
         return str(ex), 500     # Server error
-
-@app.route('/workflow/unsecure/<workflow_id>', methods=['POST'])
-@cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
-def workflow_unsecure(workflow_id: str) -> tuple:
-    """Attempts to unsecure a workflow that was previously uploaded
-    Parameters:
-        workflow_id - the ID of the workflow to unsecure
-    Request body:
-        passcode - the password to use to unsecure the workflow
-    """
-    try:
-        print("WORKFLOW UNSECURE", workflow_id)
-
-        # Get the passcode to use
-        if 'passcode' in request.form:
-            passcode = request.form['passcode']
-        else:
-            return 'Missing passcode on unsecure request for workflow id %s' % str(workflow_id), 400
-
-        # Find the workflow file by ID and check that it's still there
-        workflow_files = session['workflow_files']
-        if not workflow_files or workflow_id not in workflow_files:
-            msg = "ERROR: attempt made to unsecure invalid workflow file %s" % workflow_id
-            print(msg)
-            return msg, 400     # Bad request
-
-        workflow_file = workflow_files[workflow_id]
-        if not os.path.isfile(workflow_file):
-            msg = "ERROR: requested workflow file no longer exists"
-            print(msg)
-            return msg, 404     # Not found
-    except Exception as ex:
-        print("Exception caught handling unsecuring workflow", str(ex))
-        traceback.print_exc()
-        return str(ex), 500     # Server error
-
-    # Load the workflow and decrypt the parameters
-    try:
-        with open(workflow_file, 'r', encoding='utf8') as in_file:
-            loaded_workflow = json.load(in_file)
-    except json.JSONDecodeError as ex:
-        msg = 'ERROR: A JSON decode error was caught processing file "%s"' % workflow_file
-        print(msg, ex)
-        return str(ex), 412     # Precondition failed
-    except Exception as ex:
-        msg = 'ERROR: An unknown exception was caught processing file "%s"' % workflow_file
-        print(msg, ex)
-        return str(ex), 412     # Precondition failed
-
-    if loaded_workflow is None:
-        print("ERROR: workflow did not load from file", )
-        return ('Unable to load secured workflow associated with workflow id %s' % str(workflow_id)), 415      # Unsupported media type
-
-    if str(loaded_workflow['version']) not in WORKFLOW_SAVE_VERSIONS_SUPPORTED:
-        msg = 'ERROR: Unsupported version "%s" in workflow file "%s"' % (loaded_workflow['version'], os.path.basename(workflow_file))
-        print(msg, WORKFLOW_SAVE_VERSIONS_SUPPORTED,type(loaded_workflow['version']),type(WORKFLOW_SAVE_VERSIONS_SUPPORTED[0]))
-        return 'Unsupported version "%s" for workflow id %s' % (loaded_workflow['version'], str(workflow_id)), 406    # Not acceptable
-
-    # Return the workflow
-    loaded_workflow['id'] = workflow_id
-    if 'parameters' in loaded_workflow:
-        try:
-            loaded_workflow['parameters'] = unsecure_workflow_parameters(loaded_workflow['parameters'], passcode, True)
-        except ValueError:
-            return 'Unable to unsecure workflow; possible bad passcode', 422    # Unprocessable entity
-
-    return json.dumps(loaded_workflow)
 
 
 @app.route('/template/<lang>/<algorithm>', methods=['GET'])
