@@ -51,7 +51,7 @@ def _load_json_file(filename: str, error_func: Callable=None) -> Optional[object
     """
     result = None
     try:
-        with open(filename, 'r') as in_file:
+        with open(filename, 'r', encoding='utf8') as in_file:
             result = json.load(in_file)
     except json.JSONDecodeError as ex:
         msg = 'A JSON decode error was caught while loading JSON file "%s"' % filename
@@ -157,7 +157,7 @@ def _write_command_json(json_file_path: str, json_args: object):
     Exceptions:
         Raises RunttimeError if a problem occurs when writing out the JSON
     """
-    with open(json_file_path, 'wt')as out_file:
+    with open(json_file_path, 'wt', encoding='utf8')as out_file:
         try:
             out_file.write(json.dumps(json_args, indent=2))
         except json.JSONDecodeError as ex:
@@ -184,8 +184,8 @@ def _run_command(command: str, input_folder: str, output_folder: str, json_file_
         json_file_path: the JSON file to pass to the command
         msg_func: function to write messages to
         err_func: function to write errors to
-        additional_copy: optional tuple of additional mount commands for the docker command; one or more [source_path, mount_point] pairs; source files are
-                         copied before the command is run and folders are created as needed
+        additional_copy: optional tuple of additional mount commands for the docker command; one or more [source_path, mount_point] pairs;
+                         source files are copied before the command is run and folders are created as needed
     """
     # pylint: disable=unused-argument
     logging.debug('Copying file "%s" to "%s"', json_file_path, '/scif/apps/src/jx-args.json')
@@ -362,7 +362,7 @@ def _repoint_files_json_dir(filename: str, source_folder: str, target_folder: st
                 cur_file['DIR'] = _replace_folder_path(cur_file['DIR'], source_folder, target_folder)
             new_files.append(cur_file)
 
-        with open(new_file, 'w') as out_file:
+        with open(new_file, 'w', encoding='utf8') as out_file:
             json.dump({"FILE_LIST": new_files}, out_file, indent=2)
 
     except Exception:
@@ -770,7 +770,8 @@ def handle_merge_csv(parameters: tuple, input_folder: str, working_folder: str, 
 
     return command_results
 
-def handle_git_repo(git_repo: str, git_branch: str, parameters: tuple, input_folder: str, working_folder: str, msg_func: Callable, err_func: Callable) -> Optional[dict]:
+def handle_git_repo(git_repo: str, git_branch: str, parameters: tuple, input_folder: str, working_folder: str, msg_func: Callable, \
+                    err_func: Callable) -> Optional[dict]:
     """Handle running a git-based algorithm
     Arguments:
         git_repo: the URL of the repository to use
@@ -805,7 +806,7 @@ def handle_git_repo(git_repo: str, git_branch: str, parameters: tuple, input_fol
         if os.path.isfile(experiment_file):
             options += ' --metadata ' + experiment_file
         else:
-            msg = 'Warning: invalid experiment file specified for %s "%s"' % (git_process. experiment_file)
+            msg = 'Warning: invalid experiment file specified for %s:%s "%s"' % (git_repo, git_branch, experiment_file)
             logging.warning(msg)
             msg_func((msg,), True)
 

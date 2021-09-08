@@ -1,5 +1,7 @@
 """Server side API"""
 
+# pylint: disable=too-many-lines
+
 import json
 import datetime
 import copy
@@ -22,6 +24,7 @@ import irods.exception
 from flask import Flask, make_response, render_template, request, send_file, session
 from flask_cors import CORS, cross_origin
 from werkzeug.utils import secure_filename
+from werkzeug.datastructures import MultiDict
 from pylint import lint
 from pylint.reporters.text import TextReporter
 
@@ -216,6 +219,8 @@ def _get_python_preamble(code: list, start_index: int = 0) -> int:
     Returns:
         Returns the ending index of the preamble
     """
+    # We disable this pylint check that would decrease readability
+    # pylint: disable=too-many-nested-blocks, too-many-branches
     # We skip over blank lines, imports, comments, and docstrings
     num_lines = len(code)
     cur_line_idx = start_index
@@ -342,10 +347,9 @@ def _test_python_file(algo_type: str, lang: str, filepath: str, test_folder: str
     # Copy template files over
     for one_file in os.listdir(template_folder):
         src_name = os.path.join(template_folder, one_file)
-        if os.path.isfile(src_name):
-            if src_name.endswith('.py'):
-                shutil.copyfile(src_name, os.path.join(test_folder, one_file))
-                print("HACK: _test_python_file", "template copy", one_file)
+        if os.path.isfile(src_name) and src_name.endswith('.py'):
+            shutil.copyfile(src_name, os.path.join(test_folder, one_file))
+            print("HACK: _test_python_file", "template copy", one_file)
 
     # Copy test images and folders over
     test_images = []
@@ -356,10 +360,7 @@ def _test_python_file(algo_type: str, lang: str, filepath: str, test_folder: str
     source_folders = [images_folder]
     for one_folder in source_folders:
         # Make sure we're putting the folders and files in the right place
-        if one_folder == images_folder:
-            cur_dest_folder = dest_folder
-        else:
-            cur_dest_folder = dest_folder + one_folder[len(images_folder):]
+        cur_dest_folder = dest_folder if one_folder == images_folder else dest_folder + one_folder[len(images_folder):]
 
         # Copy this folder's contents
         for one_file in os.listdir(one_folder):
@@ -374,7 +375,7 @@ def _test_python_file(algo_type: str, lang: str, filepath: str, test_folder: str
 
     # Run the test
     cmd = [sys.executable, os.path.join(test_folder, filepath), '--working_space', test_folder] + test_images
-    proc = subprocess.run(cmd, capture_output=True)
+    proc = subprocess.run(cmd, capture_output=True, check=False)
 
     print("PROC: ", cmd, proc.returncode, proc.stdout, proc.stderr)
 
@@ -1155,6 +1156,55 @@ def handle_workflow_definitions() -> tuple:
     return json.dumps(WORKFLOW_DEFINITIONS)
 
 
+def _handle_workflow_start_save(workflow_save_path: str, params_save_path: str, cur_workflow: dict, workflow_params: list) -> None:
+    """Writes the workflow data to files
+    Arguments:
+        workflow_save_path - the path to save the current workflow data
+        params_save_path - the path to save workflow parameters to
+        cur_workflow - the current workflow
+        workflow_params - the workflow parameters to save
+    """
+    with open(workflow_save_path, 'w', encoding='utf8') as out_file:
+        json.dump(cur_workflow, out_file)
+
+    with open(params_save_path, 'w', encoding='utf8') as out_file:
+        json.dump(workflow_params, out_file)
+
+
+def _handle_workflow_start_find(workflow_data: dict) -> dict:
+    """Attempts to find the requested workflow using the workflow data passed on the handle_workflow_start() call
+    Arguments:
+        workflow_data - the workflow data to find the workflow for
+    """
+    cur_workflow = None
+
+    for one_workflow in WORKFLOW_DEFINITIONS:
+        if one_workflow['id'] == workflow_data['id']:
+            cur_workflow = one_workflow
+            break
+
+    # If we can't find the workflow, check for uploaded workflows
+    if cur_workflow is None and 'workflow_files' in session and session['workflow_files'] is not None:
+        if workflow_data['id'] in session['workflow_files']:
+            workflow_file_path = os.path.join(session['workflow_folder'], session['workflow_files'][workflow_data['id']])
+            if os.path.exists(workflow_file_path):
+                try:
+                    with open(workflow_file_path, 'r', encoding='utf8') as in_file:
+                        cur_workflow = json.load(in_file)
+                except json.JSONDecodeError as ex:
+                    msg = 'ERROR: A JSON decode error was caught trying to run file "%s"' % os.path.basename(workflow_file_path)
+                    print(msg, ex)
+                except Exception as ex:
+                    msg = 'ERROR: An unknown exception was caught trying to run file "%s"' % os.path.basename(workflow_file_path)
+                    print(msg, ex)
+
+    # See if we were sent the workflow
+    if cur_workflow is None and 'workflow' in workflow_data:
+        cur_workflow = workflow_data['workflow']
+
+    return cur_workflow
+
+
 @app.route('/workflow/start', methods=['POST'])
 @cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
 def handle_workflow_start() -> tuple:
@@ -1172,32 +1222,13 @@ def handle_workflow_start() -> tuple:
     if 'workflow_folder' not in session or session['workflow_folder'] is None or not os.path.isdir(session['workflow_folder']):
         session['workflow_folder'] = tempfile.mkdtemp(dir=WORKFLOW_FILE_START_PATH)
 
+    # Set the upload folder for this user if it hasn't been set yet
+    # pylint: disable=consider-using-with
+    if 'upload_folder' not in session or session['upload_folder'] is None or not os.path.isdir(session['upload_folder']):
+        session['upload_folder'] = tempfile.mkdtemp(dir=FILE_START_PATH)
+
     # Find the workflow
-    for one_workflow in WORKFLOW_DEFINITIONS:
-        print("  WORKFLOW ID CHECK:", one_workflow['id'])
-        if one_workflow['id'] == workflow_data['id']:
-            cur_workflow = one_workflow
-            break
-
-    # If we can't find the workflow, check for uploaded workflows
-    if cur_workflow is None and 'workflow_files' in session and session['workflow_files'] is not None:
-        if workflow_data['id'] in session['workflow_files']:
-            workflow_file_path = os.path.join(session['workflow_folder'], session['workflow_files'][workflow_data['id']])
-            print("   workflow file", workflow_file_path)
-            if os.path.exists(workflow_file_path):
-                try:
-                    with open(workflow_file_path, 'r', encoding='utf8') as in_file:
-                        cur_workflow = json.load(in_file)
-                except json.JSONDecodeError as ex:
-                    msg = 'ERROR: A JSON decode error was caught trying to run file "%s"' % os.path.basename(workflow_file_path)
-                    print(msg, ex)
-                except Exception as ex:
-                    msg = 'ERROR: An unknown exception was caught trying to run file "%s"' % os.path.basename(workflow_file_path)
-                    print(msg, ex)
-
-    # See if we were sent the workflow
-    if cur_workflow is None and 'workflow' in workflow_data:
-        cur_workflow = workflow_data['workflow']
+    cur_workflow = _handle_workflow_start_find(workflow_data)
 
     # Make sure we can find the workflow
     if cur_workflow is None:
@@ -1205,18 +1236,12 @@ def handle_workflow_start() -> tuple:
         print(msg)
         return msg, 400     # Bad request
 
-    # Set the upload folder for this user if it hasn't been set yet
-    # pylint: disable=consider-using-with
-    if 'upload_folder' not in session or session['upload_folder'] is None or not os.path.isdir(session['upload_folder']):
-        session['upload_folder'] = tempfile.mkdtemp(dir=FILE_START_PATH)
-
     # Start the process of getting the files
     workflow_id = uuid.uuid4().hex
     working_dir = os.path.join(WORKFLOW_RUN_PATH, workflow_id)
     os.makedirs(working_dir, exist_ok=True)
 
     # Check if we need to decrypt some data
-    print("HACK: cur_workflow", workflow_data)
     if 'workflow' in workflow_data and 'passcode' in workflow_data['workflow']:
         print("HACK: unsecuring parameters before starting workflow")
         workflow_params = unsecure_workflow_parameters(workflow_data['params'], workflow_data['workflow']['passcode'])
@@ -1225,23 +1250,17 @@ def handle_workflow_start() -> tuple:
 
     workflow_start(workflow_id, cur_workflow, workflow_params, FILE_HANDLERS, working_dir)
 
-    workflow_save_path = os.path.join(working_dir, '_workflow')
-    with open(workflow_save_path, 'w', encoding='utf8') as out_file:
-        json.dump(cur_workflow, out_file)
-
-    params_save_path = os.path.join(working_dir, '_params')
-    with open(params_save_path, 'w', encoding='utf8') as out_file:
-        json.dump(workflow_data['params'], out_file)
+    _handle_workflow_start_save(os.path.join(working_dir, '_workflow'), os.path.join(working_dir, '_params'), cur_workflow,
+                                workflow_data['params'])
 
     # Keep workflow IDs in longer term storage
     if 'workflows' not in session or session['workflows'] is None:
         session['workflows'] = [workflow_id,]
-        session[workflow_id] = cur_workflow
     else:
         updated_workflows = session['workflows']
         updated_workflows.append(workflow_id)
         session['workflows'] = updated_workflows
-        session[workflow_id] = cur_workflow
+    session[workflow_id] = cur_workflow
 
     return json.dumps({'id': workflow_id, 'start_ts': datetime.datetime.now().isoformat().split('.')[0]})
 
@@ -1261,6 +1280,8 @@ def handle_workflow_recover() -> tuple:
             working_dir = os.path.join(WORKFLOW_RUN_PATH, one_workflow_id)
             workflow_params = os.path.join(working_dir, '_params')
             workflow_file = os.path.join(working_dir, '_workflow')
+            # Disable the pylint check here to allow all the files to be checked on one line
+            # pylint: disable=too-many-boolean-expressions
             if os.path.exists(working_dir) and os.path.isdir(working_dir) and os.path.exists(workflow_params) \
                and os.path.isfile(workflow_params) and os.path.exists(workflow_file) and os.path.isfile(workflow_file):
                 # Recover the workflow
@@ -1528,6 +1549,106 @@ def return_workflow_artifact() -> tuple:
     return response
 
 
+def _workflow_upload_file_save(request_files: MultiDict, save_path: str) -> list:
+    """Saves files that were uploaded to the specified save location
+    Arguments:
+        request_files - the list of uploaded files from the request
+        save_path - the path to save the files to
+    Returns:
+        The list of saved files
+    """
+    loaded_filenames = []
+
+    for file_id in request_files:
+        one_file = request_files[file_id]
+        cur_save_path = os.path.join(save_path, secure_filename(one_file.filename))
+        if os.path.exists(cur_save_path):
+            os.unlink(cur_save_path)
+        one_file.save(cur_save_path)
+        loaded_filenames.append(cur_save_path)
+
+    return loaded_filenames
+
+
+def _workflow_upload_file_load(workflow_file: str) -> tuple:
+    """Attempts to load the workflow from a file
+    Arguments:
+        workflow_file - the path to the workflow file
+    Returns:
+        A tuple containing the loaded workflow and a message, in that order
+    Notes:
+        If the workflow could not be loaded, None is returned for the loaded workflow. If there were no issues the
+        message will be None in the return tuple.
+    """
+    loaded_workflow, msg = None, None
+
+    try:
+        with open(workflow_file, 'r', encoding='utf8') as in_file:
+            loaded_workflow = json.load(in_file)
+    except json.JSONDecodeError as ex:
+        msg = 'ERROR: A JSON decode error was caught processing file "%s"' % os.path.basename(workflow_file)
+        print(msg, ex)
+    except Exception as ex:
+        msg = 'ERROR: An unknown exception was caught processing file "%s"' % os.path.basename(workflow_file)
+        print(msg, ex)
+
+    if loaded_workflow and not 'version' in loaded_workflow:
+        msg = 'ERROR: Version not found in workflow file "%s"' % os.path.basename(workflow_file)
+
+    return loaded_workflow, msg
+
+
+def _workflow_upload_file_handle(workflow_path: str, workflow_def: dict) -> tuple:
+    """Analyses the passed in workflow and returns an updated workflow definition if it's to be returned to the caller
+    Arguments:
+        workflow_path - the path to the workflow file
+        workflow_def - the contents of the loaded workflow file
+    Returns:
+        A tuple consisting of a list of updated workflows, a workflow ID, and associated file paths, and a message, in that order.
+        The list of workflows may be None if a problem is found. The workflow IDs may be None if the workflows are definitions and not one
+        that had already been run. The message may be None if no problems were found
+    Notes:
+        Contains the logic for processing uploaded workflow related files
+    """
+    msg = None
+    workflow_id = None
+    return_workflows = []
+
+    # Determine what type of file we're getting
+    if 'type' in workflow_def and workflow_def['type'] == WORKFLOW_DEFINITION_SAVE_TYPE:
+        # Workflow definition file
+        if str(workflow_def['version']) not in WORKFLOW_DEFINITION_SAVE_VERSIONS_SUPPORTED:
+            msg = 'ERROR: Unsupported version "%s" in workflow definition file "%s"' % (workflow_def['version'],
+                        os.path.basename(workflow_path))
+            print(msg, WORKFLOW_DEFINITION_SAVE_VERSIONS_SUPPORTED)
+            return None, None, msg
+
+        for one_workflow_def in workflow_def['workflows']:
+            found = False
+            for tmp_workflow in WORKFLOW_DEFINITIONS:
+                if tmp_workflow['id'] == one_workflow_def['id']:
+                    found = True
+                    break
+
+            if not found:
+                WORKFLOW_DEFINITIONS.append(one_workflow_def)
+                return_workflows.append(one_workflow_def)
+    else:
+        # Workflow "run" file
+        if str(workflow_def['version']) not in WORKFLOW_SAVE_VERSIONS_SUPPORTED:
+            msg = 'ERROR: Unsupported version "%s" in workflow file "%s"' % (workflow_def['version'], os.path.basename(workflow_path))
+            print(msg, WORKFLOW_SAVE_VERSIONS_SUPPORTED)
+            return None, None, msg
+
+        loaded_file_id = uuid.uuid4().hex
+        workflow_id = loaded_file_id
+
+        workflow_def['id'] = loaded_file_id
+        return_workflows.append(workflow_def)
+
+    return return_workflows, workflow_id, msg
+
+
 @app.route('/workflow/upload', methods=['POST'])
 @cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
 def workflow_upload_file():
@@ -1544,89 +1665,40 @@ def workflow_upload_file():
         print(msg)
         return msg, 400     # Bad request
 
-    # Get the passcode to use
-    if 'passcode' in request.form:
-        passcode = request.form['passcode']
-    else:
-        passcode = DEFAULT_PASSCODE
-
     # Set the workflow folder for this user if it hasn't been set yet
     # pylint: disable=consider-using-with
     if 'workflow_folder' not in session or session['workflow_folder'] is None or not os.path.isdir(session['workflow_folder']):
         session['workflow_folder'] = tempfile.mkdtemp(dir=WORKFLOW_FILE_START_PATH)
 
     # Copy the files to our save location
-    loaded_filenames = []
-    for file_id in request.files:
-        one_file = request.files[file_id]
-        save_path = os.path.join(session['workflow_folder'], secure_filename(one_file.filename))
-        if os.path.exists(save_path):
-            os.unlink(save_path)
-        one_file.save(save_path)
-        loaded_filenames.append(save_path)
+    loaded_filenames = _workflow_upload_file_save(request.files, session['workflow_folder'])
 
     # Load the workflows while checking their contents
     # TODO: handle zip files: see return_workflow_download()
     return_workflows, return_messages, loaded_file_info = ([], [], {})
 
     for one_workflow in loaded_filenames:
-        loaded_workflow = None
-        try:
-            with open(one_workflow, 'r', encoding='utf8') as in_file:
-                loaded_workflow = json.load(in_file)
-        except json.JSONDecodeError as ex:
-            msg = 'ERROR: A JSON decode error was caught processing file "%s"' % os.path.basename(one_workflow)
-            print(msg, ex)
-            return_messages.append(msg)
-        except Exception as ex:
-            msg = 'ERROR: An unknown exception was caught processing file "%s"' % os.path.basename(one_workflow)
-            print(msg, ex)
-            return_messages.append(msg)
+        # Load the workflow file
+        loaded_workflow, new_msg = _workflow_upload_file_load(one_workflow)
+
+        if new_msg is not None:
+            return_messages.append(new_msg)
 
         if loaded_workflow is None:
             continue
 
-        if not 'version' in loaded_workflow:
-            msg = 'ERROR: Version not found in workflow file "%s"' % os.path.basename(one_workflow)
-            return_messages.append(msg)
-            continue
+        # Handle the loaded workflow
+        final_workflow_list, workflow_id, new_msg = _workflow_upload_file_handle(one_workflow, loaded_workflow)
 
-        # Determine what type of file we're getting
-        if 'type' in loaded_workflow and loaded_workflow['type'] == WORKFLOW_DEFINITION_SAVE_TYPE:
-            # Workflow definition file
-            if str(loaded_workflow['version']) not in WORKFLOW_DEFINITION_SAVE_VERSIONS_SUPPORTED:
-                msg = 'ERROR: Unsupported version "%s" in workflow definition file "%s"' % (loaded_workflow['version'],
-                            os.path.basename(one_workflow))
-                print(msg, WORKFLOW_DEFINITION_SAVE_VERSIONS_SUPPORTED,type(loaded_workflow['version']),
-                            type(WORKFLOW_SAVE_VERSIONS_SUPPORTED[0]))
-                return_messages.append(msg)
-                continue
+        if new_msg is not None:
+            return_messages.append(new_msg)
 
-            for one_workflow_def in loaded_workflow['workflows']:
-                found = False
-                for tmp_workflow in WORKFLOW_DEFINITIONS:
-                    if tmp_workflow['id'] == one_workflow_def['id']:
-                        found = True
-                        break
+        if workflow_id is not None:
+            loaded_file_info[workflow_id] = one_workflow
 
-                if not found:
-                    WORKFLOW_DEFINITIONS.append(one_workflow_def)
-                    return_workflows.append(one_workflow_def)
-        else:
-            # Workflow "run" file
-            if str(loaded_workflow['version']) not in WORKFLOW_SAVE_VERSIONS_SUPPORTED:
-                msg = 'ERROR: Unsupported version "%s" in workflow file "%s"' % (loaded_workflow['version'], os.path.basename(one_workflow))
-                print(msg, WORKFLOW_SAVE_VERSIONS_SUPPORTED,type(loaded_workflow['version']),type(WORKFLOW_SAVE_VERSIONS_SUPPORTED[0]))
-                return_messages.append(msg)
-                continue
+        if final_workflow_list is not None:
+            return_workflows.extend(final_workflow_list)
 
-            loaded_file_id = uuid.uuid4().hex
-            loaded_file_info[loaded_file_id] = one_workflow
-
-            loaded_workflow['id'] = loaded_file_id
-            if 'parameters' in loaded_workflow:
-                loaded_workflow['parameters'] = unsecure_workflow_parameters(loaded_workflow['parameters'], passcode)
-            return_workflows.append(loaded_workflow)
 
     if 'workflow_files' not in session or session['workflow_files'] is None:
         print("SESSION WORKFLOW FILES: ", str(loaded_file_info))
@@ -1818,6 +1890,7 @@ def test_python_code(algo_type: str, lang: str):
 
     return json.dumps(results)
 
+
 @app.route('/algorithm/gitcheck', methods=['POST'])
 @cross_origin(origin='127.0.0.1:3000')
 def algo_git_check():
@@ -1827,18 +1900,16 @@ def algo_git_check():
         username: the name of the user used to access the repo
         password: the password associated with the user
     """
+    # Disabling pylint checks that would make this function less readable
+    # pylint: disable=too-many-branches, too-many-statements
     print("CHECK GIT REPO")
+
     # Get the values from the form
-    have_error = False
     repo_url = None
     try:
         repo_url = request.form.get('repo_url')
     except ValueError as ex:
-        print("A value exception was caught while fetching form data:", ex)
-        have_error = True
-
-    if have_error:
-        print ("Missing or bad git repository value: URL:", str(repo_url))
+        print('Missing or bad git repository URL:', ex)
         return 'Repository fields are missing or invalid', 400
 
     # Get the list of branches and tags
@@ -1851,28 +1922,30 @@ def algo_git_check():
 
     try:
         cmd = ['git', 'init']
-        res = subprocess.run(cmd, stdout=subprocess.DEVNULL)
+        res = subprocess.run(cmd, stdout=subprocess.DEVNULL, check=False)
         if res.returncode != 0:
             print("Unable to initialize git repository at", local_repo_dir)
             return "Internal error", 500
 
         cmd = ['git', 'remote', 'add', 'origin', repo_url]
-        res = subprocess.run(cmd, stdout=subprocess.DEVNULL)
+        res = subprocess.run(cmd, stdout=subprocess.DEVNULL, check=False)
         if res.returncode != 0:
             print("Unable to configure git repository at", local_repo_dir)
             return "Configuration error", 400
 
         cmd = ['git', 'fetch']
-        res = subprocess.run(cmd, stdout=subprocess.DEVNULL)
+        res = subprocess.run(cmd, stdout=subprocess.DEVNULL, check=False)
         if res.returncode != 0:
             print("Unable to fetch git repository at", local_repo_dir)
             return "Update error", 400
 
+        # Get the branches and try to find the specified one
         cmd = ['git', 'branch', '-r']
-        res = subprocess.run(cmd, stdout=subprocess.PIPE)
+        res = subprocess.run(cmd, stdout=subprocess.PIPE, check=False)
         if res.returncode != 0:
             print("Unable to list branches for git repository at", local_repo_dir)
             return "Branch listing error", 400
+
         branches = res.stdout.decode("utf-8").split('\n')
         for one_branch in branches:
             cur_branch = one_branch.strip()
@@ -1881,11 +1954,13 @@ def algo_git_check():
                     cur_branch = cur_branch[len('origin/'):]
                 results['branches'].append(cur_branch)
 
+        # Get the tags and try to find the specified one
         cmd = ['git', 'tag', '-l']
-        res = subprocess.run(cmd, stdout=subprocess.PIPE)
+        res = subprocess.run(cmd, stdout=subprocess.PIPE, check=False)
         if res.returncode != 0:
             print("Unable to list tags for git repository at", local_repo_dir)
             return "Tags listing error", 400
+
         tags = res.stdout.decode("utf-8").split('\n')
         for one_tag in tags:
             cur_tag = one_tag.strip()
