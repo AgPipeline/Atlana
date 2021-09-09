@@ -2,6 +2,7 @@
 
 import json
 import datetime
+import copy
 import os
 import fnmatch
 import time
@@ -14,6 +15,7 @@ import traceback
 import subprocess
 import sys
 from typing import Union
+from crypt import Crypt
 from irods.session import iRODSSession
 from irods.data_object import chunks
 import irods.exception
@@ -25,13 +27,32 @@ from pylint.reporters.text import TextReporter
 
 from workflow_definitions import WORKFLOW_DEFINITIONS
 
-def _get_secret_key():
+def _get_secret_key() -> str:
     """Returns a value to be used as a secret key"""
     cur_key = os.getenv('SECRET_KEY')
     if cur_key is None or len(cur_key) == 0:
         cur_key = 'this_is_not_a_secret_key_33343536'
 
     return cur_key
+
+def _get_encryption_salt() -> str:
+    """Returns a value to be used as salt (IV)"""
+    cur_salt = os.getenv('SALT_VALUE')
+    if cur_salt is None or len(cur_salt) == 0:
+        cur_salt = '381279526a7eAC2f'
+
+    # The salt must match the block size
+    return Crypt.adjust_crypto_salt(cur_salt)
+
+def _get_default_passcode() -> str:
+    """Returns a default passcode to used when one is not specified"""
+    cur_pc = os.getenv('DEFAULT_PASSCODE')
+    if cur_pc is None or len(cur_pc) == 0:
+        cur_pc = 'unsecurepasscode'
+
+    # Return the passcode
+    return cur_pc
+
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = _get_secret_key()
@@ -46,6 +67,12 @@ RESOURCE_START_PATH = os.path.abspath(os.path.dirname(__file__))
 
 # Our local path
 OUR_LOCAL_PATH = os.path.abspath(os.path.dirname(__file__))
+
+# Get the salt (IV) for encryption
+ENCRYPTION_SALT = _get_encryption_salt()
+
+# Get the default passcode to use when it's not specified
+DEFAULT_PASSCODE = _get_default_passcode()
 
 # Starting point for seaching for user files on server
 FILE_START_PATH = os.getenv('WORKING_FOLDER')
@@ -244,7 +271,7 @@ def _write_python_file(filepath: str, code: str, variables: dict = None) ->  tup
 
     # Write the code
     variable_start_line = -1
-    with open(filepath, 'w') as out_file:
+    with open(filepath, 'w', encoding='utf8') as out_file:
         line_index = 0
 
         # Write preamble
@@ -265,7 +292,7 @@ def _write_python_file(filepath: str, code: str, variables: dict = None) ->  tup
             out_file.write(code_lines[line_index].rstrip() + '\n')
             line_index += 1
 
-    with open(filepath, 'r') as in_file:
+    with open(filepath, 'r', encoding='utf8') as in_file:
         print(in_file.read())
 
     return (len(variables), variable_start_line)
@@ -354,7 +381,7 @@ def _test_python_file(algo_type: str, lang: str, filepath: str, test_folder: str
     # Look for the result file
     csv_filepath = os.path.join(test_folder, 'rgb_plot.csv')
     if os.path.exists(csv_filepath):
-        with open(csv_filepath, 'r') as in_file:
+        with open(csv_filepath, 'r', encoding='utf8') as in_file:
             res_data = in_file.read().split('\n')
     else:
         print("Testing run failed")
@@ -513,7 +540,7 @@ def queue_start(workflow_id: str, working_folder: str, recover: bool) -> dict:
         starting_queue = True
         if os.path.isfile(queue_path):
             try:
-                with open(queue_path, 'r') as in_file:
+                with open(queue_path, 'r', encoding='utf8') as in_file:
                     res = json.load(in_file)
                     if isinstance(res, list):
                         starting_queue = False
@@ -526,7 +553,7 @@ def queue_start(workflow_id: str, working_folder: str, recover: bool) -> dict:
                 cleanup = True
 
         # Begin the starting queue
-        with open(queue_path, 'w') as out_file:
+        with open(queue_path, 'w', encoding='utf8') as out_file:
             json.dump([], out_file)
 
     return {'recover': recover, 'cleanup': cleanup}
@@ -552,7 +579,7 @@ def queue_one_process(workflow_id: str, cur_command: dict, working_folder: str, 
         # Handle downloading files
         if one_parameter['type'] == 'file':
             # Check for missing optional files
-            if not one_parameter['value'] and 'mandatory' in one_parameter and one_parameter['mandatory'] == False:
+            if not one_parameter['value'] and 'mandatory' in one_parameter and one_parameter['mandatory'] is False:
                 print('    Skipping missing non-mandatory file', one_parameter)
                 continue
 
@@ -570,14 +597,14 @@ def queue_one_process(workflow_id: str, cur_command: dict, working_folder: str, 
         # TODO: Signal recover
         return
 
-    with open(queue_path, 'r') as in_file:
+    with open(queue_path, 'r', encoding='utf8') as in_file:
         current_workflow = json.load(in_file)
 
     print("Appending command to workflow: ", current_workflow)
     current_workflow.append(_clean_for_json(cur_command))
 
     print("Current workflow: ", current_workflow)
-    with open(queue_path, 'w') as out_file:
+    with open(queue_path, 'w', encoding='utf8') as out_file:
         json.dump(current_workflow, out_file, indent=2)
 
 
@@ -619,7 +646,7 @@ def queue_status(workflow_id: str, working_folder: str) -> Union[dict, str, None
     for one_attempt in range(0, FILE_PROCESS_QUEUE_STATUS_RETRIES):
         caught_exception = True
         try:
-            with open(status_path, 'r') as in_file:
+            with open(status_path, 'r', encoding='utf8') as in_file:
                 try:
                     cur_status = json.load(in_file)
                     caught_exception = False
@@ -661,7 +688,7 @@ def queue_messages(workflow_id: str, working_folder: str) -> tuple:
     if os.path.exists(cur_path):
         for one_attempt in range(0, FILE_PROCESS_QUEUE_STATUS_RETRIES):
             try:
-                with open(cur_path, 'r') as in_file:
+                with open(cur_path, 'r', encoding='utf8') as in_file:
                     messages = in_file.readlines()
             except OSError as ex:
                 msg = 'An OS exception was caught while trying to read output file "%s"' % cur_path
@@ -681,7 +708,7 @@ def queue_messages(workflow_id: str, working_folder: str) -> tuple:
     if os.path.exists(cur_path):
         for one_attempt in range(0, FILE_PROCESS_QUEUE_STATUS_RETRIES):
             try:
-                with open(cur_path, 'r') as in_file:
+                with open(cur_path, 'r', encoding='utf8') as in_file:
                     errors = in_file.readlines()
             except OSError as ex:
                 msg = 'An OS exception was caught while trying to read error file "%s"' % cur_path
@@ -805,6 +832,80 @@ def workflow_messages(workflow_id: str, working_folder: str) -> dict:
             'errors': errors if errors is not None else []}
 
 
+def workflow_has_secure_parameters(params: list) -> bool:
+    """Returns whether or not a parameter contains sensitive information
+    Arguments:
+        params - the list of parameters to check
+    Returns:
+        Returns True if a known sensitive parameter is detected and False otherwise
+    """
+    return_value = False
+    for one_param in params:
+        if isinstance(one_param, dict) and 'auth' in one_param:
+            if one_param['auth']:
+                return_value = True
+                break
+
+    return return_value
+
+
+def secure_workflow_parameters(params: list, passcode: str) -> list:
+    """Secures workflow parameters by encrypting sensitive information
+    Arguments:
+        params - the list of parameters to secure
+        passcode - the passcode to use to secure information
+    Returns:
+        A list of secured parameters
+    """
+    crypt = None
+    return_list = []
+    for one_param in params:
+        if isinstance(one_param, dict) and 'auth' in one_param and one_param['auth']:
+            if crypt is None:
+                crypt = Crypt(ENCRYPTION_SALT)
+
+            new_param = copy.copy(one_param)
+            new_param['auth'] = crypt.encrypt(json.dumps(new_param['auth']), passcode)
+            return_list.append(new_param)
+        else:
+            return_list.append(one_param)
+
+    return return_list
+
+
+def unsecure_workflow_parameters(params: list, passcode: str,  raise_on_error: bool = False) -> list:
+    """Converts encryption from sensitive workflow parameters
+    Arguments:
+        params - the parameters to make clear text
+        passcode - the passcode that was used to secure information (used to make plain again)
+        raise_on_error - errors will raise an exception when set to True; defaults to False
+    Returns:
+        The list of unsecured parameters
+    """
+    crypt = None
+    return_list = []
+    for one_param in params:
+        if isinstance(one_param, dict) and 'auth' in one_param and isinstance(one_param['auth'], str):
+            if crypt is None:
+                crypt = Crypt(ENCRYPTION_SALT)
+
+            new_param = copy.copy(one_param)
+            try:
+                plain_text = crypt.decrypt(new_param['auth'], passcode)
+                new_param['auth'] = json.loads(plain_text)
+            except ValueError as ex:
+                print('Value exception caught while trying to load secured "auth" information from workflow:', new_param['auth'])
+                print(ex)
+                if raise_on_error:
+                    raise ex
+                print('Keeping original value')
+            return_list.append(new_param)
+        else:
+            return_list.append(one_param)
+
+    return return_list
+
+
 @app.after_request
 def add_cors_headers(response):
     """Appends CORS headers to a response
@@ -886,7 +987,6 @@ def upload_file():
     # pylint: disable=consider-using-with
     if 'upload_folder' not in session or session['upload_folder'] is None or not os.path.isdir(session['upload_folder']):
         session['upload_folder'] = tempfile.mkdtemp(dir=FILE_START_PATH)
-    print("HACK: upload folder", session['upload_folder'])
 
     loaded_filenames = []
     for file_id in request.files:
@@ -916,14 +1016,13 @@ def handle_files() -> tuple:
     file_filter = request.args['filter']
 
     if len(path) <= 0:
-        print('Zero length path requested' % path, flush=True)
+        print('Zero length path requested %s' % path, flush=True)
         return 'Resource not found', 404
 
     # Set the upload folder for this user if it hasn't been set yet
     # pylint: disable=consider-using-with
     if 'upload_folder' not in session or session['upload_folder'] is None or not os.path.isdir(session['upload_folder']):
         session['upload_folder'] = tempfile.mkdtemp(dir=FILE_START_PATH)
-    print("HACK: upload folder", session['upload_folder'])
 
     try:
         working_path = normalize_path(path)
@@ -1011,7 +1110,7 @@ def handle_irods_files() -> tuple:
                         password=conn_info['password'], zone=conn_info['zone'])
 
     if len(path) <= 0:
-        print('Zero length path requested' % path, flush=True)
+        print('Zero length path requested %s' % path, flush=True)
         return 'Resource not found', 404
 
     try:
@@ -1024,6 +1123,7 @@ def handle_irods_files() -> tuple:
                                      'date': '{0:%Y-%m-%d %H:%M:%S}'.format(one_obj.modify_time),
                                      'type': 'file'
                                      })
+
         for one_obj in col.subcollections:
             return_names.append({'name': one_obj.name,
                                  'path': one_obj.path,
@@ -1031,6 +1131,7 @@ def handle_irods_files() -> tuple:
                                  'date': '',
                                  'type': 'folder'
                                  })
+
     except irods.exception.NetworkException as ex:
         print('Network exception caught for iRODS listing: ', path, ex)
         return 'Unable to complete iRODS listing request: %s' % path, 504
@@ -1066,6 +1167,11 @@ def handle_workflow_start() -> tuple:
 
     workflow_data = request.get_json(force=True)
 
+    # Set the workflow folder for this user if it hasn't been set yet
+    # pylint: disable=consider-using-with
+    if 'workflow_folder' not in session or session['workflow_folder'] is None or not os.path.isdir(session['workflow_folder']):
+        session['workflow_folder'] = tempfile.mkdtemp(dir=WORKFLOW_FILE_START_PATH)
+
     # Find the workflow
     for one_workflow in WORKFLOW_DEFINITIONS:
         print("  WORKFLOW ID CHECK:", one_workflow['id'])
@@ -1076,11 +1182,11 @@ def handle_workflow_start() -> tuple:
     # If we can't find the workflow, check for uploaded workflows
     if cur_workflow is None and 'workflow_files' in session and session['workflow_files'] is not None:
         if workflow_data['id'] in session['workflow_files']:
-            workflow_file_path = os.path.join(WORKFLOW_FILE_START_PATH, session['workflow_files'][workflow_data['id']])
+            workflow_file_path = os.path.join(session['workflow_folder'], session['workflow_files'][workflow_data['id']])
             print("   workflow file", workflow_file_path)
             if os.path.exists(workflow_file_path):
                 try:
-                    with open(workflow_file_path, 'r') as in_file:
+                    with open(workflow_file_path, 'r', encoding='utf8') as in_file:
                         cur_workflow = json.load(in_file)
                 except json.JSONDecodeError as ex:
                     msg = 'ERROR: A JSON decode error was caught trying to run file "%s"' % os.path.basename(workflow_file_path)
@@ -1109,14 +1215,22 @@ def handle_workflow_start() -> tuple:
     working_dir = os.path.join(WORKFLOW_RUN_PATH, workflow_id)
     os.makedirs(working_dir, exist_ok=True)
 
-    workflow_start(workflow_id, cur_workflow, workflow_data['params'], FILE_HANDLERS, working_dir)
+    # Check if we need to decrypt some data
+    print("HACK: cur_workflow", workflow_data)
+    if 'workflow' in workflow_data and 'passcode' in workflow_data['workflow']:
+        print("HACK: unsecuring parameters before starting workflow")
+        workflow_params = unsecure_workflow_parameters(workflow_data['params'], workflow_data['workflow']['passcode'])
+    else:
+        workflow_params = workflow_data['params']
+
+    workflow_start(workflow_id, cur_workflow, workflow_params, FILE_HANDLERS, working_dir)
 
     workflow_save_path = os.path.join(working_dir, '_workflow')
-    with open(workflow_save_path, 'w') as out_file:
+    with open(workflow_save_path, 'w', encoding='utf8') as out_file:
         json.dump(cur_workflow, out_file)
 
     params_save_path = os.path.join(working_dir, '_params')
-    with open(params_save_path, 'w') as out_file:
+    with open(params_save_path, 'w', encoding='utf8') as out_file:
         json.dump(workflow_data['params'], out_file)
 
     # Keep workflow IDs in longer term storage
@@ -1167,9 +1281,9 @@ def handle_workflow_recover() -> tuple:
         working_dir = os.path.join(WORKFLOW_RUN_PATH, one_workflow_id)
         workflow_params = os.path.join(working_dir, '_params')
         workflow_file = os.path.join(working_dir, '_workflow')
-        with open(workflow_params, 'r') as in_file:
+        with open(workflow_params, 'r', encoding='utf8') as in_file:
             workflow_params = json.load(in_file)
-        with open(workflow_file, 'r') as in_file:
+        with open(workflow_file, 'r', encoding='utf8') as in_file:
             found_workflow = json.load(in_file)
 
         workflow_data = {
@@ -1295,10 +1409,14 @@ def return_workflow_download() -> tuple:
         save_filename = request.form['filename']
     else:
         save_filename = 'workflow.json'
+    if 'passcode' in request.form:
+        passcode = request.form['passcode']
+    else:
+        passcode = DEFAULT_PASSCODE
 
     print("Download: ", workflow,  workflow_data, save_filename)
     print("  ", type (workflow), type (workflow_data))
-    print("  ", workflow.keys(), workflow_data.keys())
+    print("  ", workflow.keys(), workflow_data)
 
     # TODO: Handle authorization
     # TODO: Do we download an archive (zip) if files are local?
@@ -1309,7 +1427,7 @@ def return_workflow_download() -> tuple:
         'name': workflow['name'],
         'description': workflow['description'],
         'steps': workflow['steps'],
-        'parameters': workflow_data['params'],
+        'parameters': secure_workflow_parameters(workflow_data, passcode),
     }
 
     response = make_response(json.dumps(return_workflow, indent=2))
@@ -1402,7 +1520,7 @@ def return_workflow_artifact() -> tuple:
         save_filename = found_file
 
     print("ARTIFACT RETURNING", artifact_path, save_filename)
-    with open(artifact_path, 'r') as in_file:
+    with open(artifact_path, 'r', encoding='utf8') as in_file:
         response = make_response(in_file.read())
     response.headers.set('Content-Type', 'text')
     response.headers.set('Content-Disposition', 'attachment', filename=save_filename)
@@ -1426,25 +1544,35 @@ def workflow_upload_file():
         print(msg)
         return msg, 400     # Bad request
 
+    # Get the passcode to use
+    if 'passcode' in request.form:
+        passcode = request.form['passcode']
+    else:
+        passcode = DEFAULT_PASSCODE
+
+    # Set the workflow folder for this user if it hasn't been set yet
+    # pylint: disable=consider-using-with
+    if 'workflow_folder' not in session or session['workflow_folder'] is None or not os.path.isdir(session['workflow_folder']):
+        session['workflow_folder'] = tempfile.mkdtemp(dir=WORKFLOW_FILE_START_PATH)
+
     # Copy the files to our save location
     loaded_filenames = []
     for file_id in request.files:
         one_file = request.files[file_id]
-        save_path = os.path.join(WORKFLOW_FILE_START_PATH, secure_filename(one_file.filename))
+        save_path = os.path.join(session['workflow_folder'], secure_filename(one_file.filename))
         if os.path.exists(save_path):
             os.unlink(save_path)
         one_file.save(save_path)
         loaded_filenames.append(save_path)
 
     # Load the workflows while checking their contents
-    # TODO: Handle authorization
     # TODO: handle zip files: see return_workflow_download()
     return_workflows, return_messages, loaded_file_info = ([], [], {})
 
     for one_workflow in loaded_filenames:
         loaded_workflow = None
         try:
-            with open(one_workflow, 'r') as in_file:
+            with open(one_workflow, 'r', encoding='utf8') as in_file:
                 loaded_workflow = json.load(in_file)
         except json.JSONDecodeError as ex:
             msg = 'ERROR: A JSON decode error was caught processing file "%s"' % os.path.basename(one_workflow)
@@ -1496,6 +1624,8 @@ def workflow_upload_file():
             loaded_file_info[loaded_file_id] = one_workflow
 
             loaded_workflow['id'] = loaded_file_id
+            if 'parameters' in loaded_workflow:
+                loaded_workflow['parameters'] = unsecure_workflow_parameters(loaded_workflow['parameters'], passcode)
             return_workflows.append(loaded_workflow)
 
     if 'workflow_files' not in session or session['workflow_files'] is None:
@@ -1503,7 +1633,7 @@ def workflow_upload_file():
         session['workflow_files'] = loaded_file_info
     elif loaded_file_info:
         print("ADDING SESSION WORKFLOW FILES: ", str(loaded_file_info))
-        session['workflow_files'] = {}.update(session['workflow_files']).update(loaded_file_info)
+        session['workflow_files'] = {**session['workflow_files'], **loaded_file_info}
 
     return json.dumps({'workflows': return_workflows, 'messages': return_messages})
 
@@ -1530,6 +1660,27 @@ def workflow_new():
     WORKFLOW_DEFINITIONS.append(new_workflow)
 
     return json.dumps({'id': new_workflow['id']})
+
+
+@app.route('/workflow/secure', methods=['POST'])
+@cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
+def workflow_secure() -> tuple:
+    """Checks if a workflow has information that needs to be secured
+    Request body:
+        config: the workflow to check
+    """
+    print("WORKFLOW SECURE")
+
+    try:
+        workflow_params = json.loads(request.form['data'])
+
+        needs_secure = False
+        needs_secure = workflow_has_secure_parameters(workflow_params)
+
+        return json.dumps({'secured': needs_secure})
+    except Exception as  ex:
+        traceback.print_exc()
+        return str(ex), 500     # Server error
 
 
 @app.route('/template/<lang>/<algorithm>', methods=['GET'])
@@ -1559,7 +1710,7 @@ def template_file(lang: str, algorithm: str):
         print('Unable to find requested algorithm: "%s" "%s"' % (algorithm, template_path), flush=True)
         return 'Algorithm not found', 400
 
-    with open(found_name, 'r') as in_file:
+    with open(found_name, 'r', encoding='utf8') as in_file:
         response = make_response(in_file.read())
     response.headers.set('Content-Type', 'text')
     return response

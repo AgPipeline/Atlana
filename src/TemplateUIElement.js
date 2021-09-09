@@ -94,7 +94,7 @@ class TemplateUIElement extends Component {
               option_props.selected = 'true';
             }
             return (
-              <option value={item.name + '_' + idx} key={item.name + '_' + idx} {...option_props}
+              <option key={item.name + '_' + idx} {...option_props}
                       className="template-ui-table-value-option template-ui-table-value-option-item">{item.location}</option>
             );}
           )}

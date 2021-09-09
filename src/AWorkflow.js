@@ -5,7 +5,8 @@
 import {Component} from 'react';
 import WorkspaceTitlebar from './WorkspaceTitlebar.js';
 import TemplateUIElement from './TemplateUIElement.js';
-import BrowseFolders  from './BrowseFolders.js';
+import BrowseFolders from './BrowseFolders.js';
+import PasscodeEntry from './PasscodeEntry.js';
 import Message from './Message.js';
 import Utils from './Utils.js';
 import './AWorkflow.css';
@@ -208,6 +209,7 @@ class AWorkflow extends Component {
     this.onCancelBrowse = this.onCancelBrowse.bind(this);
     this.onDeleteItem = this.onDeleteItem.bind(this);
     this.onDownloadItem = this.onDownloadItem.bind(this);
+    this.onDownloadItemPerform = this.onDownloadItemPerform.bind(this);
     this.onDownloadWorkflows = this.onDownloadWorkflows.bind(this);
     this.onEditResult = this.onEditResult.bind(this);
     this.onItemCheck= this.onItemCheck.bind(this);
@@ -262,6 +264,7 @@ class AWorkflow extends Component {
     this.state = {
       mode: workflow_modes.main,    // The current display mode
       browse_files: null,           // Flag used to browse files, folders, or no-browse(=null)
+      enter_passcode: null,         // Flag used to display the passcode entry form
       cur_algo_type: null,          // The current algorithm type that's getting replaced
       cur_item_index: null,         // The index of the new item to edit
       cur_item_name: null,          // The name of the new item
@@ -304,6 +307,10 @@ class AWorkflow extends Component {
     window.setTimeout(this.recoverWorkflows, 1);
   }
 
+  /**
+   * Called when the component is updated
+   * @param {Object} prev_props - the previous properties of the component
+   */
   componentDidUpdate(prev_props) {
     const have_met_requirements = this.haveRequiredWorkflowParameters();
     if (this.state.met_requirements !== have_met_requirements) {
@@ -392,6 +399,57 @@ class AWorkflow extends Component {
     browse.value = null;
     browse.style.display = "default";
     browse.click();
+  }
+
+  /**
+   * @callback AWorkflow~WorkflowSecuritySuccessCallback
+   * @param {Object} result - the result of the request
+   */
+
+  /**
+   * @callback AWorkflow~WorkflowSecurityErrorCallback
+   * @param {Object} error - the error response
+   */
+
+  /**
+   * @callback AWorkflow~WorkflowSecurityExceptionCallback
+   * @param {Object} except - the exception that was caught
+   */
+
+  /**
+   * Called to check on whether a workflow needs security based upon its parameters
+   * @param {Object} workflow_parameters - the workflow parameters to check
+   * @param {AWorkflow~WorkflowSecuritySuccessCallback} success_cb - the callback upon success
+   * @param {AWorkflow~WorkflowSecurityErrorCallback} [error_cb] - called when there's an error returned
+   * @param {AWorkflow~WorkflowSecurityExceptionCallback} [exception_cb] - called when an exception is caught while making the request
+   */
+  checkWorkflowNeedsSecurity(workflow_parameters, success_cb, error_cb, exception_cb) { 
+    const form_data = new FormData();
+    form_data.append('data', JSON.stringify(workflow_parameters));
+
+    if (!error_cb) {
+      error_cb = (error) => {console.log('ERROR', error);};
+    }
+
+    const uri = Utils.getHostOrigin().concat('/workflow/secure');
+    try {
+      fetch(uri, {
+        method: 'POST',
+        credentials: 'include',
+        body: form_data
+        }
+      )
+      .then(response => {if (response.ok) return response.json(); else throw response.statusText})
+      .then(success => {success_cb(success);})
+      .catch(error => {error_cb(error);});
+    } catch (err) {
+      if (exception_cb) {
+        exception_cb(err);
+      } else {
+        console.log("Fetch workflow security", err);
+        throw err;
+      }
+    }
   }
 
   /**
@@ -1251,6 +1309,9 @@ class AWorkflow extends Component {
     }
   }
 
+  /**
+   * Fetches the workflows from the server
+   */
   getWorkflowDefs() {
     const uri = Utils.getHostOrigin().concat('/workflow/definitions');
 
@@ -1547,7 +1608,7 @@ class AWorkflow extends Component {
   }
 
   /**
-   * Handles the request to download a workflow configuration
+   * Handles the request to download a workflow configuration and artifacts
    * @param {Object} ev - the triggering event
    * @param {string} workflow_id -the workflow ID associated with the download event
    */
@@ -1574,11 +1635,42 @@ class AWorkflow extends Component {
       return;
     }
 
+    this.checkWorkflowNeedsSecurity(found_item.workflow_data, 
+        (success) => {
+                      if (success.secured){
+                        // Display passcode entry window
+                        this.setState({enter_passcode: {success_cb: (passcode) =>
+                                                        {
+                                                          this.onDownloadItemPerform(found_item, workflow_def, passcode);
+                                                          this.setState({enter_passcode: null});
+                                                        },
+                                                        cancel_cb:  () => {this.setState({enter_passcode: null});}
+                                                       }
+                                      });
+                      } else {
+                        // Go directly to download
+                        this.onDownloadItemPerform(found_item, workflow_def)
+                      }
+                    },
+        (error) => {console.log("ERROR",error);}
+      );
+  }
+
+  /**
+   * Performs the download of workflow configuration and artifacts
+   * @param {Object} found_item - the found workflow configuration
+   * @param {Object} workflow_def -the workflow definition to download
+   * @param {str} passcode - passcode to use to secure data (only needed when data needs to be secured)
+   */
+  onDownloadItemPerform(found_item, workflow_def, passcode) {
     const save_filename = found_item.name.replaceAll(' ','_').concat('.json');
     const form_data = new FormData();
     form_data.append('workflow', JSON.stringify(this.prepareWorkflowForExport(workflow_def)));
     form_data.append('data', JSON.stringify(found_item.workflow_data));
     form_data.append('filename', save_filename);
+    if (passcode) {
+      form_data.append('passcode', passcode);
+    }
 
     const uri = Utils.getHostOrigin().concat('/workflow/download');
     try {
@@ -2188,11 +2280,13 @@ class AWorkflow extends Component {
         param_info.command = cur_template.steps[param.step_idx].command;
         param_info.field_name = param.name;
       }
-      if (param.config !== undefined) {
+      // Check if we have a valid file configuration
+      if (param.config !== undefined && param.config.auth && param.config.data_type) {
         param_info.auth = param.config.auth;
         param_info.data_type = param.config.data_type;
         param_info.value = param.config.location;
       } else {
+        // Just assign the value
         param_info[param.name] = param.value;
       }
       workflow_data.params.push(param_info);
@@ -2331,61 +2425,90 @@ class AWorkflow extends Component {
       const cur_workflow = results.workflows.shift();
       console.log("CUR WORKFLOW",cur_workflow);
 
-      // Setup our data fields if we have them
-      const cur_config = [];
-      if (cur_workflow.parameters) {
-        for (let idx in cur_workflow.steps) {
-          const parent = cur_workflow.steps[idx];
-          const field_lookup_prefix = idx + '_' + parent.command + '_';
-
-          let found_fields = cur_workflow.parameters.map((item) => {
-                    if (item.command === parent.command) {
-                      return item;
-                    }
-                    return null;
-                  }
-                );
-
-          found_fields.forEach((one_field) => {
-            if (one_field && (!one_field.visibility || one_field.visibility === 'ui')) {
-              const lookup_name = field_lookup_prefix + one_field.field_name
-              const parent_field = parent.fields.find((item) => item.name === one_field.field_name);
-              one_field.id = lookup_name;
-              if (parent_field.type === 'file' || parent_field.type === 'folder') {
-                one_field.path_is_file = parent_field.type === 'file';
-                one_field.location = one_field.value;
-              }
-              cur_config[lookup_name] = one_field;
+      // Check if we need a passcode from the user
+      this.checkWorkflowNeedsSecurity(cur_workflow.parameters, 
+          (success) => {
+            if (success.secured){
+              // Display the passcode, make the call to decrypt the data, then handle the completed upload
+              this.setState({enter_passcode: {success_cb: (passcode) =>
+                                              {
+                                                this.uploadCompletedProcess(cur_workflow, passcode);
+                                                this.setState({enter_passcode: null});
+                                              },
+                                              cancel_cb:  () => {this.setState({enter_passcode: null});}
+                                             }
+                            });
+            } else {
+              this.uploadCompletedProcess(cur_workflow);
             }
           });
-        }
-      }
-      this.workflow_configs[cur_workflow.id] = cur_config;
-
-      // Update other data variables
-      let updated_workflow_defs = this.state.workflow_defs;
-      updated_workflow_defs.push(cur_workflow);
-      const cur_index = updated_workflow_defs.findIndex((item) => item.id === cur_workflow.id);
-
-      // Reset some class variables
-      this.generated_ids = [];
-      this.mandatory_ids = [];
-      this.prepared_messages = null;
-      this.prepared_errors = null;
-
-      // Set the state to show the workflow configuration UI
-      const display_mode = cur_workflow.parameters ? workflow_modes.run : this.state.mode;
-      this.setState({mode: display_mode,
-                     workflow_defs: updated_workflow_defs,
-                     cur_item_index: cur_index,
-                     cur_item_name: cur_workflow.name, 
-                     cur_item_title: 'Run ' +  cur_workflow.name,
-                     edit_add: true,
-                     edit_item: null,
-                     met_requirements: this.haveRequiredWorkflowParameters(),
-                     errors: null,
-                     cur_messages: null});
     }
+  }
+
+  /**
+   * Handles the successful upload of a workflow file allowing the user to rerun a job
+   * @param {Object} cur_workflow - the current workflow
+   * @param {str} [passcode] - optional passcode to attach to loaded parameters
+   */
+  uploadCompletedProcess(cur_workflow, passcode) {
+    // Check if we need to store a passcode
+    if (passcode) {
+      cur_workflow.passcode = passcode;
+    }
+    // Setup our data fields if we have them
+    const cur_config = [];
+    if (cur_workflow.parameters) {
+      for (let idx in cur_workflow.steps) {
+        const parent = cur_workflow.steps[idx];
+        const field_lookup_prefix = idx + '_' + parent.command + '_';
+
+        let found_fields = cur_workflow.parameters.map((item) => {
+                  if (item.command === parent.command) {
+                    return item;
+                  }
+                  return null;
+                }
+              );
+
+        found_fields.forEach((one_field) => {
+          if (one_field && (!one_field.visibility || one_field.visibility === 'ui')) {
+            const lookup_name = field_lookup_prefix + one_field.field_name
+            const parent_field = parent.fields.find((item) => item.name === one_field.field_name);
+            one_field.id = lookup_name;
+            if (parent_field.type === 'file' || parent_field.type === 'folder') {
+              one_field.path_is_file = parent_field.type === 'file';
+              one_field.location = one_field.value ? one_field.value : '';
+            }
+            cur_config[lookup_name] = one_field;
+          }
+        });
+      }
+    }
+    this.workflow_configs[cur_workflow.id] = cur_config;
+
+    // Update other data variables
+    let updated_workflow_defs = this.state.workflow_defs;
+    updated_workflow_defs.push(cur_workflow);
+    const cur_index = updated_workflow_defs.findIndex((item) => item.id === cur_workflow.id);
+
+    // Reset some class variables
+    this.generated_ids = [];
+    this.mandatory_ids = [];
+    this.prepared_messages = null;
+    this.prepared_errors = null;
+
+    // Set the state to show the workflow configuration UI
+    const display_mode = cur_workflow.parameters ? workflow_modes.run : this.state.mode;
+    this.setState({mode: display_mode,
+                   workflow_defs: updated_workflow_defs,
+                   cur_item_index: cur_index,
+                   cur_item_name: cur_workflow.name, 
+                   cur_item_title: 'Run ' +  cur_workflow.name,
+                   edit_add: true,
+                   edit_item: null,
+                   met_requirements: this.haveRequiredWorkflowParameters(),
+                   errors: null,
+                   cur_messages: null});
   }
 
   /**
@@ -2479,6 +2602,9 @@ class AWorkflow extends Component {
           {this.generateWorkflowUI()}
         </div>
         {this.state.browse_files === true && <BrowseFolders folders={this.folders} selected={this.state.browse_cb} cancel={this.onCancelBrowse}/>}
+        {this.state.enter_passcode !== null && <PasscodeEntry title="Enter passcode"
+                                                              passcode={this.state.enter_passcode.success_cb} 
+                                                              cancel={this.state.enter_passcode.cancel_cb}/>}
       </>
     );
   }
