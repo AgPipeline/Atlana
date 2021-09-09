@@ -44,7 +44,7 @@ jobs:
       - name: Fetch source code
         uses: actions/checkout@v2
       - name: Finding files
-        run: find . -type f -name "*.py" | grep -v 'tests/' > action_pylint_files.txt
+        run: find . -type f -name "*.py" | grep -v 'tests/' | grep -v 'template/' > action_pylint_files.txt
       - name: Update apt databases
         shell: bash
         run: 'sudo apt-get update'

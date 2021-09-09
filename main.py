@@ -474,7 +474,7 @@ def get_irods_file(auth: dict, source_path: str, dest_path: str) -> bool:
             # Check the checksums
             # TODO: determine which checksum method the server uses (depending upon file size it may be faster to try both methods?)
             local_checksum = irod_md5_checksum(dest_path)
-            if local_checksum == obj.checksum:
+            if local_checksum == obj.checksum:      # pylint: disable=no-member
                 have_success = True
                 break
 
