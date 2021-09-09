@@ -1,0 +1,40 @@
+name: Enforcing tests
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+    tags:
+      - v*
+  schedule:
+    # Every 01:30 Sunday re-run the test on the main branch
+    - cron: '30 1 * * 0'
+  workflow_dispatch:
+
+jobs:
+  testing:
+    runs-on: ubuntu-latest
+    name: Running testing
+    strategy:
+      matrix:
+          app: [pylint]
+          include:
+            - app: pylint
+              pip_installs: pylint pytest Pillow
+              test_command: (cat action_pylint_files.txt | xargs python3 -m pylint --rcfile ./pylint.rc)
+    steps:
+      - name: Current python version
+        run: python3 --version || echo python3 not installed
+      - name: Install Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+      - name: Updated python version
+        run: |
+             echo "Python version" && python --version
+             echo "Python3 version" && python3 --version
+
