@@ -44,7 +44,7 @@ jobs:
       - name: Fetch source code
         uses: actions/checkout@v2
       - name: Finding files
-        run: find . -type f -name "*.py" | grep -v 'tests/' | grep -v 'template/' > action_pylint_files.txt
+        run: find . -type f -name "*.py" | grep -v 'tests/' | grep -v 'template/' | grep -v 'workflow_docker.py' | grep -v 'workflow_scif.py' > action_pylint_files.txt
       - name: Update apt databases
         shell: bash
         run: 'sudo apt-get update'
@@ -79,6 +79,8 @@ jobs:
         run: cat action_pylint_files.txt
       - name: Running test
         run: ${{ matrix.test_command }}
+      - name: Pylinting specific files
+        run: python3 -m pylint --rcfile ./pylint.rc workflow_docker.py && python3 -m pylint --rcfile ./pylint.rc workflow_scif.py
       - name: Upload testing artifact
         uses: actions/upload-artifact@v2
         with:
