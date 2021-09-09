@@ -17,7 +17,8 @@ It also provide ways to:
 The downloaded configurations of storage locations and workflows are in JSON format and can be shared with others.
 
 ## Tutorial
-Items needed:
+
+Required inputs (or see [sample data](#sample-data):
 
 - an orthomosaic image to be processed
 - a GeoJSON file containing the plots of interest
