@@ -24,7 +24,7 @@ Required inputs (or see [sample data](#sample-data):
 - a GeoJSON file containing the plots of interest
 - an optional YAML file containing [experiment information](https://osf.io/xdkcy/wiki/Configuration%20YAML/) [![external link](img/external_link.png)](https://osf.io/xdkcy/wiki/Configuration%20YAML/)
 
-What we will  be doing:
+What we will do:
 
 1. [Upload files and configure](#uploading-and-configuring-files) a server-side file storage definition
 2. Running the [Canopy Cover image-based workflow](#running-a-workflow)
