@@ -41,10 +41,6 @@ jobs:
         run: echo "PYTHONPATH is ${PYTHONPATH}"
       - name: Update pip
         run: python3 -m pip install --upgrade --no-cache-dir pip
-      - name: Fetch/update setuptools
-        run: python3 -m pip install --upgrade --no-cache-dir setuptools
-      - name: Fetch/update testing pip installations
-        run: python3 -m pip install --upgrade --no-cache-dir ${{ matrix.pip_installs }}
       - name: Fetch source code
         uses: actions/checkout@v2
       - name: Finding files
@@ -55,6 +51,10 @@ jobs:
       - name: Install system requirements
         shell: bash
         run: 'sudo apt-get install -y python3-gdal gdal-bin libgdal-dev gcc g++ python3.8-dev git'
+      - name: Fetch/update setuptools
+        run: python3 -m pip install --upgrade --no-cache-dir setuptools
+      - name: Fetch/update testing pip installations
+        run: python3 -m pip install --upgrade --no-cache-dir ${{ matrix.pip_installs }}
       - name: Install Python numpy and other modules
         shell: bash
         run: 'python3 -m pip install --upgrade --no-cache-dir numpy wheel requests'
