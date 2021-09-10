@@ -77,6 +77,7 @@ def _find_parameter_values(parameters: list, field_names: tuple) -> tuple:
         If a field name is not found, None is returned in its place.
     """
     found = {}
+
     for one_parameter in parameters:
         found[one_parameter['field_name']] = one_parameter['value']
 

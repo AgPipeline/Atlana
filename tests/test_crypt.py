@@ -1,4 +1,4 @@
-"""Tests Flask implementation"""
+"""Tests Cryptography implementation"""
 
 import random
 import string
