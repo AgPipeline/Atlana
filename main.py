@@ -57,9 +57,33 @@ def _get_default_passcode() -> str:
     return cur_pc
 
 
-app = Flask(__name__)
-app.config['SECRET_KEY'] = _get_secret_key()
+def create_app(config_file: str = None) -> Flask:
+    """Creates the Flask app to use using an optional configuration file
+    Arguments:
+        config_file - an optional configuration file to use when configuring the app
+    Returns:
+        Returns the created app
+    """
+    new_app = Flask(__name__)
+    if config_file:
+        new_app.config.from_pyfile(config_file)
 
+    new_app.config['SECRET_KEY'] = _get_secret_key()
+
+    return new_app
+
+
+# Allow an app configuration file to be specified in the environment
+CONFIG_FILE = os.getenv('APP_CONFIG_FILE')
+if CONFIG_FILE is not None:
+    if not os.path.exists(CONFIG_FILE) or not os.path.isfile(CONFIG_FILE):
+        print('Ignoring invalid app configuration file specified:', CONFIG_FILE)
+        CONFIG_FILE = None
+
+# Create the App
+app = create_app(CONFIG_FILE)
+
+# Create the CORS handler
 cors = CORS(app, resources={r"/files": {"origins": "http://127.0.0.1:3000"}})
 
 # The default page to serve up
