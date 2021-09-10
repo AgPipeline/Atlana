@@ -76,7 +76,7 @@ jobs:
         run: 'if [ -s ".github/workflows/action_pylint.sh" ]; then (chmod +x ".github/workflows/action_pylint.sh" && ./.github/workflows/action_pylint.sh) || (echo "Error running shell script" && exit 1); fi'
       - name: Fetching pylint.rc file
         run: wget https://raw.githubusercontent.com/AgPipeline/Organization-info/master/pylint.rc
-        if: ${{ matrix.name == 'pylint' }}
+        if: ${{ matrix.app == 'pylint' }}
       - name: Listing
         run: ls -la
       - name: Files to be tested
@@ -85,7 +85,7 @@ jobs:
         run: ${{ matrix.test_command }}
       - name: Pylinting specific files
         run: python3 -m pylint --rcfile ./pylint.rc workflow_docker.py && python3 -m pylint --rcfile ./pylint.rc workflow_scif.py
-        if: ${{ matrix.name == 'pylint' }}
+        if: ${{ matrix.app == 'pylint' }}
       - name: Upload testing artifact
         uses: actions/upload-artifact@v2
         with:
