@@ -29,7 +29,7 @@ jobs:
             - app: pytest
               pip_installs: pytest pytest-cov pytest-mypy
               test_command: python3 -m pytest --cov=. -rpP --cov-report=xml
-              artifacts: coverage.txt
+              artifacts: coverage.xml
     steps:
       - name: Current python version
         run: python3 --version || echo python3 not installed
@@ -85,6 +85,7 @@ jobs:
         run: ${{ matrix.test_command }}
       - name: Pylinting specific files
         run: python3 -m pylint --rcfile ./pylint.rc workflow_docker.py && python3 -m pylint --rcfile ./pylint.rc workflow_scif.py
+        if: ${{ matrix.name }} == "pylint"
       - name: Upload testing artifact
         uses: actions/upload-artifact@v2
         with:
