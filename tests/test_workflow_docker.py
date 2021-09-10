@@ -2,7 +2,6 @@
 
 import json
 import os
-import pytest
 import shutil
 import subprocess
 import tempfile
@@ -10,6 +9,8 @@ from threading import Event, Thread
 import time
 from typing import Union
 from collections.abc import Callable
+
+# pylint: disable=global-statement,protected-access
 
 # Path to the testing workflow file and its associated parameter file
 WORKFLOW_JSON_FILE = os.path.realpath(os.path.join(os.getcwd(), 'test_data/test_workflow.json'))
@@ -102,6 +103,7 @@ def test_load_json_file_errors():
         global ERROR_MESSAGES
         ERROR_MESSAGES = messages
 
+    # pylint: disable=unsubscriptable-object
     # Make the call with a file that's not JSON
     ERROR_MESSAGES = None
     res = wd._load_json_file(BAD_JSON_FILE, error_callback)
@@ -282,7 +284,9 @@ def test_run_command():
         if 'bad additional mount specified' in one_line:
             found = True
             break
-    assert found == True
+    assert found is True
+
+    os.unlink(os.path.join(os.getcwd(), 'plots.geojson'))
 
 
 def test_get_results_json():
@@ -303,7 +307,7 @@ def test_get_results_json():
     assert isinstance(res, list)
     assert len(res) == 2
     for one_res in res:
-        assert len(res) > 0
+        assert len(one_res) > 0
 
     # No results, non-recursive
     empty_folder = tempfile.mkdtemp(dir=os.getcwd())
