@@ -27,7 +27,7 @@ jobs:
               pip_installs: pylint pytest Pillow
               test_command: (cat action_pylint_files.txt | xargs python3 -m pylint --rcfile ./pylint.rc) && (PP="${PWD}" && pushd ./tests && find . | grep '\.py' | PYTHONPATH=${PP} xargs python3 -m pylint -d duplicate-code --rcfile ../pylint.rc && popd)
             - app: pytest
-              pip_installs: pytest pytest-cov pytest-mypy
+              pip_installs: pytest pytest-cov
               test_command: python3 -m pytest --cov=. -rpP --cov-report=xml
               artifacts: coverage.xml
     steps:
@@ -77,6 +77,14 @@ jobs:
       - name: Fetching pylint.rc file
         run: wget https://raw.githubusercontent.com/AgPipeline/Organization-info/master/pylint.rc
         if: ${{ matrix.app == 'pylint' }}
+      - name: Fetching testing databases
+        run: |
+              curl https://data.cyverse.org/dav-anon/iplant/projects/aes/cct/diag/sample-data/scif_test_data.tar.gz --output scif_test_data.tar.gz 
+              tar xvzf scif_test_data.tar.gz -C "./test_data"
+              curl  https://de.cyverse.org/dl/d/7AE4F4C8-5F40-4B56-91F3-127678EC58C0/ci_docker_test_data_4.tar.gz --output ci_docker_test_data_4.tar.gz
+              tar xvzf ci_docker_test_data_4.tar.gz -C "./test_data"
+              ls -l test_data
+        if: ${{ matrix.app == 'pytest' }}
       - name: Listing
         run: ls -la
       - name: Files to be tested

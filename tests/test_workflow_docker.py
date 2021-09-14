@@ -7,18 +7,19 @@ import subprocess
 import tempfile
 from threading import Event, Thread
 import time
-from typing import Union
-from collections.abc import Callable
+from typing import Optional, Union
+from collections.abc import Callable, Iterable
+import pytest
 
 # pylint: disable=global-statement,protected-access
 
 # Path to the testing workflow file and its associated parameter file
-WORKFLOW_JSON_FILE = os.path.realpath(os.path.join(os.getcwd(), 'test_data/test_workflow.json'))
-WORKFLOW_PARAMS_FILE = os.path.realpath(os.path.join(os.getcwd(), 'test_data/test_workflow_params.json'))
-WORKFLOW_QUEUE_FILE = os.path.realpath(os.path.join(os.getcwd(), 'test_data/test_workflow_queue.json'))
+WORKFLOW_JSON_FILE = os.path.realpath(os.path.join(os.getcwd(), 'test_data', 'test_workflow.json'))
+WORKFLOW_PARAMS_FILE = os.path.realpath(os.path.join(os.getcwd(), 'test_data', 'test_workflow_params.json'))
+WORKFLOW_QUEUE_FILE = os.path.realpath(os.path.join(os.getcwd(), 'test_data', 'test_workflow_queue.json'))
 
 # File path for a bad JSON file
-BAD_JSON_FILE = os.path.realpath(os.path.join(os.getcwd(), 'test_data/test_bad_json.json'))
+BAD_JSON_FILE = os.path.realpath(os.path.join(os.getcwd(), 'test_data', 'test_bad_json.json'))
 
 # Queue step that has parameters to search for
 FIND_PARAMETERS_STEP_INDEX = 0
@@ -28,24 +29,54 @@ FIND_PARAMETERS_FIELDS = ('image', 'options')
 FIND_PARAMETERS_MANDATORY_INDEXES = (0,)
 
 # The script to run when testing the consumption of output from a proc
-CONSUME_OUTPUT_TEST_SCRIPT = os.path.realpath(os.path.join(os.getcwd(), 'tests/generate_output.sh'))
+CONSUME_OUTPUT_TEST_SCRIPT = os.path.realpath(os.path.join(os.getcwd(), 'tests', 'generate_output.sh'))
 
 # Command JSON write path
 COMMAND_JSON_WRITE_PATH = os.path.realpath(os.getcwd())
 
 # Run command arguments file path
-COMMAND_RUN_ARGUMENTS_FILE = os.path.realpath(os.path.join(os.getcwd(), 'test_data/test_workflow_run_args.json'))
+COMMAND_RUN_ARGUMENTS_FILE = os.path.realpath(os.path.join(os.getcwd(), 'test_data', 'test_workflow_run_args.json'))
 COMMAND_RUN_COMMAND = 'shp2geojson'
 
 # Path to single JSON result file
-JSON_RESULT_FOLDER = os.path.realpath(os.path.join(os.getcwd(), 'test_data/result1'))
+JSON_RESULT_FOLDER = os.path.realpath(os.path.join(os.getcwd(), 'test_data', 'result1'))
 JSON_RESULT_RECURSE_FOLDER = os.path.realpath(os.path.join(os.getcwd(), 'test_data/'))
 
 # Path to the repoint JSON test file
-REPOINT_JSON_FILE = os.path.realpath(os.path.join(os.getcwd(), 'test_data/test_found_files.json'))
+REPOINT_JSON_FILE = os.path.realpath(os.path.join(os.getcwd(), 'test_data', 'test_found_files.json'))
 REPOINT_JSON_SOURCE_FOLDER = '/input/plotclip'
 REPOINT_JSON_TARGET_FOLDER = '/changed_folder'
 REPOINT_JSON_WORKING_FOLDER = os.path.realpath(os.getcwd())
+
+# Paths to soilmask workflow files
+WORKFLOW_SOILMASK_IMAGE = os.path.realpath(os.path.join(os.getcwd(), 'test_data', 'orthomosaic.tif'))
+WORKFLOW_SOILMASK_RESULT = os.path.realpath(os.path.join(os.getcwd(), 'test_data', 'test_workflow_soilmask_result.json'))
+
+# Paths to soilmask ratio workflow files
+WORKFLOW_SOILMASK_RATIO_IMAGE = os.path.realpath(os.path.join(os.getcwd(), 'test_data', 'orthomosaic.tif'))
+WORKFLOW_SOILMASK_RATIO_RESULT = os.path.realpath(os.path.join(os.getcwd(), 'test_data', 'test_workflow_soilmask_ratio_result.json'))
+
+# Paths to plotclip workflow files
+WORKFLOW_PLOTCLIP_IMAGE = os.path.realpath(os.path.join(os.getcwd(), 'test_data', 'orthomosaicmask.tif'))
+WORKFLOW_PLOTCLIP_PLOTS = os.path.realpath(os.path.join(os.getcwd(), 'test_data', 'plots.geojson'))
+WORKFLOW_PLOTCLIP_RESULT = os.path.realpath(os.path.join(os.getcwd(), 'test_data', 'test_workflow_plotclip_result.json'))
+
+# Paths to find-files files and values
+WORKFLOW_FINDFILES_FILENAME = 'orthomosaicmask.tif'
+WORKFLOW_FINDFILES_FOLDER = os.path.realpath(os.path.join(os.getcwd(), 'test_data'))
+WORKFLOW_FINDFILES_RESULT = os.path.realpath(os.path.join(os.getcwd(), 'test_data', 'test_workflow_findfiles_result.json'))
+
+# Path to canopycover files
+WORKFLOW_CANOPYCOVER_FOUNDFILES = os.path.realpath(os.path.join(os.getcwd(), 'test_data', 'canopy_cover_files.json'))
+WORKFLOW_CANOPYCOVER_FOLDER = os.path.realpath(os.path.join(os.getcwd(), 'test_data'))
+WORKFLOW_CANOPYCOVER_EXPERIMENT_FILE = None
+WORKFLOW_CANOPYCOVER_RESULT = os.path.realpath(os.path.join(os.getcwd(), 'test_data', 'test_workflow_canopycover_result.json'))
+
+# Path to greenness indices files
+WORKFLOW_GREENNESS_FOUNDFILES = os.path.realpath(os.path.join(os.getcwd(), 'test_data', 'canopy_cover_files.json'))
+WORKFLOW_GREENNESS_FOLDER = os.path.realpath(os.path.join(os.getcwd(), 'test_data'))
+WORKFLOW_GREENNESS_EXPERIMENT_FILE = None
+WORKFLOW_GREENNESS_RESULT = os.path.realpath(os.path.join(os.getcwd(), 'test_data', 'test_workflow_greenness_result.json'))
 
 # Used by the output tests
 OUTPUT_LINES = []
@@ -66,6 +97,100 @@ def _helper_msg_func(lines: tuple, append: bool=True) -> bool:
     OUTPUT_LINES.extend(lines)
     return True
 
+
+def _params_from_queue(command: str) -> Optional[dict]:
+    """Returns the parameters associated with the command from the queue file"""
+    with open(WORKFLOW_QUEUE_FILE, 'r', encoding='utf8') as in_file:
+        queue = json.load(in_file)
+
+    for one_command in queue:
+        if 'command' in one_command and one_command['command'] == command:
+            if 'parameters' in one_command:
+                return one_command['parameters']
+
+            msg = 'Command %s doesn\'t have parameters in queue file: %s' % (command, WORKFLOW_QUEUE_FILE)
+            raise RuntimeError(msg)
+
+    return None
+
+
+def _compare_results_iterable(first: Iterable, second: Iterable, exclusions: tuple) -> bool:
+    """Deep comparison of iterable result values (see _compare_results)
+    Arguments:
+        first - the first iterable to compare
+        second - the second iterable to compare
+        exclusions - a list of keys to ignore (passed through)
+    Returns:
+        Returns True if the iterables are the same, otherwise False
+    """
+    if exclusions is None:
+        exclusions = ()
+
+    # Make sure they're the same length
+    if len(first) != len(second):
+        return False
+
+    # pylint: disable=consider-using-enumerate
+    for idx in range(0, len(first)):
+        # pylint: disable=unidiomatic-typecheck
+        if type(first[idx]) != type(second[idx]):
+            return False
+        if isinstance(first[idx], dict):
+            if not _compare_results(first[idx], second[idx], exclusions):
+                return False
+        elif isinstance(first[idx], str):
+            if not first[idx] == second[idx]:
+                return False
+        elif isinstance(first[idx], Iterable):
+            if not _compare_results_iterable(first[idx], second[idx], exclusions):
+                return False
+        elif not first[idx] == second[idx]:
+            return False
+    return True
+
+
+def _compare_results(truth: dict, compare: dict, exclusions: tuple = None) -> bool:
+    """Recursively compare workflow results ignoring the exclusion keys
+    Arguments:
+        truth - the truth dictionary
+        compare - the dictionary to compare
+        exclusions - a list of keys to ignore
+    Returns:
+        Returns True if the dictionaries are the same, otherwise False
+    """
+    exclusions = () if exclusions is None else exclusions
+
+    # Basic key comparisons
+    truth_keys = list(truth.keys())
+    compare_keys = list(compare.keys())
+    if len(truth) != len(compare_keys):
+        return False
+    diffs = list(set(truth_keys).symmetric_difference(set(compare_keys)))
+    if len(diffs) > 0:
+        return False
+
+    # Keys match, compare values
+    for one_key in truth_keys:
+        # Check for exclusions
+        if one_key in exclusions:
+            continue
+
+        # Compare
+        # pylint: disable=unidiomatic-typecheck
+        if type(truth[one_key]) != type(compare[one_key]):
+            return False
+        if isinstance(truth[one_key], dict):
+            if not _compare_results(truth[one_key], compare[one_key], exclusions):
+                return False
+        elif isinstance(truth[one_key], str):
+            if not truth[one_key] == compare[one_key]:
+                return False
+        elif isinstance(truth[one_key], Iterable):
+            if not _compare_results_iterable(truth[one_key], compare[one_key], exclusions):
+                return False
+        elif not truth[one_key] == compare[one_key]:
+            return False
+    return True
 
 def test_get_command_map():
     """Tests the command map to ensure it is correctly populated"""
@@ -305,7 +430,7 @@ def test_get_results_json():
     _helper_msg_func((), False)
     res = wd._get_results_json(JSON_RESULT_RECURSE_FOLDER, _helper_msg_func, True)
     assert isinstance(res, list)
-    assert len(res) == 2
+    assert len(res) == 59
     for one_res in res:
         assert len(one_res) > 0
 
@@ -417,3 +542,269 @@ def test_repoint_files_json_dir_error():
     assert res is None
 
     os.unlink(bad_json_file)
+
+def test_handle_missing_parameters():
+    """Tests the code to handle missing parameters"""
+    # pylint: disable=import-outside-toplevel
+    import workflow_docker as wd
+
+    process_name = 'Testing'
+    parameters = (100, 'test string')
+    parameters_missing = (100, None)
+    parameter_names = ('first parameter', 'second parameter')
+
+    res = wd._handle_missing_parameters(process_name, parameters, parameter_names)
+    assert res is None
+
+    with pytest.raises(RuntimeError) as except_info:
+        wd._handle_missing_parameters(process_name, parameters_missing, parameter_names)
+        assert except_info.message.startswith('Missing required parameter')
+
+
+def test_handle_missing_files():
+    """Tests the code that handles missing files"""
+    # pylint: disable=import-outside-toplevel
+    import workflow_docker as wd
+
+    # Create a testing file
+    out_fd, test_json_file = tempfile.mkstemp(suffix='.json', dir=os.getcwd(), text=True)
+    os.close(out_fd)
+
+    process_name = 'Testing missing files'
+    parameters = (test_json_file,)
+    parameters_missing = (test_json_file, os.path.splitext(test_json_file)[0] + 'invalid',)
+    parameter_names = ('first file', 'second file')
+
+    res = wd._handle_missing_files(process_name, parameters, parameter_names)
+    assert res is None
+
+    with pytest.raises(RuntimeError) as except_info:
+        wd._handle_missing_files(process_name, parameters_missing, parameter_names)
+        assert except_info.message.startswith('Required files')
+
+    os.unlink(test_json_file)
+
+
+def test_handle_missing_folders():
+    """Tests the code that handles missing files"""
+    # pylint: disable=import-outside-toplevel
+    import workflow_docker as wd
+
+    # Create a testing folder
+    test_folder = tempfile.mkdtemp(dir=os.getcwd())
+
+    process_name = 'Testing missing folder'
+    parameters = (test_folder,)
+    parameters_missing = (test_folder, os.path.join(test_folder,'invalid'),)
+    parameter_names = ('first folder', 'second folder')
+
+    res = wd._handle_missing_folders(process_name, parameters, parameter_names)
+    assert res is None
+
+    with pytest.raises(RuntimeError) as except_info:
+        wd._handle_missing_folders(process_name, parameters_missing, parameter_names)
+        assert except_info.message.startswith('Required folders')
+
+    shutil.rmtree(test_folder)
+
+
+def test_handle_soilmask():
+    """Tests running the soilmask algorithm"""
+    # pylint: disable=import-outside-toplevel
+    import workflow_docker as wd
+
+    # Load the result
+    with open(WORKFLOW_SOILMASK_RESULT, 'r', encoding='utf8') as in_file:
+        compare_json = json.load(in_file)
+
+    # Setup fields for test
+    input_folder = os.path.dirname(WORKFLOW_SOILMASK_IMAGE)
+
+    parameters = _params_from_queue('soilmask')
+    for one_parameter in parameters:
+        if one_parameter['field_name'] == 'image':
+            one_parameter['value'] = WORKFLOW_SOILMASK_IMAGE
+
+    # Create a working folder
+    working_folder = os.path.realpath(os.path.join(os.getcwd(), 'tmpsoilmask'))
+    os.makedirs(working_folder, exist_ok=True)
+
+    # Clear messages and run the function
+    _helper_msg_func((), False)
+    res = wd.handle_soilmask(parameters, input_folder, working_folder, _helper_msg_func, _helper_msg_func)
+
+    assert res is not None
+    assert res == compare_json
+
+    shutil.rmtree(working_folder)
+
+
+def test_handle_soilmask_ratio():
+    """Tests running the ratio-based soilmask algorithm"""
+    # pylint: disable=import-outside-toplevel
+    import workflow_docker as wd
+
+    # Load the result
+    with open(WORKFLOW_SOILMASK_RATIO_RESULT, 'r', encoding='utf8') as in_file:
+        compare_json = json.load(in_file)
+
+    # Setup fields for test
+    input_folder = os.path.dirname(WORKFLOW_SOILMASK_RATIO_IMAGE)
+
+    parameters = _params_from_queue('soilmask')
+    for one_parameter in parameters:
+        if one_parameter['field_name'] == 'image':
+            one_parameter['value'] = WORKFLOW_SOILMASK_RATIO_IMAGE
+
+    # Create a working folder
+    working_folder = os.path.realpath(os.path.join(os.getcwd(), 'tmpsoilmaskratio'))
+    os.makedirs(working_folder, exist_ok=True)
+
+    # Clear messages and run the function
+    _helper_msg_func((), False)
+    res = wd.handle_soilmask_ratio(parameters, input_folder, working_folder, _helper_msg_func, _helper_msg_func)
+
+    assert res is not None
+    assert res == compare_json
+
+    shutil.rmtree(working_folder)
+
+
+def test_handle_plotclip():
+    """Tests running the plotclip algorithm"""
+    # pylint: disable=import-outside-toplevel
+    import workflow_docker as wd
+
+    # Load the result
+    with open(WORKFLOW_PLOTCLIP_RESULT, 'r', encoding='utf8') as in_file:
+        compare_json = json.load(in_file)
+
+    # Setup fields for test
+    input_folder = os.path.dirname(WORKFLOW_PLOTCLIP_IMAGE)
+
+    parameters = _params_from_queue('plotclip')
+    for one_parameter in parameters:
+        if one_parameter['field_name'] == 'image':
+            one_parameter['value'] = WORKFLOW_PLOTCLIP_IMAGE
+        elif one_parameter['field_name'] == 'geometries':
+            one_parameter['value'] = WORKFLOW_PLOTCLIP_PLOTS
+
+    # Create a working folder
+    working_folder = os.path.realpath(os.path.join(os.getcwd(), 'tmpplotclip'))
+    os.makedirs(working_folder, exist_ok=True)
+
+    # Clear messages and run the function
+    _helper_msg_func((), False)
+    res = wd.handle_plotclip(parameters, input_folder, working_folder, _helper_msg_func, _helper_msg_func)
+
+    assert res is not None
+    assert _compare_results(compare_json, res, ('timestamp', 'utc_timestamp', 'processing_time'))
+
+    shutil.rmtree(working_folder)
+
+
+def test_handle_find_files2json():
+    """Tests running the plotclip algorithm"""
+    # pylint: disable=import-outside-toplevel
+    import workflow_docker as wd
+
+    # Load the result
+    with open(WORKFLOW_FINDFILES_RESULT, 'r', encoding='utf8') as in_file:
+        compare_json = json.load(in_file)
+
+    # Setup fields for test
+    input_folder = os.path.dirname(WORKFLOW_FINDFILES_FOLDER)
+    print("INPUT FOLDER", input_folder)
+
+    # Setup fields for test
+    parameters = _params_from_queue('find_files2json')
+    for one_parameter in parameters:
+        if one_parameter['field_name'] == 'file_name':
+            one_parameter['value'] = WORKFLOW_FINDFILES_FILENAME
+        elif one_parameter['field_name'] == 'top_path':
+            one_parameter['value'] = WORKFLOW_FINDFILES_FOLDER
+
+    # Create a working folder
+    working_folder = os.path.realpath(os.path.join(os.getcwd(), 'tmpfindfiles'))
+    os.makedirs(working_folder, exist_ok=True)
+
+    # Clear messages and run the function
+    _helper_msg_func((), False)
+    res = wd.handle_find_files2json(parameters, input_folder, working_folder, _helper_msg_func, _helper_msg_func)
+
+    assert res is not None
+    assert res == compare_json
+
+    shutil.rmtree(working_folder)
+
+
+def test_handle_canopycover():
+    """Tests running the canopy cover algorithm"""
+    # pylint: disable=import-outside-toplevel
+    import workflow_docker as wd
+
+    # Load the result
+    with open(WORKFLOW_CANOPYCOVER_RESULT, 'r', encoding='utf8') as in_file:
+        compare_json = json.load(in_file)
+
+    # Setup fields for test
+    input_folder = os.path.dirname(WORKFLOW_CANOPYCOVER_FOUNDFILES)
+
+    # Setup fields for test
+    parameters = _params_from_queue('canopycover')
+    for one_parameter in parameters:
+        if one_parameter['field_name'] == 'found_json_file':
+            one_parameter['value'] = WORKFLOW_CANOPYCOVER_FOUNDFILES
+        elif one_parameter['field_name'] == 'results_search_folder':
+            one_parameter['value'] = WORKFLOW_CANOPYCOVER_FOLDER
+        elif one_parameter['field_name'] == 'experimentdata':
+            one_parameter['value'] = WORKFLOW_CANOPYCOVER_EXPERIMENT_FILE
+
+    # Create a working folder
+    working_folder = os.path.realpath(os.path.join(os.getcwd(), 'tmpcanopycover'))
+    os.makedirs(working_folder, exist_ok=True)
+
+    # Clear messages and run the function
+    _helper_msg_func((), False)
+    res = wd.handle_canopycover(parameters, input_folder, working_folder, _helper_msg_func, _helper_msg_func)
+
+    assert res is not None
+    assert res == compare_json
+
+    shutil.rmtree(working_folder)
+
+
+def test_handle_greenness_indices():
+    """Tests running the greenness indices algorithm"""
+    # pylint: disable=import-outside-toplevel
+    import workflow_docker as wd
+
+    # Load the result
+    with open(WORKFLOW_GREENNESS_RESULT, 'r', encoding='utf8') as in_file:
+        compare_json = json.load(in_file)
+
+    # Setup fields for test
+    input_folder = os.path.dirname(WORKFLOW_GREENNESS_FOUNDFILES)
+
+    # Setup fields for test
+    parameters = _params_from_queue('canopycover')
+    for one_parameter in parameters:
+        if one_parameter['field_name'] == 'found_json_file':
+            one_parameter['value'] = WORKFLOW_GREENNESS_FOUNDFILES
+        elif one_parameter['field_name'] == 'results_search_folder':
+            one_parameter['value'] = WORKFLOW_GREENNESS_FOLDER
+        elif one_parameter['field_name'] == 'experimentdata':
+            one_parameter['value'] = WORKFLOW_GREENNESS_EXPERIMENT_FILE
+
+    # Create a working folder
+    working_folder = os.path.realpath(os.path.join(os.getcwd(), 'tmpgreenness'))
+    os.makedirs(working_folder, exist_ok=True)
+
+    # Clear messages and run the function
+    _helper_msg_func((), False)
+    res = wd.handle_greenness_indices(parameters, input_folder, working_folder, _helper_msg_func, _helper_msg_func)
+
+    assert res is not None
+    assert res == compare_json
+
+    shutil.rmtree(working_folder)
