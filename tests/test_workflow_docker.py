@@ -888,9 +888,6 @@ def test_handle_git_repo():
     res = wd.handle_git_repo(WORKFLOW_GITREPO_URL, WORKFLOW_GITREPO_BRANCH, parameters, input_folder, working_folder,
                              _helper_msg_func, _helper_msg_func)
 
-    with open(WORKFLOW_GITREPO_RESULT,'w') as o:
-        json.dump(res, o)
-
     assert res is not None
     assert res == compare_json
 
