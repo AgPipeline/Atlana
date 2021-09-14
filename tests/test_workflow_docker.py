@@ -163,7 +163,8 @@ def _compare_results_paths(truth_path: str, compare_path: str, source_particle: 
         new_path += '/'
     new_path += '/'.join(compare_parts[last_folder_index + 1:])
 
-    print("PATHS: final", truth_path, new_path)
+    paths = '|%s| |%s|' % (truth_path, new_path)
+    print("PATHS: final", paths, str(truth_path == new_path))
     return truth_path == new_path
 
 
@@ -236,7 +237,7 @@ def _compare_results(truth: dict, compare: dict, exclusions: tuple = None, file_
     truth_keys = list(truth.keys())
     compare_keys = list(compare.keys())
     if len(truth_keys) != len(compare_keys):
-        print("COMPARE mismatch key len:", len(truth_keys), len(compare_keys), )
+        print("COMPARE mismatch key len:", len(truth_keys), len(compare_keys), truth_keys, compare_keys, truth, compare)
         return False
     diffs = list(set(truth_keys).symmetric_difference(set(compare_keys)))
     if len(diffs) > 0:
