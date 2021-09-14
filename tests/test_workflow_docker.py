@@ -144,7 +144,6 @@ def _compare_results_paths(truth_path: str, compare_path: str, source_particle: 
     if truth_path == compare_path:
         return True
     if not compare_path.startswith(source_particle):
-        print("PATHS starts", compare_path, source_particle)
         return False
 
     # Check that the last folder matches exactly
@@ -152,7 +151,6 @@ def _compare_results_paths(truth_path: str, compare_path: str, source_particle: 
     source_parts = source_particle.split('/' if '/' in source_particle else '\\')
     last_folder_index = len(source_parts) - 1
     if source_parts[last_folder_index] != compare_parts[last_folder_index]:
-        print("PATHS portion", source_parts[last_folder_index], compare_parts[last_folder_index], source_parts, compare_parts)
         return False
 
     # Make the path replacement and compare
@@ -162,7 +160,6 @@ def _compare_results_paths(truth_path: str, compare_path: str, source_particle: 
         new_path += '/'
     new_path += '/'.join(compare_parts[last_folder_index + 1:])
 
-    print("PATHS final", truth_path, new_path)
     return truth_path == new_path
 
 
@@ -178,27 +175,23 @@ def _compare_results_iterable(first: Iterable, second: Iterable, exclusions: tup
     """
     # Make sure they're the same length
     if len(first) != len(second):
-        print("ITERABLE: length:", len(first), len(second))
         return False
 
     # pylint: disable=consider-using-enumerate
     for idx in range(0, len(first)):
         # pylint: disable=unidiomatic-typecheck
         if type(first[idx]) != type(second[idx]):
-            print("ITERABLE: type:", idx, type(first[idx]), type(second[idx]), first[idx], second[idx])
             return False
         if isinstance(first[idx], dict):
             if not _compare_results(first[idx], second[idx], exclusions, file_corrections):
                 return False
         elif isinstance(first[idx], str):
             if not first[idx] == second[idx]:
-                print("ITERABLE: str:", idx, first[idx], second[idx])
                 return False
         elif isinstance(first[idx], Iterable):
             if not _compare_results_iterable(first[idx], second[idx], exclusions, file_corrections):
                 return False
         elif not first[idx] == second[idx]:
-            print("ITERABLE: default:", idx, first[idx], second[idx])
             return False
     return True
 
@@ -235,11 +228,9 @@ def _compare_results(truth: dict, compare: dict, exclusions: tuple = None, file_
     truth_keys = list(truth.keys())
     compare_keys = list(compare.keys())
     if len(truth_keys) != len(compare_keys):
-        print("COMPARE: key lengths:", len(truth_keys), len(compare_keys), truth_keys, compare_keys)
         return False
     diffs = list(set(truth_keys).symmetric_difference(set(compare_keys)))
     if len(diffs) > 0:
-        print("COMPARE: key diff:", diffs, truth_keys, compare_keys)
         return False
 
     # Keys match, compare values
@@ -251,7 +242,6 @@ def _compare_results(truth: dict, compare: dict, exclusions: tuple = None, file_
         # Compare
         # pylint: disable=unidiomatic-typecheck
         if type(truth[one_key]) != type(compare[one_key]):
-            print("COMPARE: type:", one_key, type(truth[one_key]), type(compare[one_key]), truth[one_key], compare[one_key])
             return False
         if isinstance(truth[one_key], dict):
             if not _compare_results(truth[one_key], compare[one_key], exclusions, file_corrections):
@@ -260,13 +250,11 @@ def _compare_results(truth: dict, compare: dict, exclusions: tuple = None, file_
             if not truth[one_key] == compare[one_key]:
                 if one_key not in file_corrections['keys'] or not \
                    _compare_results_paths(truth[one_key], compare[one_key], file_corrections['source'], file_corrections['replace']):
-                    print("COMPARE: str:", one_key, truth[one_key], compare[one_key])
                     return False
         elif isinstance(truth[one_key], Iterable):
             if not _compare_results_iterable(truth[one_key], compare[one_key], exclusions, file_corrections):
                 return False
         elif not truth[one_key] == compare[one_key]:
-            print("COMPARE: default:", one_key, truth[one_key], compare[one_key])
             return False
     return True
 
@@ -774,7 +762,7 @@ def test_handle_plotclip():
     _helper_msg_func((), False)
     res = wd.handle_plotclip(parameters, input_folder, working_folder, _helper_msg_func, _helper_msg_func)
 
-    folder_corrections = {'keys': ['path'], 'source': os.getcwd(), 'replace': '/Users/chris/agpipeline/atlana'}
+    folder_corrections = {'keys': ['path', 'top_path'], 'source': os.getcwd(), 'replace': '/Users/chris/agpipeline/atlana'}
     assert res is not None
     assert _compare_results(compare_json, res, ('timestamp', 'utc_timestamp', 'processing_time'), folder_corrections)
 
