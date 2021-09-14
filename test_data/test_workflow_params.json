@@ -1,0 +1,1 @@
+[{"workflow_name": "Canopy Cover"}, {"command": "soilmask", "field_name": "image", "auth": {}, "data_type": "1", "value": "/sample_orthophoto.tif"}, {"command": "plotclip", "field_name": "geometries", "auth": {}, "data_type": "1", "value": "/plots.json"}, {"command": "canopycover", "field_name": "experimentdata", "experimentdata": ""}]

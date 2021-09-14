@@ -1,0 +1,5 @@
+{
+  "PLOT_SHAPEFILE": "/input/plot_shapes.shp",
+  "PLOT_GEOMETRY_FILE": "/output/plots.geojson",
+}
+

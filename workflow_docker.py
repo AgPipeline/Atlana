@@ -51,7 +51,7 @@ def _load_json_file(filename: str, error_func: Callable=None) -> Optional[object
     """
     result = None
     try:
-        with open(filename, 'r') as in_file:
+        with open(filename, 'r', encoding='utf8') as in_file:
             result = json.load(in_file)
     except json.JSONDecodeError as ex:
         msg = 'A JSON decode error was caught while loading JSON file "%s"' % filename
@@ -77,6 +77,7 @@ def _find_parameter_values(parameters: list, field_names: tuple) -> tuple:
         If a field name is not found, None is returned in its place.
     """
     found = {}
+
     for one_parameter in parameters:
         found[one_parameter['field_name']] = one_parameter['value']
 
@@ -157,7 +158,7 @@ def _write_command_json(json_file_path: str, json_args: object):
     Exceptions:
         Raises RunttimeError if a problem occurs when writing out the JSON
     """
-    with open(json_file_path, 'wt')as out_file:
+    with open(json_file_path, 'wt', encoding='utf8') as out_file:
         try:
             out_file.write(json.dumps(json_args, indent=2))
         except json.JSONDecodeError as ex:
@@ -184,8 +185,8 @@ def _run_command(command: str, input_folder: str, output_folder: str, json_file_
         json_file_path: the JSON file to pass to the command
         msg_func: function to write messages to
         err_func: function to write errors to
-        additional_copy: optional tuple of additional mount commands for the docker command; one or more [source_path, mount_point] pairs; source files are
-                         copied before the command is run and folders are created as needed
+        additional_copy: optional tuple of additional mount commands for the docker command; one or more [source_path, mount_point] pairs;
+                         source files are copied before the command is run and folders are created as needed
     """
     run_command = ['docker',
                    'run',
@@ -369,7 +370,7 @@ def _repoint_files_json_dir(filename: str, source_folder: str, target_folder: st
                 cur_file['DIR'] = _replace_folder_path(cur_file['DIR'], source_folder, target_folder)
             new_files.append(cur_file)
 
-        with open(new_file, 'w') as out_file:
+        with open(new_file, 'w', encoding='utf8') as out_file:
             json.dump({"FILE_LIST": new_files}, out_file, indent=2)
 
     except Exception:
@@ -380,7 +381,7 @@ def _repoint_files_json_dir(filename: str, source_folder: str, target_folder: st
     return new_file
 
 
-def _handle_missing_parameters(process_name: str, parameters: tuple, parameter_names: tuple):
+def _handle_missing_parameters(process_name: str, parameters: tuple, parameter_names: tuple) -> None:
     """Common missing parameter handler
     Arguments:
         process_name: the name to use for any messages
@@ -402,7 +403,7 @@ def _handle_missing_parameters(process_name: str, parameters: tuple, parameter_n
         raise RuntimeError(msg)
 
 
-def _handle_missing_files(process_name: str, parameters: tuple, parameter_names: tuple):
+def _handle_missing_files(process_name: str, parameters: tuple, parameter_names: tuple) -> None:
     """Common missing file handler
     Arguments:
         process_name: the name to use for any messages
@@ -427,7 +428,7 @@ def _handle_missing_files(process_name: str, parameters: tuple, parameter_names:
         raise RuntimeError(msg)
 
 
-def _handle_missing_folders(process_name: str, parameters: tuple, parameter_names: tuple):
+def _handle_missing_folders(process_name: str, parameters: tuple, parameter_names: tuple) -> None:
     """Common missing file handler
     Arguments:
         process_name: the name to use for any messages
@@ -677,7 +678,7 @@ def handle_canopycover(parameters: tuple, input_folder: str, working_folder: str
 
     command_results = None
     if ret_value == 0:
-        command_results = {'results': _get_results_json(working_folder, err_func, True)}
+        command_results = {'results': _get_results_json(input_folder, err_func, True)}
         command_results['top_path'] = working_folder
         # TODO: change top_path to prev_working_folder everywhere and make that a default addition for substitution (magic value)
 
@@ -735,7 +736,7 @@ def handle_greenness_indices(parameters: tuple, input_folder: str, working_folde
 
     command_results = None
     if ret_value == 0:
-        command_results = {'results': _get_results_json(working_folder, err_func, True)}
+        command_results = {'results': _get_results_json(input_folder, err_func, True)}
         command_results['top_path'] = working_folder
 
     return command_results
@@ -777,7 +778,8 @@ def handle_merge_csv(parameters: tuple, input_folder: str, working_folder: str, 
 
     return command_results
 
-def handle_git_repo(git_repo: str, git_branch: str, parameters: tuple, input_folder: str, working_folder: str, msg_func: Callable, err_func: Callable) -> Optional[dict]:
+def handle_git_repo(git_repo: str, git_branch: str, parameters: tuple, input_folder: str, working_folder: str, msg_func: Callable, \
+                    err_func: Callable) -> Optional[dict]:
     """Handle running a git-based algorithm
     Arguments:
         git_repo: the URL of the repository to use
@@ -812,7 +814,7 @@ def handle_git_repo(git_repo: str, git_branch: str, parameters: tuple, input_fol
         if os.path.isfile(experiment_file):
             options += ' --metadata ' + _replace_folder_path(experiment_file, input_folder, '/input')
         else:
-            msg = 'Warning: invalid experiment file specified for %s "%s"' % (git_process. experiment_file)
+            msg = 'Warning: invalid experiment file specified for %s:%s "%s"' % (git_repo, git_branch, experiment_file)
             logging.warning(msg)
             msg_func((msg,), True)
 
@@ -832,7 +834,7 @@ def handle_git_repo(git_repo: str, git_branch: str, parameters: tuple, input_fol
 
     command_results = None
     if ret_value == 0:
-        command_results = {'results': _get_results_json(working_folder, err_func, True)}
+        command_results = {'results': _get_results_json(input_folder, err_func, True)}
         command_results['top_path'] = working_folder
 
     return command_results

@@ -40,6 +40,14 @@ class Crypt:
         Returns:
             The adjusted salt value
         """
+        if salt is None:
+            raise RuntimeError('Salt value of None passed into adjust_crypto_salt')
+
+        if isinstance(salt, bytes):
+            raise RuntimeError('Salt type is binary - please convert to a string before calling adjust_crypto_salt')
+        if not isinstance(salt, str):
+            raise RuntimeError('Salt is not a string - only string salt values are accepted for adjust_crypto_salt:', type(salt))
+
         cur_salt = salt
 
         if len(cur_salt) != AES.block_size:
@@ -64,6 +72,15 @@ class Crypt:
             If the passcode isn't an acceptable length, it's adjusted to the next longest acceptable length. If the
             passcode is longer than the maximum length, it's shorted to the maximum acceptable length
         """
+        if passcode is None:
+            raise RuntimeError('Passcode value of None passed into adjust_crypto_passcode')
+
+        if isinstance(passcode, bytes):
+            raise RuntimeError('Passcode type is binary - please convert to a string before calling adjust_crypto_passcode')
+        if not isinstance(passcode, str):
+            raise RuntimeError('Passcode is not a string - only string passcode values are accepted for adjust_crypto_passcode: ',
+                                type(passcode))
+
         max_length = max(AES.key_size)
         if len(passcode) > max_length:
             return passcode[0:max_length]

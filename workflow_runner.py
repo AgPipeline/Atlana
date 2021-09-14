@@ -46,6 +46,20 @@ def _setup_working_folder(top_folder: str, subfolder: str)-> str:
         Raises a Runtime exception if the top folder is invalid or not accessible, or if there was a problem
         creating or tidying up the working folder
     """
+    def __handle_exception(msg: str, ex) -> None:
+        """Scoped function to handle exception printing
+        Arguments:
+            msg - the exception message
+            ex - the exception
+        """
+        if logging.getLogger().level == logging.DEBUG:
+            logging.exception(msg)
+        else:
+            logging.warning(msg)
+            logging.warning(ex)
+
+
+    # Start of regular function
     if not os.path.isdir(top_folder):
         msg = 'Setup working folder: top level folder is not a valid directory "%s"' % top_folder
         logging.error(msg)
@@ -58,8 +72,7 @@ def _setup_working_folder(top_folder: str, subfolder: str)-> str:
         try:
             os.mkdir(working_folder)
         except Exception as ex:
-            msg = 'Exception caught while creating command working folder "%s"' % top_folder
-            logging.exception(msg)
+            __handle_exception('Exception caught while creating command working folder "%s"' % top_folder, ex)
             raise RuntimeError(msg) from ex
     else:
         for one_name in os.listdir(working_folder):
@@ -69,14 +82,13 @@ def _setup_working_folder(top_folder: str, subfolder: str)-> str:
                     os.unlink(cur_path)
                 else:
                     shutil.rmtree(cur_path)
+            # Ignore exceptions
             except OSError as ex:
-                msg = 'OSError exception caught while cleaning file/folder "%s"' % cur_path + '\n' + \
-                            '... ignoring exception and continuing cleanup of folder "%s"' % working_folder
-                logging.exception(msg)
+                __handle_exception('OSError exception caught while cleaning file/folder "%s"' % cur_path + '\n' + \
+                                            '... ignoring exception and continuing cleanup of folder "%s"' % working_folder, ex)
             except Exception as ex:
-                msg = 'Unknown exception caught while cleaning file/folder "%s"' % cur_path + '\n' + \
-                            '... ignoring exception and continuing cleanup of folder "%s"' % working_folder
-                logging.exception(msg)
+                __handle_exception('Unknown exception caught while cleaning file/folder "%s"' % cur_path + '\n' + \
+                                            '... ignoring exception and continuing cleanup of folder "%s"' % working_folder, ex)
 
     return working_folder
 
@@ -91,7 +103,7 @@ def _load_json_file(filename: str, error_func: Callable=None) -> Optional[object
     """
     result = None
     try:
-        with open(filename, 'r') as in_file:
+        with open(filename, 'r', encoding='utf8') as in_file:
             result = json.load(in_file)
     except json.JSONDecodeError as ex:
         msg = 'A JSON decode error was caught while loading JSON file "%s"' % filename
@@ -132,7 +144,7 @@ def _write_log_file(filename: str, lines: tuple, append: bool=True) -> bool:
     for try_count in range(0, WRITING_LOG_RETRY_COUNT):
         try:
             # pylint: disable=consider-using-with
-            opened_file = open(filename, mode)
+            opened_file = open(filename, mode, encoding='utf8')
         except OSError:
             msg = 'Exception opening log file "%s" for writing "%s"' % (filename, mode)
             logging.exception(msg)
@@ -322,7 +334,8 @@ def run_workflow():
         logging.info('Running command %s', str(command_name))
         write_status(status_filename, STATUS_RUNNING, {'message': 'Running ' + command_name})
         if 'git' in command_map and 'git_repo' in one_command and 'git_branch' in one_command:
-            res = command_map['git'](one_command['git_repo'], one_command['git_branch'], parameters, working_folder, command_working_folder, message_func, error_func)
+            res = command_map['git'](one_command['git_repo'], one_command['git_branch'], parameters, working_folder, command_working_folder,
+                                     message_func, error_func)
         elif command_name in command_map:
             res = command_map[command_name](parameters, working_folder, command_working_folder, message_func, error_func)
         else:
