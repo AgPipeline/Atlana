@@ -700,7 +700,10 @@ def test_handle_soilmask():
     assert res is not None
     assert _compare_results(compare_json, res, None, folder_corrections)
 
-    shutil.rmtree(working_folder)
+    try:
+        shutil.rmtree(working_folder)
+    except Exception as ex:
+        print('test_handle_soilmask: exception caught deleting working folder', working_folder, str(ex))
 
 
 def test_handle_soilmask_ratio():
@@ -732,7 +735,10 @@ def test_handle_soilmask_ratio():
     assert res is not None
     assert _compare_results(compare_json, res, None, folder_corrections)
 
-    shutil.rmtree(working_folder)
+    try:
+        shutil.rmtree(working_folder)
+    except Exception as ex:
+        print('test_handle_soilmask_ratio: exception caught deleting working folder', working_folder, str(ex))
 
 
 def test_handle_plotclip():
@@ -804,7 +810,10 @@ def test_handle_find_files2json():
     assert res is not None
     assert _compare_results(compare_json, res, None, folder_corrections)
 
-    shutil.rmtree(working_folder)
+    try:
+        shutil.rmtree(working_folder)
+    except Exception as ex:
+        print('test_handle_find_files2json: exception caught deleting working folder', working_folder, str(ex))
 
 
 def test_handle_canopycover():
@@ -843,7 +852,10 @@ def test_handle_canopycover():
     assert res is not None
     #assert _compare_results(compare_json, res, None, folder_corrections)
 
-    shutil.rmtree(working_folder)
+    try:
+        shutil.rmtree(working_folder)
+    except Exception as ex:
+        print('test_handle_canopycover: exception caught deleting working folder', working_folder, str(ex))
 
 
 def test_handle_greenness_indices():
@@ -880,7 +892,10 @@ def test_handle_greenness_indices():
     assert res is not None
     #assert _compare_results(compare_json, res, None, folder_corrections)
 
-    shutil.rmtree(working_folder)
+    try:
+        shutil.rmtree(working_folder)
+    except Exception as ex:
+        print('test_handle_greenness_indices: exception caught deleting working folder', working_folder, str(ex))
 
 
 def test_handle_merge_csv():
@@ -915,7 +930,10 @@ def test_handle_merge_csv():
     for one_file in WORKFLOW_MERGECSV_FILES:
         assert os.path.exists(os.path.join(working_folder, one_file))
 
-    shutil.rmtree(working_folder)
+    try:
+        shutil.rmtree(working_folder)
+    except Exception as ex:
+        print('test_handle_merge_csv: exception caught deleting working folder', working_folder, str(ex))
 
 
 def test_handle_git_repo():
@@ -953,4 +971,7 @@ def test_handle_git_repo():
     assert res is not None
     #assert _compare_results(compare_json, res, None, folder_corrections)
 
-    shutil.rmtree(working_folder)
+    try:
+        shutil.rmtree(working_folder)
+    except Exception as ex:
+        print('test_handle_git_repo: exception caught deleting working folder', working_folder, str(ex))
