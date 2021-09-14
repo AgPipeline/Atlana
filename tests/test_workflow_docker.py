@@ -127,59 +127,116 @@ def _params_from_queue(command: str) -> Optional[dict]:
     return None
 
 
-def _compare_results_iterable(first: Iterable, second: Iterable, exclusions: tuple) -> bool:
+def _compare_results_paths(truth_path: str, compare_path: str, source_particle: str, replace_particle: str) -> bool:
+    """Handles comparing paths that need to be changed
+    Arguments:
+        truth_path - the path that's to be compared against
+        compare_path - the path that is to be checked
+        source_particle - the starting portion of compare_path that's to be replaced
+        replace_particle - the replacement path
+    Returns:
+        Returns True if the paths match, and False if not
+    Notes:
+        If compare_path doesn't start with source_particle, False will be returned. If truth_path and compare_path start out
+        the same, True is returned. The paths for replacement are compared by complete folder named: '/a/b/c' won't match '/a/b/condor'
+    """
+    # Easy cases
+    if truth_path == compare_path:
+        return True
+    if not compare_path.startswith(source_particle):
+        return False
+
+    # Check that the last folder matches exactly
+    compare_parts = compare_path.split('/' if '/' in compare_path else '\\')
+    source_parts = source_particle.split('/' if '/' in source_particle else '\\')
+    last_folder_index = len(source_parts) - 1
+    if source_parts[last_folder_index] != compare_parts[last_folder_index]:
+        return False
+
+    # Make the path replacement and compare
+    new_path = replace_particle.replace('\\', '/')
+    index = len(new_path) - 1
+    if new_path[index] != '/':
+        new_path += '/'
+    new_path += '/'.join(compare_parts[last_folder_index + 1:])
+
+    return truth_path == new_path
+
+
+def _compare_results_iterable(first: Iterable, second: Iterable, exclusions: tuple, file_corrections: dict) -> bool:
     """Deep comparison of iterable result values (see _compare_results)
     Arguments:
         first - the first iterable to compare
         second - the second iterable to compare
         exclusions - a list of keys to ignore (passed through)
+        file_corrections - a dict for replacing paths (pass through)
     Returns:
         Returns True if the iterables are the same, otherwise False
     """
-    if exclusions is None:
-        exclusions = ()
-
     # Make sure they're the same length
     if len(first) != len(second):
+        print("ITERABLE mismatch len:", len(first), len(second))
         return False
 
     # pylint: disable=consider-using-enumerate
     for idx in range(0, len(first)):
         # pylint: disable=unidiomatic-typecheck
         if type(first[idx]) != type(second[idx]):
+            print("ITERABLE mismatch type:", type(first[idx]), type(second[idx]))
             return False
         if isinstance(first[idx], dict):
-            if not _compare_results(first[idx], second[idx], exclusions):
+            if not _compare_results(first[idx], second[idx], exclusions, file_corrections):
                 return False
         elif isinstance(first[idx], str):
             if not first[idx] == second[idx]:
+                print("ITERABLE mismatch str:", first[idx], second[idx])
                 return False
         elif isinstance(first[idx], Iterable):
-            if not _compare_results_iterable(first[idx], second[idx], exclusions):
+            if not _compare_results_iterable(first[idx], second[idx], exclusions, file_corrections):
                 return False
         elif not first[idx] == second[idx]:
+            print("ITERABLE mismatch (default):", first[idx], second[idx])
             return False
     return True
 
 
-def _compare_results(truth: dict, compare: dict, exclusions: tuple = None) -> bool:
+def _compare_results(truth: dict, compare: dict, exclusions: tuple = None, file_corrections: dict = None) -> bool:
     """Recursively compare workflow results ignoring the exclusion keys
     Arguments:
         truth - the truth dictionary
         compare - the dictionary to compare
         exclusions - a list of keys to ignore
+        file_corrections - a dict for replacing paths in the compare parameter (strings):
+                {'keys': <list of keys with paths>, 'source': <source path to replace>, 'replace': <path to replace with>}
     Returns:
         Returns True if the dictionaries are the same, otherwise False
+    Note:
+        If a string compare fails, a check is made for the key in folder_corrections (if defined) and if matched the source
+        path will be replaced with the replacement path. If the source folder doesn't match the expected value, the match will
+        fail. The comparison is done after any path substitution
     """
+    # Disable pylint message to keep code readable
+    # pylint: disable=too-many-branches
+
+    # Adjust parameters as needed
     exclusions = () if exclusions is None else exclusions
+    file_corrections = {} if file_corrections is None else file_corrections
+    if 'keys' not in file_corrections:
+        file_corrections['keys'] = []
+    if 'source' not in file_corrections:
+        file_corrections['source'] = ''
+    if 'replace' not in file_corrections:
+        file_corrections['replace'] = ''
 
     # Basic key comparisons
     truth_keys = list(truth.keys())
     compare_keys = list(compare.keys())
     if len(truth) != len(compare_keys):
+        print("COMPARE mismatch key len:", len(truth), len(compare_keys))
         return False
     diffs = list(set(truth_keys).symmetric_difference(set(compare_keys)))
     if len(diffs) > 0:
+        print("COMPARE mismatch keys:", diffs)
         return False
 
     # Keys match, compare values
@@ -191,17 +248,22 @@ def _compare_results(truth: dict, compare: dict, exclusions: tuple = None) -> bo
         # Compare
         # pylint: disable=unidiomatic-typecheck
         if type(truth[one_key]) != type(compare[one_key]):
+            print("COMPARE mismatch types:", one_key, type(truth[one_key]), type(compare[one_key]))
             return False
         if isinstance(truth[one_key], dict):
-            if not _compare_results(truth[one_key], compare[one_key], exclusions):
+            if not _compare_results(truth[one_key], compare[one_key], exclusions, file_corrections):
                 return False
         elif isinstance(truth[one_key], str):
             if not truth[one_key] == compare[one_key]:
-                return False
+                if one_key not in file_corrections['keys'] or \
+                   _compare_results_paths(truth[one_key], compare[one_key], file_corrections['source'], file_corrections['replace']):
+                    print("COMPARE mismatch str:", one_key, truth[one_key], compare[one_key])
+                    return False
         elif isinstance(truth[one_key], Iterable):
-            if not _compare_results_iterable(truth[one_key], compare[one_key], exclusions):
+            if not _compare_results_iterable(truth[one_key], compare[one_key], exclusions, file_corrections):
                 return False
         elif not truth[one_key] == compare[one_key]:
+            print("COMPARE mismatch (default):", one_key, truth[one_key], compare[one_key])
             return False
     return True
 
@@ -643,8 +705,9 @@ def test_handle_soilmask():
     _helper_msg_func((), False)
     res = wd.handle_soilmask(parameters, input_folder, working_folder, _helper_msg_func, _helper_msg_func)
 
+    folder_corrections = {'keys': ['path'], 'source': os.getcwd(), 'replace': '/Users/chris/agpipeline/atlana'}
     assert res is not None
-    assert res == compare_json
+    assert _compare_results(compare_json, res, None, folder_corrections)
 
     shutil.rmtree(working_folder)
 
@@ -674,8 +737,9 @@ def test_handle_soilmask_ratio():
     _helper_msg_func((), False)
     res = wd.handle_soilmask_ratio(parameters, input_folder, working_folder, _helper_msg_func, _helper_msg_func)
 
+    folder_corrections = {'keys': ['path'], 'source': os.getcwd(), 'replace': '/Users/chris/agpipeline/atlana'}
     assert res is not None
-    assert res == compare_json
+    assert _compare_results(compare_json, res, None, folder_corrections)
 
     shutil.rmtree(working_folder)
 
@@ -742,8 +806,9 @@ def test_handle_find_files2json():
     _helper_msg_func((), False)
     res = wd.handle_find_files2json(parameters, input_folder, working_folder, _helper_msg_func, _helper_msg_func)
 
+    folder_corrections = {'keys': ['found_json_file'], 'source': os.getcwd(), 'replace': '/Users/chris/agpipeline/atlana'}
     assert res is not None
-    assert res == compare_json
+    assert _compare_results(compare_json, res, None, folder_corrections)
 
     shutil.rmtree(working_folder)
 
@@ -780,8 +845,9 @@ def test_handle_canopycover():
     _helper_msg_func((), False)
     res = wd.handle_canopycover(parameters, input_folder, working_folder, _helper_msg_func, _helper_msg_func)
 
+    folder_corrections = {'keys': ['top_path'], 'source': os.getcwd(), 'replace': '/Users/chris/agpipeline/atlana'}
     assert res is not None
-    assert res == compare_json
+    assert _compare_results(compare_json, res, None, folder_corrections)
 
     shutil.rmtree(working_folder)
 
@@ -816,8 +882,9 @@ def test_handle_greenness_indices():
     _helper_msg_func((), False)
     res = wd.handle_greenness_indices(parameters, input_folder, working_folder, _helper_msg_func, _helper_msg_func)
 
+    folder_corrections = {'keys': ['top_path'], 'source': os.getcwd(), 'replace': '/Users/chris/agpipeline/atlana'}
     assert res is not None
-    assert res == compare_json
+    assert _compare_results(compare_json, res, None, folder_corrections)
 
     shutil.rmtree(working_folder)
 
@@ -888,7 +955,8 @@ def test_handle_git_repo():
     res = wd.handle_git_repo(WORKFLOW_GITREPO_URL, WORKFLOW_GITREPO_BRANCH, parameters, input_folder, working_folder,
                              _helper_msg_func, _helper_msg_func)
 
+    folder_corrections = {'keys': ['top_path'], 'source': os.getcwd(), 'replace': '/Users/chris/agpipeline/atlana'}
     assert res is not None
-    assert res == compare_json
+    assert _compare_results(compare_json, res, None, folder_corrections)
 
     shutil.rmtree(working_folder)
