@@ -766,7 +766,10 @@ def test_handle_plotclip():
     assert res is not None
     assert _compare_results(compare_json, res, ('timestamp', 'utc_timestamp', 'processing_time'), folder_corrections)
 
-    shutil.rmtree(working_folder)
+    try:
+        shutil.rmtree(working_folder)
+    except Exception as ex:
+        print('test_handle_plotclip: exception caught deleting working folder', working_folder, str(ex))
 
 
 def test_handle_find_files2json():
