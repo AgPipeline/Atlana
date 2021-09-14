@@ -78,9 +78,18 @@ WORKFLOW_GREENNESS_FOLDER = os.path.realpath(os.path.join(os.getcwd(), 'test_dat
 WORKFLOW_GREENNESS_EXPERIMENT_FILE = None
 WORKFLOW_GREENNESS_RESULT = os.path.realpath(os.path.join(os.getcwd(), 'test_data', 'test_workflow_greenness_result.json'))
 
-# Path to merge csv indices files
+# Path to merge csv files
 WORKFLOW_MERGECSV_FOLDER = os.path.realpath(os.path.join(os.getcwd(), 'test_data'))
 WORKFLOW_MERGECSV_RESULT = os.path.realpath(os.path.join(os.getcwd(), 'test_data', 'test_workflow_mergecsv_result.json'))
+WORKFLOW_MERGECSV_FILES = ['canopycover.csv', 'rgb_plot.csv']
+
+# Path to git algorithm files
+WORKFLOW_GITREPO_URL = 'https://github.com/AgPipeline/transformer-rgb-indices.git'
+WORKFLOW_GITREPO_BRANCH = 'main'
+WORKFLOW_GITREPO_FOUNDFILES = os.path.realpath(os.path.join(os.getcwd(), 'test_data', 'canopy_cover_files.json'))
+WORKFLOW_GITREPO_FOLDER = os.path.realpath(os.path.join(os.getcwd(), 'test_data'))
+WORKFLOW_GITREPO_EXPERIMENT_FILE = None
+WORKFLOW_GITREPO_RESULT = os.path.realpath(os.path.join(os.getcwd(), 'test_data', 'test_workflow_gitrepo_result.json'))
 
 # Used by the output tests
 OUTPUT_LINES = []
@@ -434,7 +443,7 @@ def test_get_results_json():
     _helper_msg_func((), False)
     res = wd._get_results_json(JSON_RESULT_RECURSE_FOLDER, _helper_msg_func, True)
     assert isinstance(res, list)
-    assert len(res) == 59
+    assert len(res) == 2
     for one_res in res:
         assert len(one_res) > 0
 
@@ -743,6 +752,8 @@ def test_handle_canopycover():
     """Tests running the canopy cover algorithm"""
     # pylint: disable=import-outside-toplevel
     import workflow_docker as wd
+    #import logging
+    #logging.getLogger().setLevel(logging.DEBUG)
 
     # Load the result
     with open(WORKFLOW_CANOPYCOVER_RESULT, 'r', encoding='utf8') as in_file:
@@ -836,6 +847,49 @@ def test_handle_merge_csv():
     # Clear messages and run the function
     _helper_msg_func((), False)
     res = wd.handle_merge_csv(parameters, input_folder, working_folder, _helper_msg_func, _helper_msg_func)
+
+    assert res is not None
+    assert res == compare_json
+
+    for one_file in WORKFLOW_MERGECSV_FILES:
+        assert os.path.exists(os.path.join(working_folder, one_file))
+
+    shutil.rmtree(working_folder)
+
+
+def test_handle_git_repo():
+    """Tests fetching and running algorithm from a git repo"""
+    # pylint: disable=import-outside-toplevel
+    import workflow_docker as wd
+
+    # Load the result
+    with open(WORKFLOW_GITREPO_RESULT, 'r', encoding='utf8') as in_file:
+        compare_json = json.load(in_file)
+
+    # Setup fields for test
+    input_folder = WORKFLOW_GITREPO_FOLDER
+
+    # Setup fields for test
+    parameters = _params_from_queue('canopycover')
+    for one_parameter in parameters:
+        if one_parameter['field_name'] == 'found_json_file':
+            one_parameter['value'] = WORKFLOW_GITREPO_FOUNDFILES
+        elif one_parameter['field_name'] == 'results_search_folder':
+            one_parameter['value'] = WORKFLOW_GITREPO_FOLDER
+        elif one_parameter['field_name'] == 'experimentdata':
+            one_parameter['value'] = WORKFLOW_GITREPO_EXPERIMENT_FILE
+
+    # Create a working folder
+    working_folder = os.path.realpath(os.path.join(os.getcwd(), 'tmpgitrepo'))
+    os.makedirs(working_folder, exist_ok=True)
+
+    # Clear messages and run the function
+    _helper_msg_func((), False)
+    res = wd.handle_git_repo(WORKFLOW_GITREPO_URL, WORKFLOW_GITREPO_BRANCH, parameters, input_folder, working_folder,
+                             _helper_msg_func, _helper_msg_func)
+
+    with open(WORKFLOW_GITREPO_RESULT,'w') as o:
+        json.dump(res, o)
 
     assert res is not None
     assert res == compare_json

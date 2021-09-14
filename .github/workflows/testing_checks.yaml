@@ -86,7 +86,9 @@ jobs:
               ls -l test_data
         if: ${{ matrix.app == 'pytest' }}
       - name: Listing
-        run: ls -la
+        run: |
+              ls -la
+              ls -la test_data
       - name: Files to be tested
         run: cat action_pylint_files.txt
       - name: Running test

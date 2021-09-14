@@ -678,7 +678,7 @@ def handle_canopycover(parameters: tuple, input_folder: str, working_folder: str
 
     command_results = None
     if ret_value == 0:
-        command_results = {'results': _get_results_json(working_folder, err_func, True)}
+        command_results = {'results': _get_results_json(input_folder, err_func, True)}
         command_results['top_path'] = working_folder
         # TODO: change top_path to prev_working_folder everywhere and make that a default addition for substitution (magic value)
 
@@ -736,7 +736,7 @@ def handle_greenness_indices(parameters: tuple, input_folder: str, working_folde
 
     command_results = None
     if ret_value == 0:
-        command_results = {'results': _get_results_json(working_folder, err_func, True)}
+        command_results = {'results': _get_results_json(input_folder, err_func, True)}
         command_results['top_path'] = working_folder
 
     return command_results
@@ -834,7 +834,7 @@ def handle_git_repo(git_repo: str, git_branch: str, parameters: tuple, input_fol
 
     command_results = None
     if ret_value == 0:
-        command_results = {'results': _get_results_json(working_folder, err_func, True)}
+        command_results = {'results': _get_results_json(input_folder, err_func, True)}
         command_results['top_path'] = working_folder
 
     return command_results
