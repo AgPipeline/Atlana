@@ -144,6 +144,7 @@ def _compare_results_paths(truth_path: str, compare_path: str, source_particle: 
     if truth_path == compare_path:
         return True
     if not compare_path.startswith(source_particle):
+        print("PATHS starts", compare_path, source_particle)
         return False
 
     # Check that the last folder matches exactly
@@ -151,6 +152,7 @@ def _compare_results_paths(truth_path: str, compare_path: str, source_particle: 
     source_parts = source_particle.split('/' if '/' in source_particle else '\\')
     last_folder_index = len(source_parts) - 1
     if source_parts[last_folder_index] != compare_parts[last_folder_index]:
+        print("PATHS portion", source_parts[last_folder_index], compare_parts[last_folder_index], source_parts, compare_parts)
         return False
 
     # Make the path replacement and compare
@@ -160,6 +162,7 @@ def _compare_results_paths(truth_path: str, compare_path: str, source_particle: 
         new_path += '/'
     new_path += '/'.join(compare_parts[last_folder_index + 1:])
 
+    print("PATHS final", truth_path, new_path)
     return truth_path == new_path
 
 
