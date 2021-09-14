@@ -175,23 +175,27 @@ def _compare_results_iterable(first: Iterable, second: Iterable, exclusions: tup
     """
     # Make sure they're the same length
     if len(first) != len(second):
+        print("ITERABLE: length:", len(first), len(second))
         return False
 
     # pylint: disable=consider-using-enumerate
     for idx in range(0, len(first)):
         # pylint: disable=unidiomatic-typecheck
         if type(first[idx]) != type(second[idx]):
+            print("ITERABLE: type:", idx, type(first[idx]), type(second[idx]), first[idx], second[idx])
             return False
         if isinstance(first[idx], dict):
             if not _compare_results(first[idx], second[idx], exclusions, file_corrections):
                 return False
         elif isinstance(first[idx], str):
             if not first[idx] == second[idx]:
+                print("ITERABLE: str:", idx, first[idx], second[idx])
                 return False
         elif isinstance(first[idx], Iterable):
             if not _compare_results_iterable(first[idx], second[idx], exclusions, file_corrections):
                 return False
         elif not first[idx] == second[idx]:
+            print("ITERABLE: default:", idx, first[idx], second[idx])
             return False
     return True
 
@@ -228,9 +232,11 @@ def _compare_results(truth: dict, compare: dict, exclusions: tuple = None, file_
     truth_keys = list(truth.keys())
     compare_keys = list(compare.keys())
     if len(truth_keys) != len(compare_keys):
+        print("COMPARE: key lengths:", len(truth_keys), len(compare_keys), truth_keys, compare_keys)
         return False
     diffs = list(set(truth_keys).symmetric_difference(set(compare_keys)))
     if len(diffs) > 0:
+        print("COMPARE: key diff:", diffs, truth_keys, compare_keys)
         return False
 
     # Keys match, compare values
@@ -242,6 +248,7 @@ def _compare_results(truth: dict, compare: dict, exclusions: tuple = None, file_
         # Compare
         # pylint: disable=unidiomatic-typecheck
         if type(truth[one_key]) != type(compare[one_key]):
+            print("COMPARE: type:", one_key, type(truth[one_key]), type(compare[one_key]), truth[one_key], compare[one_key])
             return False
         if isinstance(truth[one_key], dict):
             if not _compare_results(truth[one_key], compare[one_key], exclusions, file_corrections):
@@ -250,11 +257,13 @@ def _compare_results(truth: dict, compare: dict, exclusions: tuple = None, file_
             if not truth[one_key] == compare[one_key]:
                 if one_key not in file_corrections['keys'] or not \
                    _compare_results_paths(truth[one_key], compare[one_key], file_corrections['source'], file_corrections['replace']):
+                    print("COMPARE: str:", one_key, truth[one_key], compare[one_key])
                     return False
         elif isinstance(truth[one_key], Iterable):
             if not _compare_results_iterable(truth[one_key], compare[one_key], exclusions, file_corrections):
                 return False
         elif not truth[one_key] == compare[one_key]:
+            print("COMPARE: default:", one_key, truth[one_key], compare[one_key])
             return False
     return True
 
