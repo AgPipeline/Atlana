@@ -381,7 +381,7 @@ def _repoint_files_json_dir(filename: str, source_folder: str, target_folder: st
     return new_file
 
 
-def _handle_missing_parameters(process_name: str, parameters: tuple, parameter_names: tuple):
+def _handle_missing_parameters(process_name: str, parameters: tuple, parameter_names: tuple) -> None:
     """Common missing parameter handler
     Arguments:
         process_name: the name to use for any messages
@@ -403,7 +403,7 @@ def _handle_missing_parameters(process_name: str, parameters: tuple, parameter_n
         raise RuntimeError(msg)
 
 
-def _handle_missing_files(process_name: str, parameters: tuple, parameter_names: tuple):
+def _handle_missing_files(process_name: str, parameters: tuple, parameter_names: tuple) -> None:
     """Common missing file handler
     Arguments:
         process_name: the name to use for any messages
@@ -428,7 +428,7 @@ def _handle_missing_files(process_name: str, parameters: tuple, parameter_names:
         raise RuntimeError(msg)
 
 
-def _handle_missing_folders(process_name: str, parameters: tuple, parameter_names: tuple):
+def _handle_missing_folders(process_name: str, parameters: tuple, parameter_names: tuple) -> None:
     """Common missing file handler
     Arguments:
         process_name: the name to use for any messages

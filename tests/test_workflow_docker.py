@@ -78,6 +78,10 @@ WORKFLOW_GREENNESS_FOLDER = os.path.realpath(os.path.join(os.getcwd(), 'test_dat
 WORKFLOW_GREENNESS_EXPERIMENT_FILE = None
 WORKFLOW_GREENNESS_RESULT = os.path.realpath(os.path.join(os.getcwd(), 'test_data', 'test_workflow_greenness_result.json'))
 
+# Path to merge csv indices files
+WORKFLOW_MERGECSV_FOLDER = os.path.realpath(os.path.join(os.getcwd(), 'test_data'))
+WORKFLOW_MERGECSV_RESULT = os.path.realpath(os.path.join(os.getcwd(), 'test_data', 'test_workflow_mergecsv_result.json'))
+
 # Used by the output tests
 OUTPUT_LINES = []
 def _helper_msg_func(lines: tuple, append: bool=True) -> bool:
@@ -553,8 +557,7 @@ def test_handle_missing_parameters():
     parameters_missing = (100, None)
     parameter_names = ('first parameter', 'second parameter')
 
-    res = wd._handle_missing_parameters(process_name, parameters, parameter_names)
-    assert res is None
+    wd._handle_missing_parameters(process_name, parameters, parameter_names)
 
     with pytest.raises(RuntimeError) as except_info:
         wd._handle_missing_parameters(process_name, parameters_missing, parameter_names)
@@ -575,8 +578,7 @@ def test_handle_missing_files():
     parameters_missing = (test_json_file, os.path.splitext(test_json_file)[0] + 'invalid',)
     parameter_names = ('first file', 'second file')
 
-    res = wd._handle_missing_files(process_name, parameters, parameter_names)
-    assert res is None
+    wd._handle_missing_files(process_name, parameters, parameter_names)
 
     with pytest.raises(RuntimeError) as except_info:
         wd._handle_missing_files(process_name, parameters_missing, parameter_names)
@@ -598,8 +600,7 @@ def test_handle_missing_folders():
     parameters_missing = (test_folder, os.path.join(test_folder,'invalid'),)
     parameter_names = ('first folder', 'second folder')
 
-    res = wd._handle_missing_folders(process_name, parameters, parameter_names)
-    assert res is None
+    wd._handle_missing_folders(process_name, parameters, parameter_names)
 
     with pytest.raises(RuntimeError) as except_info:
         wd._handle_missing_folders(process_name, parameters_missing, parameter_names)
@@ -803,6 +804,38 @@ def test_handle_greenness_indices():
     # Clear messages and run the function
     _helper_msg_func((), False)
     res = wd.handle_greenness_indices(parameters, input_folder, working_folder, _helper_msg_func, _helper_msg_func)
+
+    assert res is not None
+    assert res == compare_json
+
+    shutil.rmtree(working_folder)
+
+
+def test_handle_merge_csv():
+    """Tests merging CSV files algorithm"""
+    # pylint: disable=import-outside-toplevel
+    import workflow_docker as wd
+
+    # Load the result
+    with open(WORKFLOW_MERGECSV_RESULT, 'r', encoding='utf8') as in_file:
+        compare_json = json.load(in_file)
+
+    # Setup fields for test
+    input_folder = os.path.dirname(WORKFLOW_MERGECSV_FOLDER)
+
+    # Setup fields for test
+    parameters = _params_from_queue('merge_csv')
+    for one_parameter in parameters:
+        if one_parameter['field_name'] == 'top_path':
+            one_parameter['value'] = WORKFLOW_MERGECSV_FOLDER
+
+    # Create a working folder
+    working_folder = os.path.realpath(os.path.join(os.getcwd(), 'tmpmergecsv'))
+    os.makedirs(working_folder, exist_ok=True)
+
+    # Clear messages and run the function
+    _helper_msg_func((), False)
+    res = wd.handle_merge_csv(parameters, input_folder, working_folder, _helper_msg_func, _helper_msg_func)
 
     assert res is not None
     assert res == compare_json
