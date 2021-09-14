@@ -144,6 +144,7 @@ def _compare_results_paths(truth_path: str, compare_path: str, source_particle: 
     if truth_path == compare_path:
         return True
     if not compare_path.startswith(source_particle):
+        print("PATHS: startwith", compare_path, source_particle)
         return False
 
     # Check that the last folder matches exactly
@@ -151,6 +152,8 @@ def _compare_results_paths(truth_path: str, compare_path: str, source_particle: 
     source_parts = source_particle.split('/' if '/' in source_particle else '\\')
     last_folder_index = len(source_parts) - 1
     if source_parts[last_folder_index] != compare_parts[last_folder_index]:
+        print("PATHS: folder", source_parts[last_folder_index], compare_parts[last_folder_index], last_folder_index, source_parts, \
+                compare_parts, truth_path, compare_path)
         return False
 
     # Make the path replacement and compare
@@ -160,6 +163,7 @@ def _compare_results_paths(truth_path: str, compare_path: str, source_particle: 
         new_path += '/'
     new_path += '/'.join(compare_parts[last_folder_index + 1:])
 
+    print("PATHS: final", truth_path, new_path)
     return truth_path == new_path
 
 
@@ -231,8 +235,8 @@ def _compare_results(truth: dict, compare: dict, exclusions: tuple = None, file_
     # Basic key comparisons
     truth_keys = list(truth.keys())
     compare_keys = list(compare.keys())
-    if len(truth) != len(compare_keys):
-        print("COMPARE mismatch key len:", len(truth), len(compare_keys))
+    if len(truth_keys) != len(compare_keys):
+        print("COMPARE mismatch key len:", len(truth_keys), len(compare_keys), )
         return False
     diffs = list(set(truth_keys).symmetric_difference(set(compare_keys)))
     if len(diffs) > 0:
@@ -771,8 +775,9 @@ def test_handle_plotclip():
     _helper_msg_func((), False)
     res = wd.handle_plotclip(parameters, input_folder, working_folder, _helper_msg_func, _helper_msg_func)
 
+    folder_corrections = {'keys': ['path'], 'source': os.getcwd(), 'replace': '/Users/chris/agpipeline/atlana'}
     assert res is not None
-    assert _compare_results(compare_json, res, ('timestamp', 'utc_timestamp', 'processing_time'))
+    assert _compare_results(compare_json, res, ('timestamp', 'utc_timestamp', 'processing_time'), folder_corrections)
 
     shutil.rmtree(working_folder)
 
@@ -788,7 +793,6 @@ def test_handle_find_files2json():
 
     # Setup fields for test
     input_folder = os.path.dirname(WORKFLOW_FINDFILES_FOLDER)
-    print("INPUT FOLDER", input_folder)
 
     # Setup fields for test
     parameters = _params_from_queue('find_files2json')
