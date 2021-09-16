@@ -24,7 +24,7 @@ Items needed:
 
 What we will  be doing:
 
-1. [Upload files and configure](#uploading-and-configuring-files) a server-side file storage definition
+1. [Upload files and configure](#uploading-and-configuring-files) a file endpoint on the remote system
 2. Running the [Canopy Cover image-based workflow](#running-a-workflow)
 3. [Downloading the results](#downloading-the-results) to the local computer
 4. [Deleting](#delete-workflow-run) the workflow run
@@ -67,8 +67,8 @@ Next, select "Server Side" from the drop down on the upper right of the page, an
 <img src="img/configure_files_server_side.png" width="450" alt="Choose dropdown server-side then new" aria-label="Create new server-side definition" title="Create new server-side file configuration"/>
 
 This will display a new window showing the uploaded files.
-Change the name of the configuration if you want to.
-Select "OK" to complete the configuration and dismiss the window.
+You may change the name of the endpoing to something more meaningful.
+Select "OK" to complete defining the endpoint and dismiss the window.
 
 <img src="img/configure_files_new_server_side.png" width="450" alt="Finish server-side configuration" aria-label="Click OK to complete configuration" title="Click OK to accept"/>
 
