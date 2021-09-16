@@ -3,6 +3,7 @@
 Atlana is our web interface used to configure and run workflows for processing drone captured data.
 
 ## What's available
+
 The UI provides a convienient way for running workflows.
 It also provide ways to:
 
@@ -16,13 +17,14 @@ It also provide ways to:
 The downloaded configurations of storage locations and workflows are in JSON format and can be shared with others.
 
 ## Tutorial
-Items needed:
+
+Required inputs (or see [sample data](#sample-data):
 
 - an orthomosaic image to be processed
 - a GeoJSON file containing the plots of interest
 - an optional YAML file containing [experiment information](https://osf.io/xdkcy/wiki/Configuration%20YAML/) [![external link](img/external_link.png)](https://osf.io/xdkcy/wiki/Configuration%20YAML/)
 
-What we will  be doing:
+What we will do:
 
 1. [Upload files and configure](#uploading-and-configuring-files) a file endpoint on the remote system
 2. Running the [Canopy Cover image-based workflow](#running-a-workflow)
