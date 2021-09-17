@@ -53,18 +53,23 @@ tar -xzf sample_website_data.tar.gz
 
 ### Uploading and configuring files
 
+In this section we will be uploading files onto the server and then defining the upload location as an endpoint.
+Defining the endpoint makes the files available to workflows.
+
 On the main page of the site, click the `files` link under **Data Sources**.
-This will take you to the file storage definition page
+This will take you to the file storage definition page.
 
 <img src="img/landing_click_files.png" width="450" alt="File storage definition link" aria-label="File storage definition link" title="Click on Files link"/>
 
 Next click the upload icon, select and upload the files to process.
-You may see an <img src="img/configure_files_uploading_files.png" width="90" alt="Uploading files" aria-label="Uploading files" title="Uploading files"/> message on the icon if it takes a few seconds to upload the files.
-You can also drag-and-drop files onto the upload location.
+You may see an <img src="img/configure_files_uploading_files.png" width="90" alt="Uploading files" aria-label="Uploading files" title="Uploading files"/> message on the icon if it takes a few seconds to upload the files to the server.
+You can also drag-and-drop files onto the upload icon.
+
+You will see the uploaded file on the next step.
 
 <img src="img/configure_files_upload.png" width="450" alt="Click upload files icon" aria-label="Upload files link" title="Click or drag-and-drop to upload files"/>
 
-Next, select "Server Side" from the drop down on the upper right of the page, and click "New".
+Next, select "Server Side" from the drop down on the upper right of the page, and click "New" to start defining the endpoint.
 
 <img src="img/configure_files_server_side.png" width="450" alt="Choose dropdown server-side then new" aria-label="Create new server-side definition" title="Create new server-side file configuration"/>
 
