@@ -28,8 +28,8 @@ What we will do:
 
 1. [Upload files and configure](#uploading-and-configuring-files) a file endpoint on the remote system
 2. Running the [Canopy Cover image-based workflow](#running-a-workflow)
-3. [Downloading the results](#downloading-the-results) to the local computer
-4. [Deleting](#delete-workflow-run) the workflow run
+3. [Download results](#downloading-the-results) to the local computer
+4. [Delete](#delete-workflow-run) the workflow run
 
 Note that the geographic boundaries of the image don't need to match that of the plots.
 Only those plots that intersect the image will be processed.
