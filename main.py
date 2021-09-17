@@ -366,6 +366,7 @@ def _test_python_file(algo_type: str, lang: str, filepath: str, test_folder: str
     template_folder = os.path.join(CODE_TEMPLATE_PATH, algo_type, lang)
     print("HACK: _test_python_file", "template folder", template_folder)
     if not os.path.exists(template_folder) or not os.path.isdir(template_folder):
+        # pylint: disable=consider-using-f-string
         raise RuntimeError('Expected template folder "%s" is not found' % os.path.join('/', algo_type, lang))
 
     # Copy template files over
@@ -556,9 +557,9 @@ def queue_start(workflow_id: str, working_folder: str, recover: bool) -> dict:
     if recover is True:
         # Make sure we have something to recover
         if not os.path.isfile(queue_path):
-            msg = "ERROR: Attempting to recover a missing workflow %s" % (working_folder)
+            msg = f'ERROR: Attempting to recover a missing workflow {working_folder}'
             print (msg)
-            raise RuntimeError("ERROR: Attempting to recover a missing workflow %s" % (working_folder))
+            raise RuntimeError(f'ERROR: Attempting to recover a missing workflow {working_folder}')
         # TODO: Signal recover
     else:
         # Check if  our queue is valid and restart it if not
@@ -680,10 +681,10 @@ def queue_status(workflow_id: str, working_folder: str) -> Union[dict, str, None
                 except Exception as ex:
                     print("An unknown exception was caught while checking workflow status", ex)
         except OSError as ex:
-            msg = 'An OS exception was caught while trying to open status file "%s"' % status_path
+            msg = f'An OS exception was caught while trying to open status file "{status_path}"'
             print(msg, ex)
         except Exception as ex:
-            msg = 'Unknown exception caught while trying to access the status file "%s"' % status_path
+            msg = f'Unknown exception caught while trying to access the status file "{status_path}"'
             print(msg, ex)
 
         if cur_status is None:
@@ -716,14 +717,14 @@ def queue_messages(workflow_id: str, working_folder: str) -> tuple:
                 with open(cur_path, 'r', encoding='utf8') as in_file:
                     messages = in_file.readlines()
             except OSError as ex:
-                msg = 'An OS exception was caught while trying to read output file "%s"' % cur_path
+                msg = f'An OS exception was caught while trying to read output file "{cur_path}"'
                 print(msg, ex)
             except Exception as ex:
-                msg = 'An unknown exception was caught while trying to read output file "%s"' % cur_path
+                msg = f'An unknown exception was caught while trying to read output file "{cur_path}"'
                 print(msg, ex)
 
             if messages is None:
-                msg = 'Sleeping %d before trying to get messages again "%s"' % (one_attempt, cur_path)
+                msg = f'Sleeping {one_attempt} before trying to get messages again "{cur_path}"'
                 print(msg)
                 time.sleep(FILE_PROCESS_QUEUE_MESSAGE_TIMEOUTS[one_attempt])
             else:
@@ -736,14 +737,14 @@ def queue_messages(workflow_id: str, working_folder: str) -> tuple:
                 with open(cur_path, 'r', encoding='utf8') as in_file:
                     errors = in_file.readlines()
             except OSError as ex:
-                msg = 'An OS exception was caught while trying to read error file "%s"' % cur_path
+                msg = f'An OS exception was caught while trying to read error file "{cur_path}"'
                 print(msg, ex)
             except Exception as ex:
-                msg = 'An unknown exception was caught while trying to read error file "%s"' % cur_path
+                msg = f'An unknown exception was caught while trying to read error file "{cur_path}"'
                 print(msg, ex)
 
             if errors is None:
-                msg = 'Sleeping %d before trying to get errors again "%s"' % (one_attempt, cur_path)
+                msg = f'Sleeping {one_attempt} before trying to get errors again "{cur_path}"'
                 print(msg)
                 time.sleep(FILE_PROCESS_QUEUE_MESSAGE_TIMEOUTS[one_attempt])
             else:
@@ -803,7 +804,8 @@ def workflow_start(workflow_id: str, workflow_template: dict, data: list, file_h
                     print("HACK: SKIPPING PARAMETER FOR FIELD", one_field)
                     if not 'mandatory' in one_field or one_field ['mandatory']:
                         print("Unable to find parameter for step ", one_step['name'], ' field ', one_field['name'])
-                        raise RuntimeError("Missing mandatory value for %s on workflow step %s" % (one_field['name'], one_step['name']))
+                        # pylint: disable=consider-using-f-string
+                        raise RuntimeError('Missing mandatory value for %s on workflow step %s' % (one_field['name'], one_step['name']))
 
         cur_step = {'step': one_step['name'], 'command': one_step['command'], 'parameters': parameters, 'working_folder': working_folder}
         print("HACK: CHECKING GIT", one_step)
@@ -1041,7 +1043,7 @@ def handle_files() -> tuple:
     file_filter = request.args['filter']
 
     if len(path) <= 0:
-        print('Zero length path requested %s' % path, flush=True)
+        print(f'Zero length path requested {path}', flush=True)
         return 'Resource not found', 404
 
     # Set the upload folder for this user if it hasn't been set yet
@@ -1055,7 +1057,7 @@ def handle_files() -> tuple:
             working_path = '.'  + working_path
         cur_path = os.path.abspath(os.path.join(session['upload_folder'], working_path))
         if not cur_path.startswith(session['upload_folder']):
-            print('Invalid path requested: "%s"' % path, flush=True)
+            print(f'Invalid path requested: "{path}"', flush=True)
             return 'Resource not found', 400
     except FileNotFoundError as ex:
         print("A file not found exception was caught:",  ex)
@@ -1114,7 +1116,7 @@ def handle_irods_connect() -> tuple:
 
     session['connection'] = {'host': host, 'port': port, 'user': user, 'password': password, 'zone': zone}
 
-    return {'path': '/{0}/home/{1}'.format(zone, user)}
+    return {'path': f'/{zone}/home/{user}'}
 
 
 @app.route('/irods/files', methods=['GET'])
@@ -1135,13 +1137,14 @@ def handle_irods_files() -> tuple:
                         password=conn_info['password'], zone=conn_info['zone'])
 
     if len(path) <= 0:
-        print('Zero length path requested %s' % path, flush=True)
+        print('Zero length path requested {path}', flush=True)
         return 'Resource not found', 404
 
     try:
         col = conn.collections.get(path)
         for one_obj in col.data_objects:
             if not one_obj.name == '.' and (not file_filter or (file_filter and fnmatch.fnmatch(one_obj.name, file_filter))):
+                # pylint:  disable=consider-using-f-string
                 return_names.append({'name': one_obj.name,
                                      'path': one_obj.path,
                                      'size': one_obj.size,
@@ -1159,13 +1162,13 @@ def handle_irods_files() -> tuple:
 
     except irods.exception.NetworkException as ex:
         print('Network exception caught for iRODS listing: ', path, ex)
-        return 'Unable to complete iRODS listing request: %s' % path, 504
+        return f'Unable to complete iRODS listing request: {path}', 504
     except irods.exception.CAT_INVALID_AUTHENTICATION as ex:
         print('Invalid authentication exception caught for iRODS listing: ', path, ex)
-        return 'Invalid password specified for iRODS listing request: %s' % path, 401
+        return f'Invalid password specified for iRODS listing request: {path}', 401
     except irods.exception.CAT_INVALID_USER as ex:
         print('Invalid user exception caught for iRODS listing: ', path, ex)
-        return 'Invalid user specified for iRODS listing request: %s' % path, 401
+        return f'Invalid user specified for iRODS listing request: {path}', 401
 
     return json.dumps(return_names)
 
@@ -1216,9 +1219,11 @@ def _handle_workflow_start_find(workflow_data: dict) -> dict:
                     with open(workflow_file_path, 'r', encoding='utf8') as in_file:
                         cur_workflow = json.load(in_file)
                 except json.JSONDecodeError as ex:
+                    # pylint: disable=consider-using-f-string
                     msg = 'ERROR: A JSON decode error was caught trying to run file "%s"' % os.path.basename(workflow_file_path)
                     print(msg, ex)
                 except Exception as ex:
+                    # pylint: disable=consider-using-f-string
                     msg = 'ERROR: An unknown exception was caught trying to run file "%s"' % os.path.basename(workflow_file_path)
                     print(msg, ex)
 
@@ -1256,6 +1261,7 @@ def handle_workflow_start() -> tuple:
 
     # Make sure we can find the workflow
     if cur_workflow is None:
+        # pylint: disable=consider-using-f-string
         msg = "Unable to find workflow associated with workflow ID %s" % (str(workflow_data['id']))
         print(msg)
         return msg, 400     # Bad request
@@ -1354,13 +1360,13 @@ def handle_workflow_delete(workflow_id: str) -> tuple:
         print("Workflow delete", workflow_id)
         cur_workflows = session['workflows']
         if not cur_workflows or workflow_id not in cur_workflows:
-            msg = "ERROR: attempt made to access invalid workflow %s" % workflow_id
+            msg = f'ERROR: attempt made to access invalid workflow {workflow_id}'
             print(msg)
             return msg, 400     # Bad request
 
         working_dir = os.path.abspath(os.path.join(WORKFLOW_RUN_PATH, workflow_id))
         if not working_dir.startswith(WORKFLOW_RUN_PATH):
-            print('Invalid workflow requested: "%s"' % workflow_id, flush=True)
+            print('Invalid workflow requested: "{workflow_id}"', flush=True)
             return 'Resource not found', 404
 
         if os.path.isdir(working_dir):
@@ -1390,13 +1396,13 @@ def handle_workflow_status(workflow_id: str) -> tuple:
         print("Workflow status", workflow_id)
         cur_workflows = session['workflows']
         if not cur_workflows or workflow_id not in cur_workflows:
-            msg = "ERROR: attempt made to access invalid workflow %s" % workflow_id
+            msg = f'ERROR: attempt made to access invalid workflow {workflow_id}'
             print(msg)
             return msg, 400     # Bad request
 
         working_dir = os.path.abspath(os.path.join(WORKFLOW_RUN_PATH, workflow_id))
         if not working_dir.startswith(WORKFLOW_RUN_PATH):
-            print('Invalid workflow requested: "%s"' % workflow_id, flush=True)
+            print('Invalid workflow requested: "{workflow_id}"', flush=True)
             return 'Resource not found', 404
 
         if not os.path.isdir(working_dir):
@@ -1422,13 +1428,13 @@ def get_workflow_messages(workflow_id: str) -> tuple:
         print("Workflow messges", workflow_id)
         cur_workflows = session['workflows']
         if not cur_workflows or workflow_id not in cur_workflows:
-            msg = "ERROR: attempt made to access invalid workflow %s" % workflow_id
+            msg = f'ERROR: attempt made to access invalid workflow {workflow_id}'
             print(msg)
             return msg, 400     # Bad request
 
         working_dir = os.path.abspath(os.path.join(WORKFLOW_RUN_PATH, workflow_id))
         if not working_dir.startswith(WORKFLOW_RUN_PATH):
-            print('Invalid workflow requested: "%s"' % workflow_id, flush=True)
+            print(f'Invalid workflow requested: "{workflow_id}"', flush=True)
             return 'Resource not found', 404
 
         if not os.path.isdir(working_dir):
@@ -1529,13 +1535,13 @@ def return_workflow_artifact() -> tuple:
     # Check parameters
     cur_workflows = session['workflows']
     if not cur_workflows or workflow_id not in cur_workflows:
-        msg = "ERROR: attempt made to access invalid workflow %s" % workflow_id
+        msg = f'ERROR: attempt made to access invalid workflow {workflow_id}'
         print(msg)
         return msg, 400     # Bad request
 
     working_dir = os.path.abspath(os.path.join(WORKFLOW_RUN_PATH, workflow_id))
     if not working_dir.startswith(WORKFLOW_RUN_PATH):
-        print('Invalid workflow artifact requested: "%s"' % workflow_id, flush=True)
+        print(f'Invalid workflow artifact requested: "{workflow_id}"', flush=True)
         return 'Resource not found', 404
 
     # Find the file to download
@@ -1555,10 +1561,10 @@ def return_workflow_artifact() -> tuple:
     artifact_path = os.path.abspath(os.path.join(working_dir, step_command, found_file))
     print("ARTIFACT PATH:",artifact_path,working_dir)
     if not artifact_path.startswith(working_dir):
-        print('Invalid workflow artifact requested: "%s" "%s"' % (workflow_id, artifact_name), flush=True)
+        print(f'Invalid workflow artifact requested: "{workflow_id}" "{artifact_name}"', flush=True)
         return 'Resource not found', 404
     if not os.path.exists(artifact_path) or not os.path.isfile(artifact_path):
-        print('Invalid workflow artifact file requested: "%s" "%s"' % (workflow_id, artifact_name), flush=True)
+        print(f'Invalid workflow artifact file requested: "{workflow_id}" "{artifact_name}"', flush=True)
         return 'Resource not found', 404
 
     if not save_filename:
@@ -1610,13 +1616,16 @@ def _workflow_upload_file_load(workflow_file: str) -> tuple:
         with open(workflow_file, 'r', encoding='utf8') as in_file:
             loaded_workflow = json.load(in_file)
     except json.JSONDecodeError as ex:
+        # pylint: disable=consider-using-f-string
         msg = 'ERROR: A JSON decode error was caught processing file "%s"' % os.path.basename(workflow_file)
         print(msg, ex)
     except Exception as ex:
+        # pylint: disable=consider-using-f-string
         msg = 'ERROR: An unknown exception was caught processing file "%s"' % os.path.basename(workflow_file)
         print(msg, ex)
 
     if loaded_workflow and not 'version' in loaded_workflow:
+        # pylint: disable=consider-using-f-string
         msg = 'ERROR: Version not found in workflow file "%s"' % os.path.basename(workflow_file)
 
     return loaded_workflow, msg
@@ -1642,6 +1651,7 @@ def _workflow_upload_file_handle(workflow_path: str, workflow_def: dict) -> tupl
     if 'type' in workflow_def and workflow_def['type'] == WORKFLOW_DEFINITION_SAVE_TYPE:
         # Workflow definition file
         if str(workflow_def['version']) not in WORKFLOW_DEFINITION_SAVE_VERSIONS_SUPPORTED:
+            # pylint: disable=consider-using-f-string
             msg = 'ERROR: Unsupported version "%s" in workflow definition file "%s"' % (workflow_def['version'],
                         os.path.basename(workflow_path))
             print(msg, WORKFLOW_DEFINITION_SAVE_VERSIONS_SUPPORTED)
@@ -1660,6 +1670,7 @@ def _workflow_upload_file_handle(workflow_path: str, workflow_def: dict) -> tupl
     else:
         # Workflow "run" file
         if str(workflow_def['version']) not in WORKFLOW_SAVE_VERSIONS_SUPPORTED:
+            # pylint: disable=consider-using-f-string
             msg = 'ERROR: Unsupported version "%s" in workflow file "%s"' % (workflow_def['version'], os.path.basename(workflow_path))
             print(msg, WORKFLOW_SAVE_VERSIONS_SUPPORTED)
             return None, None, msg
@@ -1684,8 +1695,7 @@ def workflow_upload_file():
     # Get our additional parameters
     desired_version = request.form['version']
     if not desired_version in WORKFLOW_SAVE_VERSIONS_SUPPORTED:
-        msg = 'ERROR: unsupported workflow save file version requested "%s": supported %s' % \
-                            (desired_version, str(WORKFLOW_SAVE_VERSIONS_SUPPORTED))
+        msg = f'ERROR: unsupported workflow save file version requested "{desired_version}": supported {WORKFLOW_SAVE_VERSIONS_SUPPORTED}'
         print(msg)
         return msg, 400     # Bad request
 
@@ -1790,7 +1800,7 @@ def template_file(lang: str, algorithm: str):
     print("Path:",  template_path)
 
     if not template_path.startswith(template_base_path) or not os.path.exists(template_path):
-        print('Invalid template requested: "%s"' % template_path, flush=True)
+        print(f'Invalid template requested: "{template_path}"', flush=True)
         return 'Resource not found', 404
 
     # Find the requested template
@@ -1803,7 +1813,7 @@ def template_file(lang: str, algorithm: str):
                 break
 
     if found_name is None:
-        print('Unable to find requested algorithm: "%s" "%s"' % (algorithm, template_path), flush=True)
+        print(f'Unable to find requested algorithm: "{algorithm}" "{template_path}"', flush=True)
         return 'Algorithm not found', 400
 
     with open(found_name, 'r', encoding='utf8') as in_file:
@@ -1822,7 +1832,7 @@ def check_python_code(lang: str):
 
     # Check that the length of the request is reasonable
     if request.content_length > MAX_CODE_LENGTH:
-        print('Too large a file size was requested: %s' % str(request.content_length))
+        print(f'Too large a file size was requested: {request.content_length}')
         return 'Code size is too large', 413    # Payload too large
 
     # Save the code to a file and run pylint over it
@@ -1859,7 +1869,7 @@ def check_python_code(lang: str):
             })
 
     except Exception as ex:
-        msg = 'Exception caught while trying to check python code "%s"' % code
+        msg = f'Exception caught while trying to check python code "{code}"'
         print(msg, ex)
         traceback.print_exc()
         return 'Error checking Python code', 202   # Accepted, but non-comittal
@@ -1885,7 +1895,7 @@ def test_python_code(algo_type: str, lang: str):
 
     # Check that the length of the request is reasonable
     if request.content_length > MAX_CODE_LENGTH:
-        print('Too large a file size was requested: %s' % str(request.content_length))
+        print(f'Too large a file size was requested: {request.content_length}')
         return 'Code size is too large', 413    # Payload too large
 
     # Save the code to a file and run pylint over it
@@ -1907,7 +1917,7 @@ def test_python_code(algo_type: str, lang: str):
             results = test_results
 
         except Exception as ex:
-            msg = 'Exception caught while trying to check python code "%s"' % code
+            msg = f'Exception caught while trying to check python code "{code}"'
             print(msg, ex)
             traceback.print_exc()
             return 'Error checking Python code', 202   # Accepted, but non-comittal

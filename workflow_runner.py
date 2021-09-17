@@ -61,7 +61,7 @@ def _setup_working_folder(top_folder: str, subfolder: str)-> str:
 
     # Start of regular function
     if not os.path.isdir(top_folder):
-        msg = 'Setup working folder: top level folder is not a valid directory "%s"' % top_folder
+        msg = f'Setup working folder: top level folder is not a valid directory "{top_folder}"'
         logging.error(msg)
         raise RuntimeError(msg)
 
@@ -72,7 +72,7 @@ def _setup_working_folder(top_folder: str, subfolder: str)-> str:
         try:
             os.mkdir(working_folder)
         except Exception as ex:
-            __handle_exception('Exception caught while creating command working folder "%s"' % top_folder, ex)
+            __handle_exception(f'Exception caught while creating command working folder "{top_folder}"', ex)
             raise RuntimeError(msg) from ex
     else:
         for one_name in os.listdir(working_folder):
@@ -84,11 +84,11 @@ def _setup_working_folder(top_folder: str, subfolder: str)-> str:
                     shutil.rmtree(cur_path)
             # Ignore exceptions
             except OSError as ex:
-                __handle_exception('OSError exception caught while cleaning file/folder "%s"' % cur_path + '\n' + \
-                                            '... ignoring exception and continuing cleanup of folder "%s"' % working_folder, ex)
+                __handle_exception(f'OSError exception caught while cleaning file/folder "{cur_path}"' + '\n' + \
+                                            f'... ignoring exception and continuing cleanup of folder "{working_folder}"', ex)
             except Exception as ex:
-                __handle_exception('Unknown exception caught while cleaning file/folder "%s"' % cur_path + '\n' + \
-                                            '... ignoring exception and continuing cleanup of folder "%s"' % working_folder, ex)
+                __handle_exception(f'Unknown exception caught while cleaning file/folder "{cur_path}"' + '\n' + \
+                                            f'... ignoring exception and continuing cleanup of folder "{working_folder}"', ex)
 
     return working_folder
 
@@ -106,12 +106,12 @@ def _load_json_file(filename: str, error_func: Callable=None) -> Optional[object
         with open(filename, 'r', encoding='utf8') as in_file:
             result = json.load(in_file)
     except json.JSONDecodeError as ex:
-        msg = 'A JSON decode error was caught while loading JSON file "%s"' % filename
+        msg = f'A JSON decode error was caught while loading JSON file "{filename}"'
         logging.exception(msg)
         if error_func:
             error_func((msg, str(ex)))
     except Exception as ex:
-        msg = 'An unknown exception was caught while loading JSON file "%s"' % filename
+        msg = f'An unknown exception was caught while loading JSON file "{filename}"'
         logging.exception(msg)
         if error_func:
             error_func((msg, str(ex)))
@@ -146,10 +146,10 @@ def _write_log_file(filename: str, lines: tuple, append: bool=True) -> bool:
             # pylint: disable=consider-using-with
             opened_file = open(filename, mode, encoding='utf8')
         except OSError:
-            msg = 'Exception opening log file "%s" for writing "%s"' % (filename, mode)
+            msg = f'Exception opening log file "{filename}" for writing "{mode}"'
             logging.exception(msg)
         except Exception:
-            msg = 'Unknown exception opening log file "%s" for writing "%s"' % (filename, mode)
+            msg = f'Unknown exception opening log file "{filename}" for writing "{mode}"'
             logging.exception(msg)
 
         # Check for success
@@ -164,7 +164,7 @@ def _write_log_file(filename: str, lines: tuple, append: bool=True) -> bool:
         time.sleep(sleep_time)
 
     if opened_file is None:
-        msg = 'Unable to open log file "%s" for writing "%s"' % (filename, mode)
+        msg = f'Unable to open log file "{filename}" for writing "{mode}"'
         logging.warning(msg)
         return return_value
 
@@ -173,7 +173,7 @@ def _write_log_file(filename: str, lines: tuple, append: bool=True) -> bool:
             opened_file.write(one_line)
         return_value = True
     except Exception:
-        msg = 'Exception caught while writing to log file "%s"' % filename
+        msg = f'Exception caught while writing to log file "{filename}"'
         logging.exception(msg)
     finally:
         opened_file.close()
@@ -197,7 +197,7 @@ def parse_args() -> tuple:
     args =  parser.parse_args()
 
     if not args.workdir or not os.path.exists(args.workdir):
-        raise RuntimeError('Invalid or missing folder specified "%s"' % args.workdir)
+        raise RuntimeError(f'Invalid or missing folder specified "{args.workdir}"')
 
     workflow_folder = args.workdir
     if os.path.isdir(workflow_folder):
@@ -339,7 +339,7 @@ def run_workflow():
         elif command_name in command_map:
             res = command_map[command_name](parameters, working_folder, command_working_folder, message_func, error_func)
         else:
-            msg = 'Unknown command found "%s"' % command_name
+            msg = f'Unknown command found "{command_name}"'
             write_status(status_filename, STATUS_COMPLETED, {'error': msg})
             wrote_final_status = True
             logging.error('Unknown workflow command found from file  "%s"', workflow_file)
