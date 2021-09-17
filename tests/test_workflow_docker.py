@@ -121,7 +121,7 @@ def _params_from_queue(command: str) -> Optional[dict]:
             if 'parameters' in one_command:
                 return one_command['parameters']
 
-            msg = 'Command %s doesn\'t have parameters in queue file: %s' % (command, WORKFLOW_QUEUE_FILE)
+            msg = 'Command {command} doesn\'t have parameters in queue file: {WORKFLOW_QUEUE_FILE}'
             raise RuntimeError(msg)
 
     return None
@@ -388,7 +388,7 @@ def test_consume_output():
     """Test consuming the output from a running process"""
     # pylint: disable=import-outside-toplevel
     import workflow_docker as wd
-    global OUTPUT_LINES
+    global OUTPUT_LINES     # pylint: disable=global-variable-not-assigned
 
     def run_consume_test(num_lines: Union[int, str], msg_func: Callable) -> None:
         """Runs the test
@@ -446,7 +446,7 @@ def test_run_command():
     """Tests running a command"""
     # pylint: disable=import-outside-toplevel
     import workflow_docker as wd
-    global OUTPUT_LINES
+    global OUTPUT_LINES     # pylint: disable=global-variable-not-assigned
 
     # Run successful case
     _helper_msg_func((), False)
@@ -484,7 +484,7 @@ def test_get_results_json():
     """Tests getting the results JSON files"""
     # pylint: disable=import-outside-toplevel
     import workflow_docker as wd
-    global OUTPUT_LINES
+    global OUTPUT_LINES     # pylint: disable=global-variable-not-assigned
 
     # Non-recursive call
     _helper_msg_func((), False)
