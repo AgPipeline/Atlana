@@ -1629,13 +1629,20 @@ class AWorkflow extends Component {
       return;
     }
 
-    const workflow_def = this.state.workflow_defs.find((item) => item.id === found_item.workflow_type);
+    // Try to get the workflow definition from our definitions, or a previously run workflow
+    let workflow_def = this.state.workflow_defs.find((item) => item.id === found_item.workflow_type);
     if (!workflow_def) {
+      if (found_item.workflow_data && found_item.workflow_data.workflow && found_item.workflow_data.workflow.steps) {
+        workflow_def = found_item.workflow_data.workflow;
+      }
+    }
+    if (!workflow_def) {
+      console.log("Unable to find workflow definition");
       // TODO: Report problem
       return;
     }
 
-    this.checkWorkflowNeedsSecurity(found_item.workflow_data, 
+    this.checkWorkflowNeedsSecurity(found_item.workflow_data.params, 
         (success) => {
                       if (success.secured){
                         // Display passcode entry window
@@ -1666,7 +1673,7 @@ class AWorkflow extends Component {
     const save_filename = found_item.name.replaceAll(' ','_').concat('.json');
     const form_data = new FormData();
     form_data.append('workflow', JSON.stringify(this.prepareWorkflowForExport(workflow_def)));
-    form_data.append('data', JSON.stringify(found_item.workflow_data));
+    form_data.append('data', JSON.stringify(found_item.workflow_data.params));
     form_data.append('filename', save_filename);
     if (passcode) {
       form_data.append('passcode', passcode);
@@ -2181,7 +2188,7 @@ class AWorkflow extends Component {
                                  //status: cur_workflow.status
                                 }
 
-            workflow_info.workflow_data = cur_workflow.params;
+            workflow_info.workflow_data = cur_workflow;
             workflow_info.start_ts = null;
 
             // Add the job if we don't know about it yet

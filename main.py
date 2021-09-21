@@ -1278,6 +1278,7 @@ def handle_workflow_start() -> tuple:
     else:
         workflow_params = workflow_data['params']
 
+    cur_workflow['id'] = workflow_id
     workflow_start(workflow_id, cur_workflow, workflow_params, FILE_HANDLERS, working_dir)
 
     _handle_workflow_start_save(os.path.join(working_dir, '_workflow'), os.path.join(working_dir, '_params'), cur_workflow,
