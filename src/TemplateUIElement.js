@@ -61,7 +61,7 @@ class TemplateUIElement extends Component {
 
     if (item.default !== undefined) {
       default_string = item.default.location;
-      if (choices && choices.find((val) => val === item.default) === undefined) {
+      if (choices && choices.find((val) => (val.location === item.default || val.location === item.default.location)) === undefined) {
         choices = [...choices, item.default];
       }
     }
