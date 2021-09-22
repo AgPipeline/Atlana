@@ -1086,15 +1086,14 @@ class AWorkflow extends Component {
         }
 
         let props = {};
+        let on_change_params = [];
         if (item.type === 'file') {
           props.files = this.files;
           props.browse = this.browseFiles;
-          if ((item.default === undefined) && (this.files.length > 0)) {
-            item.default = {location: this.files[0].location, id: item_save_name, auth: this.files[0].auth,
-                                         data_type: this.files[0].data_type, path_is_file: true, name: this.files[0].location}
-          }
+          on_change_params.push(this.files);
         } else if (item.type === 'folder') {
           props.folders = this.folders;
+          on_change_params.push(this.folders);
           if ((item.default === undefined) && (this.folders.length > 0)) {
             item.default = {location: this.folders[0].location, id: item_save_name, auth: this.folders[0].auth,
                                          data_type: this.folders[0].data_type, path_is_file: false, name: this.folders[0].location}
@@ -1104,7 +1103,7 @@ class AWorkflow extends Component {
         return(
           <tr id={item.name + '_' + idx} key={item.name + '_' + idx}>
             <TemplateUIElement template={item} id={item_save_name} id_prefix={id_prefix} new_id={this.newIdAdded}
-                               change={(ev, mapped_value) => {this.onItemCheck(ev, item_save_name, mapped_value);}} {...props}/>
+                               change={(ev, mapped_value) => {this.onItemCheck(ev, item_save_name, mapped_value, ...on_change_params);}} {...props}/>
           </tr>
         );
       })
@@ -1817,8 +1816,9 @@ class AWorkflow extends Component {
    * @param {Object} ev - the triggering event
    * @param {string|Object} item_save_name - identifying value passed to the UI element generator (TemplateUIElement)
    * @param {*} mapped_value - optional value(s) dependent upon the UI element type generated
+   * @param {*} files_folders - optional value(s) specified for a file or folder element containing the list of files/folders
    */
-  onItemCheck(ev, item_save_name, mapped_value) {
+  onItemCheck(ev, item_save_name, mapped_value, files_folders) {
     const cur_template = this.state.workflow_defs[this.state.cur_item_index];
     let cur_config = this.workflow_configs[cur_template.id];
 
@@ -1830,7 +1830,27 @@ class AWorkflow extends Component {
         alert("Unknown object has been updated. Contact the developer to resolve");
       }
     } else {
-      cur_config[item_save_name] =  ev.target.value;
+      const val = ev.target.value;
+      const key_parts = ev.target.id.split('_');
+      const field_name = key_parts.pop();
+      const step_idx = parseInt(key_parts.shift());
+      const step_name = key_parts.join('_');
+
+      const found_field = cur_template.steps[step_idx].fields.find((item) => item.name === field_name);
+
+      // Check if this element is for a file or folder
+      if (found_field && files_folders && (found_field.type === 'file' || found_field.type === 'folder')) {
+        // Check for a match to the file or folder
+        const match = files_folders.find((item) => item.location === val);
+        if (match) {
+          cur_config[item_save_name] = {location: val, id: item_save_name, auth: match.auth,
+                                         data_type: match.data_type, path_is_file: true, name: val};
+        } else {
+          cur_config[item_save_name] = val;
+        }
+      } else {
+        cur_config[item_save_name] = val;
+      }
     }
   }
 
@@ -2248,8 +2268,8 @@ class AWorkflow extends Component {
         if (!el_id.startsWith(id_prefix)) {
           // We assume we have a workflow configuration item
           const key_parts = el_id.split('_');
+          const field_name = key_parts.pop();
           param_info.step_idx = parseInt(key_parts.shift());
-          key_parts.pop();
           param_info.step_name = key_parts.join('_');
 
           const found_key = Object.keys(cur_config).find((id) => cur_config[id].id === el_id);
@@ -2263,9 +2283,15 @@ class AWorkflow extends Component {
                 break;
               }
             }
-            if (found_item && found_item.default !== undefined && 
-                            ((found_item.type === 'file') || (found_item.type === 'folder'))) {
-              param_info.config = found_item.default;
+            if (found_item && ((found_item.type === 'file') || (found_item.type === 'folder'))) {
+              if (found_item.default !== undefined) {
+                param_info.config = found_item.default;
+              } else {
+                const match = this.files.find((item) => item.location === el.value);
+                if (match) {
+                  param_info.config = match;
+                }
+              }
             }
           }
         }

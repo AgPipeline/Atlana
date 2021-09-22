@@ -88,6 +88,8 @@ class TemplateUIElement extends Component {
     return (
       <div id={element_id + '_wrapper'} className="template-ui-table-value-wrapper">
         <select name={element_id} id={element_id} className="template-ui-table-select" {...props}>
+        {!is_mandatory && !default_string && <option key={item.name + '_empty_sel'} selected
+                      className="template-ui-table-value-option template-ui-table-value-option-item"> </option>}
           {choices && choices.map((item, idx) => {
             let option_props = {}
             if (default_string && (default_string === item.location)) {
