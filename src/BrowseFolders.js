@@ -45,7 +45,7 @@ class BrowseFolders extends Component {
     this.fetch_pending_id = 0;         // Value used to keep track of latest fetch
 
     // Initialize to a single source if there is only one choice
-    const folder_selected_id = this.props.folders && this.props.folders.length === 1 ? this.props.folders[0].id : null;
+    const folder_selected_id = this.props.folders && this.props.folders.length > 0 ? this.props.folders[0].id : null;
     if (folder_selected_id !== null) {
       this.folder_instance = this.props.folders.find((item) => item.id === folder_selected_id);
       this.interface = FileInterfaces.getInterface(this.folder_instance.data_type);
@@ -341,7 +341,7 @@ class BrowseFolders extends Component {
     this.interface = inter;
     this.setState({selected_id: ev.target.value});
 
-    this.connectRequestStart(this.interface.auth, () => this.fetchRequestStart(this.interface.auth, this.interface.location));
+    this.connectRequestStart(folder_instance.auth, () => this.fetchRequestStart(folder_instance.auth, folder_instance.location));
   }
 
   /**

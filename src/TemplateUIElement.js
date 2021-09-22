@@ -61,7 +61,7 @@ class TemplateUIElement extends Component {
 
     if (item.default !== undefined) {
       default_string = item.default.location;
-      if (choices && choices.find((val) => val === item.default) === undefined) {
+      if (choices && choices.find((val) => (val.location === item.default || val.location === item.default.location)) === undefined) {
         choices = [...choices, item.default];
       }
     }
@@ -88,6 +88,8 @@ class TemplateUIElement extends Component {
     return (
       <div id={element_id + '_wrapper'} className="template-ui-table-value-wrapper">
         <select name={element_id} id={element_id} className="template-ui-table-select" {...props}>
+        {!is_mandatory && !default_string && <option key={item.name + '_empty_sel'} selected
+                      className="template-ui-table-value-option template-ui-table-value-option-item"> </option>}
           {choices && choices.map((item, idx) => {
             let option_props = {}
             if (default_string && (default_string === item.location)) {
@@ -100,7 +102,7 @@ class TemplateUIElement extends Component {
           )}
         </select>
         {have_browse_callback && 
-            <div id={this.default_id_prefix + 'browse_' + item.id} className="template-ui-table-browse"
+            <div id={this.default_id_prefix + 'browse_' + item.name} className="template-ui-table-browse"
                  onClick={(ev) => browse_cb(ev, element_id, item)}>
               ...
             </div>
