@@ -100,7 +100,7 @@ class TemplateUIElement extends Component {
           )}
         </select>
         {have_browse_callback && 
-            <div id={this.default_id_prefix + 'browse_' + item.id} className="template-ui-table-browse"
+            <div id={this.default_id_prefix + 'browse_' + item.name} className="template-ui-table-browse"
                  onClick={(ev) => browse_cb(ev, element_id, item)}>
               ...
             </div>

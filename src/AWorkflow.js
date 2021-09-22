@@ -142,7 +142,7 @@ var id_prefix = 'workflow_new_item_';
 /**
  * Timeout period between checks on workflow status
  */
-var timeout_workflow_status = 10000;
+var timeout_workflow_status = 20000;
 
 /**
  * The number of times we try to find a workflow in our list
