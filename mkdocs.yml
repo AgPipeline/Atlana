@@ -1,5 +1,7 @@
 site_name: Atlana
 
+docs_dir: docs
+
 nav:
     - 'index.md'
     - 'about.md'
@@ -9,3 +11,7 @@ theme:
   custom_dir: docs_theme_override
 
 copyright: All Rights Reserved  
+
+markdown_extensions:
+    - toc:
+        permalink: True
