@@ -26,7 +26,7 @@ Required inputs (or see [sample data](#sample-data):
 
 What we will do:
 
-1. [Upload files and configure](#uploading-and-configuring-files) a file endpoint on the remote system
+1. [Upload files and configure](#uploading-and-configuring-files) access to a folder on the remote system
 2. Running the [Canopy Cover image-based workflow](#running-a-workflow)
 3. [Download results](#downloading-the-results) to the local computer
 4. [Delete](#delete-workflow-run) the workflow run
@@ -53,8 +53,7 @@ tar -xzf sample_website_data.tar.gz
 
 ### Uploading and configuring files
 
-In this section we will be uploading files onto the server and then defining the upload location as an endpoint.
-Defining the endpoint makes the files available to workflows.
+In this section we will be uploading files onto the server and then defining the upload folder so workflows can access the files.
 
 On the main page of the site, click the `files` link under **Data Sources**.
 This will take you to the file storage definition page.
@@ -69,13 +68,13 @@ You will see the uploaded file on the next step.
 
 <img src="img/configure_files_upload.png" width="450" alt="Click upload files icon" aria-label="Upload files link" title="Click or drag-and-drop to upload files"/>
 
-Next, select "Server Side" from the drop down on the upper right of the page, and click "New" to start defining the endpoint.
+Next, select "Server Side" from the drop down on the upper right of the page, and click "New" to start defining the folder.
 
 <img src="img/configure_files_server_side.png" width="450" alt="Choose dropdown server-side then new" aria-label="Create new server-side definition" title="Create new server-side file configuration"/>
 
 This will display a new window showing the uploaded files.
-You may change the name of the endpoing to something more meaningful.
-Select "OK" to complete defining the endpoint and dismiss the window.
+You may change the name of the definition to something more meaningful.
+Select "OK" to complete defining the folder and dismiss the window.
 
 <img src="img/configure_files_new_server_side.png" width="450" alt="Finish server-side configuration" aria-label="Click OK to complete configuration" title="Click OK to accept"/>
 
