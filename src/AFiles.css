@@ -60,7 +60,7 @@
 .files-types-upload-border-base {
     min-width: 30px;
     min-height: 25px;
-    border: 1px dashed lightgrey;
+    border: 1px dashed grey;
     border-radius: 5px;
 }
 

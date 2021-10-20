@@ -841,7 +841,7 @@ class AWorkflow extends Component {
                  baseProfile="full"
                  width="30" height="21"
                  xmlns="http://www.w3.org/2000/svg">
-              <polygon points="15 21 25 12 20 12 20 3 10 3 10 12 5 12 15 21" stroke="lightgrey" fill="white" strokeWidth="1" />
+              <polygon points="15 21 25 12 20 12 20 3 10 3 10 12 5 12 15 21" stroke="grey" fill="white" strokeWidth="1" />
             </svg>
           </div>
           <div className="workflow-details-download-spacer"></div>
@@ -1129,7 +1129,7 @@ class AWorkflow extends Component {
                  baseProfile="full"
                  width="30" height="21"
                  xmlns="http://www.w3.org/2000/svg">
-              <polygon points="15 3 25 15 20 15 20 20 10 20 10 15 5 15 15 3" stroke="lightgrey" fill="white" strokeWidth="1" />
+              <polygon points="15 3 25 15 20 15 20 20 10 20 10 15 5 15 15 3" stroke="grey" fill="white" strokeWidth="1" />
             </svg>
           </div>
           <input type="file" id="workflow_types_file_find" accept="application/json"
@@ -1356,7 +1356,7 @@ class AWorkflow extends Component {
                    baseProfile="full"
                    width="30" height="21"
                    xmlns="http://www.w3.org/2000/svg">
-                <polygon points="15 21 25 12 20 12 20 3 10 3 10 12 5 12 15 21" stroke="lightgrey" fill="white" strokeWidth="1" />
+                <polygon points="15 21 25 12 20 12 20 3 10 3 10 12 5 12 15 21" stroke="grey" fill="white" strokeWidth="1" />
               </svg>
             </div>
           </th>
