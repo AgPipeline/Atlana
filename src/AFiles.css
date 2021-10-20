@@ -53,6 +53,7 @@
 }
 
 .files-types-upload-wrapper {
+    align-self: center;
     margin-right: 10px;
 }
 
@@ -85,11 +86,11 @@
 }
 
 .files-types-list-wrapper {
-    align-self: end;
+    align-self: center;
 }
 
 .files-add-new-button-wrapper {
-    align-self: end;
+    align-self: center;
 }
 
 .files-types-option {
