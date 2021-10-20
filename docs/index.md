@@ -68,9 +68,9 @@ You will see the uploaded file on the next step.
 
 <img src="img/configure_files_upload.png" width="450" alt="Click upload files icon" aria-label="Upload files link" title="Click or drag-and-drop to upload files"/>
 
-Next, select "Server Side" from the drop down on the upper right of the page, and click "New" to start defining the folder.
+Next, select "Remote" from the drop down on the upper right of the page, and click "New" to start defining the folder.
 
-<img src="img/configure_files_server_side.png" width="450" alt="Choose dropdown server-side then new" aria-label="Create new server-side definition" title="Create new server-side file configuration"/>
+<img src="img/configure_files_server_side.png" width="450" alt="Choose dropdown remote then new" aria-label="Create new remote definition" title="Create new remote file configuration"/>
 
 This will display a new window showing the uploaded files.
 You may change the name of the definition to something more meaningful.
