@@ -1,0 +1,143 @@
+
+.passcode-background {
+    background-color: rgb(128, 128, 128, .25);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: row;
+    align-content: space-around;
+    align-items: flex-start;
+}
+
+.passcode-spacing {
+    flex: 20;
+}
+
+.passcode-wrapper {
+    margin-top: 80px;
+    min-width: 60%;
+    max-width: 80%;
+    border: 1px solid black;
+    border-radius: 10px;
+    background-color: white;
+    display: flex;
+    flex-direction: column;
+    align-content: space-around;
+    align-items: flex-start;
+}
+
+.passcode-titlebar {
+    background-color: lightgrey;
+    border-radius: 10px 10px 0 0 ;
+    border-bottom: 1px solid grey;
+    color: black;
+    font-size: large;
+    text-align: center;
+    min-height: 1.5em;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    width: 100%;
+}
+.passcode-titlebar-left {
+    flex: 1;
+}
+
+.passcode-titlebar-center {
+    flex: 20;
+    white-space: nowrap;
+}
+
+.passcode-titlebar-right {
+    flex: 1;
+    padding-right: 10px;
+    text-align: center;
+    align-self: center;
+}
+
+.passcode-titlebar-close {
+    cursor: pointer;
+    margin-top: 2px;
+}
+
+.passcode-titlebar-close:hover {
+    border: 1px solid black;
+    border-radius: 5px;
+}
+
+.passcode-entry-wrapper {
+    margin-top: 10px;
+    margin-bottom: 5px;
+    display: flex;
+    flex-direction: column;
+    align-content: flex-start;
+    align-items: flex-start;
+}
+
+.passcode-item-wrapper {
+    display: flex;
+    flex-direction: row;
+    align-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.passcode-item {
+}
+
+.passcode-value-prompt {
+    margin-left: 10px;
+}
+
+.password-value {
+    margin-left:  5px;
+}
+
+.passcode-footer {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.passcode-footer-spacer {
+    flex: 80%;
+}
+
+.passcode-button {
+    min-width: 20px;
+    height: 20px;
+    border: 1px solid grey;
+    padding-right: 10px;
+    padding-left: 10px;
+    border-radius: 5px;
+}
+
+.passcode-button-disabled {
+    border-color: #e0e0e0;
+    color: grey;
+    cursor: default;
+}
+
+.passcode-ok {
+    background-color: #d8ffd8;
+    margin-left: 20px;
+    cursor: pointer;
+}
+
+.passcode-ok-disabled {
+    background-color: #f0f0f0;
+    cursor: default;
+}
+
+.passcode-cancel {
+    background-color: #e0e0e0;
+    margin-right: 20px;
+    padding-right: 20px;
+    cursor: pointer;
+}

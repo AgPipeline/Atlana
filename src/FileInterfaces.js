@@ -19,12 +19,12 @@ import Server from './data/Server';
 var file_interface_types = [
 {
   name: 'iRODS',
-  prompt: 'iRODS Definition',
+  prompt: 'iRODS connection',
   id: 2,
   create: () => {return new iRODS();}
 }, {
-  name: 'Server side',
-  prompt: 'Server-side Definition',
+  name: 'Remote',
+  prompt: 'Remote connection',
   id: 1,
   create: () => {return new Server();}
 }

@@ -1,0 +1,105 @@
+[
+  {
+    "step": "Mask Soil on Image",
+    "command": "soilmask",
+    "parameters": [
+      {
+        "command": "image",
+        "field_name": "image",
+        "auth": {},
+        "data_type": "1",
+        "value": "/var/folders/79/6_kkxtld10b_rmstzyt6gmyc0000gn/T/atlana/2498b99c2ec54f90aee6225a85a0c7af/sample_orthophoto.tif",
+        "name": "Server-side",
+        "type": "file",
+        "mandatory": true
+      }
+    ],
+    "working_folder": "/var/folders/79/6_kkxtld10b_rmstzyt6gmyc0000gn/T/atlana/2498b99c2ec54f90aee6225a85a0c7af"
+  },
+  {
+    "step": "Plot Clip",
+    "command": "plotclip",
+    "parameters": [
+      {
+        "command": "geometries",
+        "field_name": "geometries",
+        "auth": {},
+        "data_type": "1",
+        "value": "/var/folders/79/6_kkxtld10b_rmstzyt6gmyc0000gn/T/atlana/2498b99c2ec54f90aee6225a85a0c7af/plots.json",
+        "name": "Server-side",
+        "type": "file",
+        "mandatory": true
+      },
+      {
+        "command": "image",
+        "field_name": "image",
+        "type": "file",
+        "prev_command_path": "file:0:path",
+        "visibility": "server"
+      }
+    ],
+    "working_folder": "/var/folders/79/6_kkxtld10b_rmstzyt6gmyc0000gn/T/atlana/2498b99c2ec54f90aee6225a85a0c7af"
+  },
+  {
+    "step": "Find files",
+    "command": "find_files2json",
+    "parameters": [
+      {
+        "command": "file_name",
+        "field_name": "file_name",
+        "type": "string",
+        "prev_command_path": "file_name",
+        "visibility": "server"
+      },
+      {
+        "command": "top_path",
+        "field_name": "top_path",
+        "type": "folder",
+        "prev_command_path": "top_path",
+        "visibility": "server"
+      }
+    ],
+    "working_folder": "/var/folders/79/6_kkxtld10b_rmstzyt6gmyc0000gn/T/atlana/2498b99c2ec54f90aee6225a85a0c7af"
+  },
+  {
+    "step": "Canopy Cover",
+    "command": "canopycover",
+    "parameters": [
+      {
+        "field_name": "experimentdata",
+        "value": "",
+        "type": "file",
+        "mandatory": false
+      },
+      {
+        "command": "found_json_file",
+        "field_name": "found_json_file",
+        "type": "file",
+        "prev_command_path": "found_json_file",
+        "visibility": "server"
+      },
+      {
+        "command": "results_search_folder",
+        "field_name": "results_search_folder",
+        "type": "string",
+        "prev_command_path": "results_search_folder",
+        "visibility": "server"
+      }
+    ],
+    "working_folder": "/var/folders/79/6_kkxtld10b_rmstzyt6gmyc0000gn/T/atlana/2498b99c2ec54f90aee6225a85a0c7af"
+  },
+  {
+    "step": "Merge CSV",
+    "command": "merge_csv",
+    "parameters": [
+      {
+        "command": "top_path",
+        "field_name": "top_path",
+        "type": "folder",
+        "prev_command_path": "top_path",
+        "visibility": "server"
+      }
+    ],
+    "working_folder": "/var/folders/79/6_kkxtld10b_rmstzyt6gmyc0000gn/T/atlana/2498b99c2ec54f90aee6225a85a0c7af"
+  }
+]

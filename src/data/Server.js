@@ -18,10 +18,10 @@ class Server extends IData {
    */
   initialize() {
     return ({
-      name: 'Server files',
+      name: 'Remote files',
       authentication: false,
-      summary: 'Browse server folders and files',
-      description: 'Browse the server-side folders and files that are available.',
+      summary: 'Browse remote folders and files',
+      description: 'Browse the remote folders and files that are available.',
       filtering: IData.filtering.normal
     });
   }
@@ -52,6 +52,7 @@ class Server extends IData {
     try {
       fetch(uri, {
         method: 'GET',
+        credentials: 'include',
         }
       )
       .then(response => {if (response.ok) return response.json(); else throw response.statusText;})
