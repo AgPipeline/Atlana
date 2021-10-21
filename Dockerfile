@@ -49,6 +49,8 @@ COPY --from=build /app/react_frontend/build/* ./
 # Install additional packages
 RUN apt-get update && \
     apt-get install -y --no-install-recommends git && \
+    apt-get install -y --no-install-recommends python3-dev && \
+    apt-get install -y --no-install-recommends gcc g++ && \
     apt-get autoremove -y && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -57,12 +59,13 @@ RUN apt-get update && \
 COPY ./requirements.txt ./
 RUN python3 -m pip install --upgrade --no-cache-dir pip
 RUN python3 -m pip install --upgrade --no-cache-dir -r requirements.txt
+RUN python3 -m pip install --upgrade --no-cache-dir setuptools
 
 # Copy files to where we want them
 RUN mkdir templates && mv index.html templates/
 COPY ./*.py ./*.sh ./
-COPY ./test_data ./test_data
 
+# COPY ./test_data ./test_data
 # TODO: Get the pylint resource file
 # TODO: install testing environment (plot-base-rgb: 1.9)
 # TODO: install test images:https://data.cyverse.org/dav-anon/iplant/projects/aes/cct/diag/sample-data/sample_plot_images.zip and place in separate folders
