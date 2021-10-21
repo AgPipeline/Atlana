@@ -31,7 +31,7 @@ var menu = [
 }, {
   name: 'Workflows',
   items: [{
-    name: 'Image',
+    name: 'RGB Image',
     id: states.workflow_image
   }]
 }, {
