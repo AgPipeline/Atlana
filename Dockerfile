@@ -80,4 +80,4 @@ ENV PYTHONPATH="${PYTHONPATH}:/app/react_frontend"  \
     SECRET_KEY=$SECRET_KEY \
     ATLANA_USE_SCIF_WORKFLOW= 
 
-ENTRYPOINT gunicorn -w 4 -b ${WEB_SITE_URL} --access-logfile '-' main:app
+ENTRYPOINT gunicorn -w 4 -b ${WEB_SITE_URL} --access-logfile '-' main:app --timeout 18000
