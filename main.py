@@ -491,6 +491,15 @@ def copy_server_file(auth: dict, source_path: str, dest_path: str) -> bool:
     """
     # pylint: disable=unused-argument
     working_path = normalize_path(source_path)
+
+    # Check if we have a special path
+    if len(working_path) > 1:
+        dir_name = Path(working_path).parts[1]
+        if ADDITIONAL_LOCAL_FOLDERS and dir_name in ADDITIONAL_LOCAL_FOLDERS:
+            cur_path = os.path.join(ADDITIONAL_LOCAL_FOLDERS[dir_name], working_path[len(dir_name) + 2:])
+            shutil.copyfile (cur_path, dest_path)
+            return True
+
     if working_path[0] == '/':
         working_path = '.'  + working_path
     cur_path = os.path.abspath(os.path.join(session['upload_folder'], working_path))
@@ -1075,7 +1084,7 @@ def _handle_files_get_path(working_path: str, upload_folder: str, additional_fol
     # Check if it's an additional path as defined on startup
     if len(working_path) > 1:
         dir_name = Path(working_path).parts[1]
-        if dir_name in additional_folders:
+        if additional_folders and dir_name in additional_folders:
             return os.path.join(additional_folders[dir_name], working_path[len(dir_name) + 2:])
 
     # Might be a user specific path
