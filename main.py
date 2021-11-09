@@ -16,8 +16,9 @@ import tempfile
 import traceback
 import subprocess
 import sys
-from typing import Union
+from typing import Optional, Union
 from crypt import Crypt
+from pathlib import Path
 from irods.session import iRODSSession
 from irods.data_object import chunks
 import irods.exception
@@ -29,6 +30,45 @@ from pylint import lint
 from pylint.reporters.text import TextReporter
 
 from workflow_definitions import WORKFLOW_DEFINITIONS
+
+def _get_additional_folders() -> Optional[dict]:
+    """Returns additional user accessible folders"""
+    folder_defs = os.getenv('MORE_FOLDERS')
+    if not folder_defs:
+        return None
+
+    return_defs = {}
+
+    folder_defs = folder_defs.split(';') if ';' in folder_defs else [folder_defs]
+
+    for one_def in folder_defs:
+        if ':' not in one_def:
+            print(f'Skipping invalid additional folder: "{one_def}"')
+            continue
+
+        try:
+            def_name, def_path = [part.strip() for part in one_def.split(':')]
+        except ValueError:
+            print(f'ValueError exception caught while splitting additional folder: "{one_def}"')
+            print('    continuing processing')
+            continue
+
+        if not def_name or not def_path:
+            print(f'Invalid additional folder missing a name or a path: "{one_def}"')
+            continue
+
+        def_path = os.path.realpath(def_path)
+        if not os.path.isdir(def_path):
+            print(f'Path for additional folder "{def_path}" is not found: "{one_def}"')
+            print('    skipping invalid path')
+            continue
+
+        if def_name in return_defs:
+            print(f'Current additional folder "{one_def}" overwriting previous definition "{def_name}:{return_defs[def_name]}"')
+
+        return_defs[def_name] = def_path
+
+    return return_defs
 
 def _get_secret_key() -> str:
     """Returns a value to be used as a secret key"""
@@ -85,6 +125,9 @@ app = create_app(CONFIG_FILE)
 
 # Create the CORS handler
 cors = CORS(app, resources={r"/files": {"origins": "http://127.0.0.1:3000"}})
+
+# Additional folders to allow user access
+ADDITIONAL_LOCAL_FOLDERS=_get_additional_folders()
 
 # The default page to serve up
 DEFAULT_TEMPLATE_PAGE='index.html'
@@ -448,6 +491,15 @@ def copy_server_file(auth: dict, source_path: str, dest_path: str) -> bool:
     """
     # pylint: disable=unused-argument
     working_path = normalize_path(source_path)
+
+    # Check if we have a special path
+    if len(working_path) > 1:
+        dir_name = Path(working_path).parts[1]
+        if ADDITIONAL_LOCAL_FOLDERS and dir_name in ADDITIONAL_LOCAL_FOLDERS:
+            cur_path = os.path.join(ADDITIONAL_LOCAL_FOLDERS[dir_name], working_path[len(dir_name) + 2:])
+            shutil.copyfile (cur_path, dest_path)
+            return True
+
     if working_path[0] == '/':
         working_path = '.'  + working_path
     cur_path = os.path.abspath(os.path.join(session['upload_folder'], working_path))
@@ -1027,6 +1079,24 @@ def upload_file():
     return json.dumps(loaded_filenames)
 
 
+def _handle_files_get_path(working_path: str, upload_folder: str, additional_folders: dict) -> Optional[str]:
+    """Returns the path to search when returning server files list"""
+    # Check if it's an additional path as defined on startup
+    if len(working_path) > 1:
+        dir_name = Path(working_path).parts[1]
+        if additional_folders and dir_name in additional_folders:
+            return os.path.join(additional_folders[dir_name], working_path[len(dir_name) + 2:])
+
+    # Might be a user specific path
+    if working_path[0] == '/':
+        working_path = '.'  + working_path
+    cur_path = os.path.abspath(os.path.join(upload_folder, working_path))
+    if not cur_path.startswith(upload_folder):
+        return None
+
+    return cur_path
+
+
 @app.route('/server/files', methods=['GET'])
 @cross_origin(origin='127.0.0.1:3000', headers=['Content-Type','Authorization'])
 def handle_files() -> tuple:
@@ -1051,12 +1121,10 @@ def handle_files() -> tuple:
     if 'upload_folder' not in session or session['upload_folder'] is None or not os.path.isdir(session['upload_folder']):
         session['upload_folder'] = tempfile.mkdtemp(dir=FILE_START_PATH)
 
+    working_path = normalize_path(path)
     try:
-        working_path = normalize_path(path)
-        if working_path[0] == '/':
-            working_path = '.'  + working_path
-        cur_path = os.path.abspath(os.path.join(session['upload_folder'], working_path))
-        if not cur_path.startswith(session['upload_folder']):
+        cur_path = _handle_files_get_path(working_path, session['upload_folder'], ADDITIONAL_LOCAL_FOLDERS)
+        if not cur_path:
             print(f'Invalid path requested: "{path}"', flush=True)
             return 'Resource not found', 400
     except FileNotFoundError as ex:
@@ -1074,6 +1142,15 @@ def handle_files() -> tuple:
                                  'size': os.path.getsize(file_path),
                                  'date': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(os.path.getmtime(file_path))),
                                  'type': 'folder' if os.path.isdir(file_path) else 'file'
+                                 })
+
+    if ADDITIONAL_LOCAL_FOLDERS and path == '/':
+        for one_name, _ in ADDITIONAL_LOCAL_FOLDERS.items():
+            return_names.append({'name': one_name,
+                                 'path': '/' + one_name,
+                                 'size': 0,
+                                 'date': '',
+                                 'type': 'folder'
                                  })
 
     return json.dumps(return_names)
