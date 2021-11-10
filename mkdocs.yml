@@ -4,6 +4,7 @@ docs_dir: docs
 
 nav:
     - 'index.md'
+    - 'server.md'
     - 'about.md'
 
 theme:
