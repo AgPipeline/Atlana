@@ -295,6 +295,8 @@ def run_workflow():
     logging.getLogger().setLevel(logging_level)
 
     status_filename = os.path.join(working_folder, STATUS_FILE_NAME)
+    # Disable pylint check since we'd lose the *_filename context if we changed lambdas to defined functions
+    # pylint: disable=unnecessary-lambda-assignment
     message_filename = os.path.join(working_folder, STDOUT_FILE_NAME)
     message_func = lambda msg, append: _write_log_file(message_filename, msg, append)
     error_filename = os.path.join(working_folder, STDERR_FILE_NAME)
