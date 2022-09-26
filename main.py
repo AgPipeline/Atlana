@@ -439,6 +439,8 @@ def _test_python_file(algo_type: str, lang: str, filepath: str, test_folder: str
                 test_images.append(dest_name)
             elif os.path.isdir(src_name):
                 os.makedirs(dest_name, exist_ok=True)
+                # Disable pylint check since we are deliberatly modifying the list
+                # pylint: disable=modified-iterating-list
                 source_folders.append(src_name)
 
     # Run the test
